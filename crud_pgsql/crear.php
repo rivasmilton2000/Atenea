@@ -10,7 +10,7 @@ if ($_POST) {
 ?>
 
 <form method="POST">
-    <input name="nombre" placeholder="Nombre" required>
+    <input name="nombre" placeholder="Name" required>
     <input name="email" placeholder="Email" required>
     <button>Guardar</button>
 </form>
