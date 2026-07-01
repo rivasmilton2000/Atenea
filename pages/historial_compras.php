@@ -383,7 +383,29 @@ ob_start();
                             href="<?php echo dashboard_h(atenea_purchase_invoice_url((int) $purchase['order_id'], 'download')); ?>"
                             data-loader-text="Preparando descarga de factura..."
                           >Descargar PDF</a>
+                          <?php if (!empty($purchase['dte_json_available'])): ?>
+                            <a
+                              class="btn btn-outline-primary btn-sm mb-0 atenea-invoice-button"
+                              href="<?php echo dashboard_h(atenea_purchase_dte_url((int) $purchase['order_id'], 'json')); ?>"
+                              data-loader-text="Preparando JSON DTE..."
+                            >JSON DTE</a>
+                          <?php endif; ?>
+                          <?php if (!empty($purchase['dte_status'])): ?>
+                            <a
+                              class="btn btn-outline-secondary btn-sm mb-0 atenea-invoice-button"
+                              href="<?php echo dashboard_h(atenea_purchase_dte_url((int) $purchase['order_id'], 'status')); ?>"
+                              data-loader-text="Consultando estado DTE..."
+                            >Estado DTE</a>
+                            <a
+                              class="btn btn-outline-secondary btn-sm mb-0 atenea-invoice-button"
+                              href="<?php echo dashboard_h(atenea_purchase_dte_url((int) $purchase['order_id'], 'sello')); ?>"
+                              data-loader-text="Consultando sello DTE..."
+                            >Sello</a>
+                          <?php endif; ?>
                         </div>
+                        <?php if (!empty($purchase['dte_status'])): ?>
+                          <span class="atenea-purchase-unavailable mt-2">DTE: <?php echo dashboard_h((string) $purchase['dte_status']); ?></span>
+                        <?php endif; ?>
                       <?php else: ?>
                         <span class="atenea-purchase-unavailable">Factura no disponible</span>
                       <?php endif; ?>
@@ -442,7 +464,29 @@ ob_start();
                           href="<?php echo dashboard_h(atenea_purchase_invoice_url((int) $purchase['order_id'], 'download')); ?>"
                           data-loader-text="Preparando descarga de factura..."
                         >Descargar PDF</a>
+                        <?php if (!empty($purchase['dte_json_available'])): ?>
+                          <a
+                            class="btn btn-outline-primary btn-sm mb-0 atenea-invoice-button"
+                            href="<?php echo dashboard_h(atenea_purchase_dte_url((int) $purchase['order_id'], 'json')); ?>"
+                            data-loader-text="Preparando JSON DTE..."
+                          >JSON DTE</a>
+                        <?php endif; ?>
+                        <?php if (!empty($purchase['dte_status'])): ?>
+                          <a
+                            class="btn btn-outline-secondary btn-sm mb-0 atenea-invoice-button"
+                            href="<?php echo dashboard_h(atenea_purchase_dte_url((int) $purchase['order_id'], 'status')); ?>"
+                            data-loader-text="Consultando estado DTE..."
+                          >Estado DTE</a>
+                          <a
+                            class="btn btn-outline-secondary btn-sm mb-0 atenea-invoice-button"
+                            href="<?php echo dashboard_h(atenea_purchase_dte_url((int) $purchase['order_id'], 'sello')); ?>"
+                            data-loader-text="Consultando sello DTE..."
+                          >Sello</a>
+                        <?php endif; ?>
                       </div>
+                      <?php if (!empty($purchase['dte_status'])): ?>
+                        <span class="atenea-purchase-unavailable mt-2">DTE: <?php echo dashboard_h((string) $purchase['dte_status']); ?></span>
+                      <?php endif; ?>
                     <?php else: ?>
                       <span class="atenea-purchase-unavailable">Factura no disponible</span>
                     <?php endif; ?>

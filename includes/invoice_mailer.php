@@ -50,8 +50,8 @@ if (!function_exists('atenea_ensure_invoice_dir')) {
     }
 }
 
-if (!function_exists('atenea_build_invoice_pdf')) {
-    function atenea_build_invoice_pdf(array $order, array $items): array
+if (!function_exists('atenea_build_legacy_invoice_pdf')) {
+    function atenea_build_legacy_invoice_pdf(array $order, array $items): array
     {
         atenea_invoice_bootstrap();
 
@@ -171,8 +171,15 @@ if (!function_exists('atenea_build_invoice_pdf')) {
     }
 }
 
+if (!function_exists('atenea_build_invoice_pdf')) {
+    function atenea_build_invoice_pdf(array $order, array $items): array
+    {
+        return atenea_build_legacy_invoice_pdf($order, $items);
+    }
+}
+
 if (!function_exists('atenea_send_invoice_email')) {
-    function atenea_send_invoice_email(array $order, string $pdf_absolute_path): void
+    function atenea_send_invoice_email(array $order, string $pdf_absolute_path, array $extraAttachments = [], array $context = []): void
     {
         atenea_invoice_bootstrap();
         include __DIR__ . '/email_account.php';
@@ -188,13 +195,30 @@ if (!function_exists('atenea_send_invoice_email')) {
 
         $mail->setFrom($myemail, 'Atenea');
         $mail->addAddress($order['billing_email'], $order['billing_name']);
-        $mail->Subject = 'Factura de tu compra #' . (int)$order['id'];
+        $isSimulation = !empty($context['is_simulation']);
+        $subjectPrefix = $isSimulation ? 'DTE simulada' : 'Factura';
+        $mail->Subject = $subjectPrefix . ' de tu compra #' . (int)$order['id'];
         $mail->isHTML(true);
-        $mail->Body = '<p>Hola ' . htmlspecialchars($order['billing_name']) . ',</p>'
-            . '<p>Gracias por tu compra. Adjuntamos tu factura en PDF de la orden <strong>#' . (int)$order['id'] . '</strong>.</p>'
+        $mail->Body = '<p>Hola ' . htmlspecialchars($order['billing_name'], ENT_QUOTES, 'UTF-8') . ',</p>'
+            . '<p>Gracias por tu compra. Adjuntamos el documento PDF de la orden <strong>#' . (int)$order['id'] . '</strong>.</p>'
             . '<p>Total pagado: <strong>$' . number_format((float)$order['total_amount'], 2) . '</strong></p>';
 
+        if ($isSimulation) {
+            $mail->Body .= '<p><strong>MODO SIMULACION - NO VALIDO FISCALMENTE.</strong> Tambien adjuntamos el JSON DTE generado internamente.</p>';
+        }
+
         $mail->addAttachment($pdf_absolute_path, 'factura_orden_' . (int)$order['id'] . '.pdf');
+
+        foreach ($extraAttachments as $attachment) {
+            $attachmentPath = trim((string) ($attachment['path'] ?? ''));
+            if ($attachmentPath === '' || !is_file($attachmentPath)) {
+                continue;
+            }
+
+            $attachmentName = trim((string) ($attachment['name'] ?? basename($attachmentPath)));
+            $mail->addAttachment($attachmentPath, $attachmentName !== '' ? $attachmentName : basename($attachmentPath));
+        }
+
         $mail->send();
     }
 }

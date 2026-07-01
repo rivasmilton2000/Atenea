@@ -28,6 +28,8 @@ module_shell_begin([
                 ['label' => 'Estudiantes', 'href' => 'sa_estudiantes.php', 'icon' => 'school', 'match' => ['sa_estudiantes.php', 'sa_estudiantes_searchfrm.php', 'sa_estudiantes_searchfrm2.php', 'sa_estudiantes_edit.php', 'sa_estudiantes_edit2.php']],
                 ['label' => 'Dis. asignaturas', 'href' => 'sa_dis_asignaturas.php', 'icon' => 'account_tree', 'match' => ['sa_dis_asignaturas.php', 'sa_dis_asignaturas_searchfrm.php', 'sa_dis_asignaturas_edit.php']],
                 ['label' => 'Inventario', 'href' => 'sa_inventario.php', 'icon' => 'inventory_2', 'match' => ['sa_inventario.php', 'sa_inventario_searchfrm.php', 'sa_inventario_edit.php']],
+                ['label' => 'Facturacion DTE', 'href' => 'sa_dte_config.php', 'icon' => 'receipt_long', 'match' => ['sa_dte_config.php']],
+                ['label' => 'Documentos DTE', 'href' => 'sa_dte_documents.php', 'icon' => 'description', 'match' => ['sa_dte_documents.php']],
                 ['label' => 'Documentación', 'href' => 'sa_documentacion.php', 'icon' => 'description', 'match' => ['sa_documentacion.php', 'sa_documentacion_searchfrm.php', 'sa_documentacion_edit.php']],
                 ['label' => 'Con. evaluación', 'href' => 'sa_con_evaluacion.php', 'icon' => 'edit_note', 'match' => ['sa_con_evaluacion.php', 'sa_con_evaluacion_searchfrm.php', 'sa_con_evaluacion_edit.php']],
                 ['label' => 'Evaluaciones', 'href' => 'sa_evaluaciones.php', 'icon' => 'fact_check', 'match' => ['sa_evaluaciones.php', 'sa_evaluaciones_searchfrm.php', 'sa_evaluaciones_edit.php']],

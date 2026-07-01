@@ -33,6 +33,9 @@ $documentacionCount = dashboard_count($db, "SELECT COUNT(*) FROM archivos WHERE 
 $contenidosCount = dashboard_count($db, "SELECT COUNT(*) FROM contenidos WHERE c_estado = 1");
 $evaluacionesCount = dashboard_count($db, "SELECT COUNT(*) FROM evaluaciones WHERE evaluacion_estado = 1");
 $calendarioCount = dashboard_count($db, "SELECT COUNT(*) FROM actividades WHERE ACT_ESTADO = 1");
+$dteDocumentsCount = atenea_db_has_table($db, 'dte_documents')
+    ? dashboard_count($db, "SELECT COUNT(*) FROM dte_documents")
+    : 0;
 
 $navSections = [
     [
@@ -66,6 +69,8 @@ $navSections = [
             ['label' => 'Estudiantes', 'href' => 'estudiantes.php', 'icon' => 'school'],
             ['label' => 'Dis. asignaturas', 'href' => 'dis_asignaturas.php', 'icon' => 'account_tree'],
             ['label' => 'Productos', 'href' => 'productos_admin.php', 'icon' => 'storefront'],
+            ['label' => 'Facturacion DTE', 'href' => 'dte_config.php', 'icon' => 'receipt_long'],
+            ['label' => 'Documentos DTE', 'href' => 'dte_documents.php', 'icon' => 'description'],
             ['label' => 'Categoría productos', 'href' => 'categorias_productos.php', 'icon' => 'category'],
             ['label' => 'Inventario', 'href' => 'inventario.php', 'icon' => 'inventory_2'],
             ['label' => 'Documentación', 'href' => 'documentacion.php', 'icon' => 'description'],
@@ -91,6 +96,7 @@ $cards = [
     ['title' => 'Con. evaluación', 'value' => $contenidosCount, 'icon' => 'edit_note', 'accent' => 'success', 'href' => 'con_evaluacion.php', 'metricLabel' => 'Contenidos activos', 'footerLabel' => 'Gestionar contenidos'],
     ['title' => 'Evaluaciones', 'value' => $evaluacionesCount, 'icon' => 'fact_check', 'accent' => 'info', 'href' => 'evaluaciones.php', 'metricLabel' => 'Pruebas activas', 'footerLabel' => 'Abrir evaluaciones'],
     ['title' => 'Calendario', 'value' => $calendarioCount, 'icon' => 'calendar_month', 'accent' => 'warning', 'href' => 'calendario.php', 'metricLabel' => 'Eventos activos', 'footerLabel' => 'Ver agenda'],
+    ['title' => 'Documentos DTE', 'value' => $dteDocumentsCount, 'icon' => 'receipt_long', 'accent' => 'dark', 'href' => 'dte_documents.php', 'metricLabel' => 'DTE registrados', 'footerLabel' => 'Abrir facturacion'],
 ];
 
 $quickLinks = [
@@ -98,6 +104,8 @@ $quickLinks = [
     ['label' => 'Revisar docentes', 'href' => 'docentes.php', 'icon' => 'co_present'],
     ['label' => 'Administrar estudiantes', 'href' => 'estudiantes.php', 'icon' => 'school'],
     ['label' => 'Controlar inventario', 'href' => 'inventario.php', 'icon' => 'inventory_2'],
+    ['label' => 'Configurar DTE', 'href' => 'dte_config.php', 'icon' => 'receipt_long'],
+    ['label' => 'Ver documentos DTE', 'href' => 'dte_documents.php', 'icon' => 'description'],
     ['label' => 'Abrir documentación', 'href' => 'documentacion.php', 'icon' => 'description'],
     ['label' => 'Ver calendario', 'href' => 'calendario.php', 'icon' => 'calendar_month'],
 ];
@@ -107,6 +115,7 @@ $summaryItems = [
     ['label' => 'Rol', 'value' => 'Administrador'],
     ['label' => 'Módulos visibles', 'value' => count($navSections[2]['items'])],
     ['label' => 'Registros monitoreados', 'value' => $asignaturasCount + $personalCount + $docentesCount + $estudiantesCount],
+    ['label' => 'DTE registrados', 'value' => $dteDocumentsCount],
 ];
 
 dashboard_render_material_page([
@@ -123,5 +132,6 @@ dashboard_render_material_page([
         $asignaturasCount . ' asignaturas activas',
         $estudiantesCount . ' estudiantes activos',
         $calendarioCount . ' actividades vigentes',
+        $dteDocumentsCount . ' DTE registrados',
     ],
 ]);

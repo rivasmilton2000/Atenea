@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/dte/bootstrap.php';
+
 if (!function_exists('atenea_purchase_status_meta')) {
     function atenea_purchase_status_meta(string $status): array
     {
@@ -51,6 +53,18 @@ if (!function_exists('atenea_purchase_invoice_url')) {
         $mode = $mode === 'download' ? 'download' : 'view';
 
         return 'usuario_compra_factura.php?orden=' . $orderId . '&mode=' . $mode;
+    }
+}
+
+if (!function_exists('atenea_purchase_dte_url')) {
+    function atenea_purchase_dte_url(int $orderId, string $mode = 'status'): string
+    {
+        $allowedModes = ['status', 'json', 'response', 'sello'];
+        if (!in_array($mode, $allowedModes, true)) {
+            $mode = 'status';
+        }
+
+        return 'usuario_compra_dte.php?orden=' . $orderId . '&mode=' . $mode;
     }
 }
 
@@ -117,6 +131,7 @@ if (!function_exists('obtenerHistorialComprasUsuario')) {
 
         $hasOrderDetails = atenea_db_has_table($db, 'orden_detalles');
         $hasInvoices = atenea_db_has_table($db, 'orden_facturas');
+        $hasDteDocuments = atenea_db_has_table($db, 'dte_documents');
         $detailsJoin = $hasOrderDetails
             ? "LEFT JOIN (
                     SELECT
@@ -137,6 +152,10 @@ if (!function_exists('obtenerHistorialComprasUsuario')) {
             : "'' AS item_names, 0 AS total_quantity, 0 AS line_count, 0 AS has_product";
         $invoiceJoin = $hasInvoices ? 'LEFT JOIN orden_facturas ofa ON ofa.orden_id = o.id' : '';
         $invoiceSelect = $hasInvoices ? 'ofa.pdf_path, ofa.email_status' : 'NULL AS pdf_path, NULL AS email_status';
+        $dteJoin = $hasDteDocuments ? 'LEFT JOIN dte_documents dd ON dd.order_id = o.id' : '';
+        $dteSelect = $hasDteDocuments
+            ? 'dd.estado AS dte_estado, dd.sello_recibido, dd.json_path, dd.response_path, dd.pdf_path AS dte_pdf_path, dd.modo AS dte_modo'
+            : "NULL AS dte_estado, NULL AS sello_recibido, NULL AS json_path, NULL AS response_path, NULL AS dte_pdf_path, NULL AS dte_modo";
 
         $sql = "
             SELECT
@@ -150,7 +169,8 @@ if (!function_exists('obtenerHistorialComprasUsuario')) {
                 o.stripe_session_id,
                 o.stripe_payment_intent,
                 {$detailsSelect},
-                {$invoiceSelect}
+                {$invoiceSelect},
+                {$dteSelect}
             FROM (
                 SELECT
                     id,
@@ -169,6 +189,7 @@ if (!function_exists('obtenerHistorialComprasUsuario')) {
             ) o
             {$detailsJoin}
             {$invoiceJoin}
+            {$dteJoin}
             ORDER BY COALESCE(o.paid_at, o.created_at) DESC, o.id DESC
         ";
 
@@ -186,7 +207,12 @@ if (!function_exists('obtenerHistorialComprasUsuario')) {
         while ($result instanceof mysqli_result && ($row = $result->fetch_assoc())) {
             $itemNames = explode('||', (string) ($row['item_names'] ?? ''));
             $concept = atenea_purchase_concept_summary($itemNames);
-            $invoiceFile = atenea_purchase_resolve_invoice_file((string) ($row['pdf_path'] ?? ''));
+            $dtePdfFile = DteStorage::resolveStoredFile((string) ($row['dte_pdf_path'] ?? ''));
+            $invoiceFile = !empty($dtePdfFile['exists'])
+                ? $dtePdfFile
+                : atenea_purchase_resolve_invoice_file((string) ($row['pdf_path'] ?? ''));
+            $jsonFile = DteStorage::resolveStoredFile((string) ($row['json_path'] ?? ''));
+            $responseFile = DteStorage::resolveStoredFile((string) ($row['response_path'] ?? ''));
 
             $history[] = [
                 'order_id' => (int) ($row['id'] ?? 0),
@@ -205,6 +231,11 @@ if (!function_exists('obtenerHistorialComprasUsuario')) {
                 'stripe_payment_intent' => trim((string) ($row['stripe_payment_intent'] ?? '')),
                 'invoice_available' => $invoiceFile['exists'],
                 'invoice_email_status' => (string) ($row['email_status'] ?? ''),
+                'dte_status' => (string) ($row['dte_estado'] ?? ''),
+                'dte_sello' => (string) ($row['sello_recibido'] ?? ''),
+                'dte_mode' => (string) ($row['dte_modo'] ?? ''),
+                'dte_json_available' => !empty($jsonFile['exists']),
+                'dte_response_available' => !empty($responseFile['exists']),
             ];
         }
 
@@ -247,9 +278,19 @@ if (!function_exists('atenea_obtener_factura_compra_usuario')) {
     {
         $userEmail = trim((string) ($usuarioActual['email'] ?? ''));
 
-        if ($orderId <= 0 || $userEmail === '' || !atenea_db_has_table($db, 'ordenes') || !atenea_db_has_table($db, 'orden_facturas')) {
+        if ($orderId <= 0 || $userEmail === '' || !atenea_db_has_table($db, 'ordenes')) {
             return null;
         }
+
+        $hasInvoices = atenea_db_has_table($db, 'orden_facturas');
+        $hasDteDocuments = atenea_db_has_table($db, 'dte_documents');
+
+        $invoiceJoin = $hasInvoices ? 'LEFT JOIN orden_facturas ofa ON ofa.orden_id = o.id' : '';
+        $invoiceSelect = $hasInvoices ? 'ofa.pdf_path, ofa.email_status' : 'NULL AS pdf_path, NULL AS email_status';
+        $dteJoin = $hasDteDocuments ? 'LEFT JOIN dte_documents dd ON dd.order_id = o.id' : '';
+        $dteSelect = $hasDteDocuments
+            ? 'dd.pdf_path AS dte_pdf_path, dd.estado AS dte_estado, dd.sello_recibido, dd.json_path, dd.response_path, dd.modo AS dte_modo'
+            : 'NULL AS dte_pdf_path, NULL AS dte_estado, NULL AS sello_recibido, NULL AS json_path, NULL AS response_path, NULL AS dte_modo';
 
         $sql = "
             SELECT
@@ -258,10 +299,11 @@ if (!function_exists('atenea_obtener_factura_compra_usuario')) {
                 o.estado,
                 o.paid_at,
                 o.created_at,
-                ofa.pdf_path,
-                ofa.email_status
+                {$invoiceSelect},
+                {$dteSelect}
             FROM ordenes o
-            LEFT JOIN orden_facturas ofa ON ofa.orden_id = o.id
+            {$invoiceJoin}
+            {$dteJoin}
             WHERE o.id = ? AND o.billing_email = ?
             LIMIT 1
         ";
@@ -286,7 +328,10 @@ if (!function_exists('atenea_obtener_factura_compra_usuario')) {
             return null;
         }
 
-        $invoiceFile = atenea_purchase_resolve_invoice_file((string) ($purchase['pdf_path'] ?? ''));
+        $dtePdfFile = DteStorage::resolveStoredFile((string) ($purchase['dte_pdf_path'] ?? ''));
+        $invoiceFile = !empty($dtePdfFile['exists'])
+            ? $dtePdfFile
+            : atenea_purchase_resolve_invoice_file((string) ($purchase['pdf_path'] ?? ''));
 
         return [
             'order_id' => (int) ($purchase['id'] ?? 0),
@@ -297,6 +342,86 @@ if (!function_exists('atenea_obtener_factura_compra_usuario')) {
             'invoice_relative_path' => $invoiceFile['relative_path'],
             'invoice_absolute_path' => $invoiceFile['absolute_path'],
             'invoice_available' => $invoiceFile['exists'],
+            'dte_status' => (string) ($purchase['dte_estado'] ?? ''),
+            'dte_sello' => (string) ($purchase['sello_recibido'] ?? ''),
+            'dte_mode' => (string) ($purchase['dte_modo'] ?? ''),
+        ];
+    }
+}
+
+if (!function_exists('atenea_obtener_documento_dte_compra_usuario')) {
+    function atenea_obtener_documento_dte_compra_usuario(mysqli $db, array $usuarioActual, int $orderId): ?array
+    {
+        $userEmail = trim((string) ($usuarioActual['email'] ?? ''));
+
+        if ($orderId <= 0 || $userEmail === '' || !atenea_db_has_table($db, 'ordenes') || !atenea_db_has_table($db, 'dte_documents')) {
+            return null;
+        }
+
+        $sql = "
+            SELECT
+                o.id,
+                o.billing_email,
+                o.total_amount,
+                o.paid_at,
+                o.created_at,
+                dd.estado,
+                dd.sello_recibido,
+                dd.numero_control,
+                dd.codigo_generacion,
+                dd.modo,
+                dd.descripcion_msg,
+                dd.pdf_path,
+                dd.json_path,
+                dd.response_path
+            FROM ordenes o
+            JOIN dte_documents dd ON dd.order_id = o.id
+            WHERE o.id = ? AND o.billing_email = ?
+            LIMIT 1
+        ";
+
+        $stmt = $db->prepare($sql);
+        if (!$stmt) {
+            return null;
+        }
+
+        $stmt->bind_param('is', $orderId, $userEmail);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $document = $result instanceof mysqli_result ? $result->fetch_assoc() : null;
+        if ($result instanceof mysqli_result) {
+            mysqli_free_result($result);
+        }
+        $stmt->close();
+
+        if (!$document) {
+            return null;
+        }
+
+        $pdfFile = DteStorage::resolveStoredFile((string) ($document['pdf_path'] ?? ''));
+        $jsonFile = DteStorage::resolveStoredFile((string) ($document['json_path'] ?? ''));
+        $responseFile = DteStorage::resolveStoredFile((string) ($document['response_path'] ?? ''));
+
+        return [
+            'order_id' => (int) ($document['id'] ?? 0),
+            'billing_email' => (string) ($document['billing_email'] ?? ''),
+            'amount' => (float) ($document['total_amount'] ?? 0),
+            'date' => (string) (($document['paid_at'] ?? '') !== '' ? $document['paid_at'] : ($document['created_at'] ?? '')),
+            'status' => (string) ($document['estado'] ?? ''),
+            'sello_recibido' => (string) ($document['sello_recibido'] ?? ''),
+            'numero_control' => (string) ($document['numero_control'] ?? ''),
+            'codigo_generacion' => (string) ($document['codigo_generacion'] ?? ''),
+            'modo' => (string) ($document['modo'] ?? ''),
+            'descripcion_msg' => (string) ($document['descripcion_msg'] ?? ''),
+            'pdf_relative_path' => (string) ($pdfFile['relative_path'] ?? ''),
+            'pdf_absolute_path' => (string) ($pdfFile['absolute_path'] ?? ''),
+            'pdf_available' => !empty($pdfFile['exists']),
+            'json_relative_path' => (string) ($jsonFile['relative_path'] ?? ''),
+            'json_absolute_path' => (string) ($jsonFile['absolute_path'] ?? ''),
+            'json_available' => !empty($jsonFile['exists']),
+            'response_relative_path' => (string) ($responseFile['relative_path'] ?? ''),
+            'response_absolute_path' => (string) ($responseFile['absolute_path'] ?? ''),
+            'response_available' => !empty($responseFile['exists']),
         ];
     }
 }
