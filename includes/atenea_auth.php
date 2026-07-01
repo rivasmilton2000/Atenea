@@ -136,53 +136,37 @@ if (!function_exists('atenea_handle_session_timeout')) {
 if (!function_exists('atenea_db_has_column')) {
     function atenea_db_has_column(mysqli $db, string $table, string $column): bool
     {
-        static $cache = [];
-
-        $cacheKey = strtolower($table . '.' . $column);
-        if (array_key_exists($cacheKey, $cache)) {
-            return $cache[$cacheKey];
-        }
-
         $tableName = str_replace('`', '``', $table);
         $columnName = str_replace('`', '``', $column);
         $sql = "SHOW COLUMNS FROM `{$tableName}` LIKE '{$columnName}'";
         $result = mysqli_query($db, $sql);
-
-        $cache[$cacheKey] = $result instanceof mysqli_result && $result->num_rows > 0;
+        $exists = $result instanceof mysqli_result && $result->num_rows > 0;
 
         if ($result instanceof mysqli_result) {
             mysqli_free_result($result);
         }
 
-        return $cache[$cacheKey];
+        return $exists;
     }
 }
 
 if (!function_exists('atenea_db_has_table')) {
     function atenea_db_has_table(mysqli $db, string $table): bool
     {
-        static $cache = [];
-
         $table = trim($table);
         if ($table === '') {
             return false;
         }
 
-        $cacheKey = strtolower($table);
-        if (array_key_exists($cacheKey, $cache)) {
-            return $cache[$cacheKey];
-        }
-
         $tableName = str_replace('`', '``', $table);
         $result = mysqli_query($db, "SHOW TABLES LIKE '{$tableName}'");
-
-        $cache[$cacheKey] = $result instanceof mysqli_result && $result->num_rows > 0;
+        $exists = $result instanceof mysqli_result && $result->num_rows > 0;
 
         if ($result instanceof mysqli_result) {
             mysqli_free_result($result);
         }
 
-        return $cache[$cacheKey];
+        return $exists;
     }
 }
 
@@ -191,10 +175,6 @@ if (!function_exists('atenea_ensure_public_user_schema')) {
     {
         static $initialized = false;
 
-        if ($initialized && atenea_db_has_table($db, 'public_users')) {
-            return true;
-        }
-
         $sql = "CREATE TABLE IF NOT EXISTS `public_users` (
                     `PUBLIC_USER_ID` INT(11) NOT NULL AUTO_INCREMENT,
                     `USER_ID` INT(11) NOT NULL,
@@ -202,6 +182,20 @@ if (!function_exists('atenea_ensure_public_user_schema')) {
                     `LAST_NAME` VARCHAR(100) NOT NULL,
                     `EMAIL` VARCHAR(150) NOT NULL,
                     `PHONE_NUMBER` VARCHAR(25) DEFAULT NULL,
+                    `BIRTHDATE` DATE DEFAULT NULL,
+                    `PROFILE_PHOTO` VARCHAR(255) DEFAULT NULL,
+                    `GOOGLE_ID` VARCHAR(191) DEFAULT NULL,
+                    `GOOGLE_EMAIL` VARCHAR(150) DEFAULT NULL,
+                    `BILLING_NAME` VARCHAR(150) DEFAULT NULL,
+                    `BILLING_EMAIL` VARCHAR(150) DEFAULT NULL,
+                    `TIPO_DOCUMENTO` VARCHAR(10) DEFAULT NULL,
+                    `NUMERO_DOCUMENTO` VARCHAR(25) DEFAULT NULL,
+                    `BILLING_DEPARTAMENTO` VARCHAR(100) DEFAULT NULL,
+                    `BILLING_MUNICIPIO` VARCHAR(100) DEFAULT NULL,
+                    `BILLING_DISTRITO` VARCHAR(100) DEFAULT NULL,
+                    `BILLING_DIRECCION` TEXT DEFAULT NULL,
+                    `BILLING_NRC` VARCHAR(20) DEFAULT NULL,
+                    `BILLING_PROFILE_COMPLETED` TINYINT(1) NOT NULL DEFAULT 0,
                     `PLAN_STATUS` VARCHAR(30) NOT NULL DEFAULT 'pending',
                     `ACCOUNT_STATUS` TINYINT(1) NOT NULL DEFAULT 1,
                     `CREATED_AT` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -211,9 +205,48 @@ if (!function_exists('atenea_ensure_public_user_schema')) {
                     UNIQUE KEY `uq_public_users_email` (`EMAIL`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 
-        $initialized = mysqli_query($db, $sql) === true;
+        if (mysqli_query($db, $sql) !== true) {
+            return false;
+        }
 
-        return $initialized;
+        if (!atenea_db_has_table($db, 'public_users')) {
+            return false;
+        }
+
+        if (!$initialized) {
+            $columns = [
+                'BIRTHDATE' => 'DATE DEFAULT NULL AFTER `PHONE_NUMBER`',
+                'PROFILE_PHOTO' => 'VARCHAR(255) DEFAULT NULL AFTER `BIRTHDATE`',
+                'GOOGLE_ID' => 'VARCHAR(191) DEFAULT NULL AFTER `PROFILE_PHOTO`',
+                'GOOGLE_EMAIL' => 'VARCHAR(150) DEFAULT NULL AFTER `GOOGLE_ID`',
+                'BILLING_NAME' => 'VARCHAR(150) DEFAULT NULL AFTER `GOOGLE_EMAIL`',
+                'BILLING_EMAIL' => 'VARCHAR(150) DEFAULT NULL AFTER `BILLING_NAME`',
+                'TIPO_DOCUMENTO' => 'VARCHAR(10) DEFAULT NULL AFTER `BILLING_EMAIL`',
+                'NUMERO_DOCUMENTO' => 'VARCHAR(25) DEFAULT NULL AFTER `TIPO_DOCUMENTO`',
+                'BILLING_DEPARTAMENTO' => 'VARCHAR(100) DEFAULT NULL AFTER `NUMERO_DOCUMENTO`',
+                'BILLING_MUNICIPIO' => 'VARCHAR(100) DEFAULT NULL AFTER `BILLING_DEPARTAMENTO`',
+                'BILLING_DISTRITO' => 'VARCHAR(100) DEFAULT NULL AFTER `BILLING_MUNICIPIO`',
+                'BILLING_DIRECCION' => 'TEXT DEFAULT NULL AFTER `BILLING_DISTRITO`',
+                'BILLING_NRC' => 'VARCHAR(20) DEFAULT NULL AFTER `BILLING_DIRECCION`',
+                'BILLING_PROFILE_COMPLETED' => 'TINYINT(1) NOT NULL DEFAULT 0 AFTER `BILLING_NRC`',
+            ];
+
+            foreach ($columns as $column => $definition) {
+                if (atenea_db_has_column($db, 'public_users', $column)) {
+                    continue;
+                }
+
+                $columnName = str_replace('`', '``', $column);
+                $alter = "ALTER TABLE `public_users` ADD COLUMN `{$columnName}` {$definition}";
+                if (mysqli_query($db, $alter) !== true) {
+                    return false;
+                }
+            }
+
+            $initialized = true;
+        }
+
+        return true;
     }
 }
 
@@ -250,6 +283,16 @@ if (!function_exists('atenea_auth_select_sql')) {
         $birthdateExpr = atenea_public_user_select_expr($db, 'BIRTHDATE', 'BIRTHDATE', 'NULL');
         $googleIdExpr = atenea_public_user_select_expr($db, 'GOOGLE_ID', 'GOOGLE_ID');
         $googleEmailExpr = atenea_public_user_select_expr($db, 'GOOGLE_EMAIL', 'GOOGLE_EMAIL');
+        $billingNameExpr = atenea_public_user_select_expr($db, 'BILLING_NAME', 'BILLING_NAME');
+        $billingEmailExpr = atenea_public_user_select_expr($db, 'BILLING_EMAIL', 'BILLING_EMAIL');
+        $billingDocumentTypeExpr = atenea_public_user_select_expr($db, 'TIPO_DOCUMENTO', 'TIPO_DOCUMENTO');
+        $billingDocumentNumberExpr = atenea_public_user_select_expr($db, 'NUMERO_DOCUMENTO', 'NUMERO_DOCUMENTO');
+        $billingDepartmentExpr = atenea_public_user_select_expr($db, 'BILLING_DEPARTAMENTO', 'BILLING_DEPARTAMENTO');
+        $billingMunicipalityExpr = atenea_public_user_select_expr($db, 'BILLING_MUNICIPIO', 'BILLING_MUNICIPIO');
+        $billingDistrictExpr = atenea_public_user_select_expr($db, 'BILLING_DISTRITO', 'BILLING_DISTRITO');
+        $billingAddressExpr = atenea_public_user_select_expr($db, 'BILLING_DIRECCION', 'BILLING_DIRECCION');
+        $billingNrcExpr = atenea_public_user_select_expr($db, 'BILLING_NRC', 'BILLING_NRC');
+        $billingProfileCompletedExpr = atenea_public_user_select_expr($db, 'BILLING_PROFILE_COMPLETED', 'BILLING_PROFILE_COMPLETED', '0');
         $accountStatusExpr = atenea_public_user_select_expr($db, 'ACCOUNT_STATUS', 'PUBLIC_ACCOUNT_STATUS', '1');
         $createdAtExpr = atenea_public_user_select_expr($db, 'CREATED_AT', 'PUBLIC_CREATED_AT', 'NULL');
         $updatedAtExpr = atenea_public_user_select_expr($db, 'UPDATED_AT', 'PUBLIC_UPDATED_AT', 'NULL');
@@ -287,6 +330,16 @@ if (!function_exists('atenea_auth_select_sql')) {
                     {$birthdateExpr},
                     {$googleIdExpr},
                     {$googleEmailExpr},
+                    {$billingNameExpr},
+                    {$billingEmailExpr},
+                    {$billingDocumentTypeExpr},
+                    {$billingDocumentNumberExpr},
+                    {$billingDepartmentExpr},
+                    {$billingMunicipalityExpr},
+                    {$billingDistrictExpr},
+                    {$billingAddressExpr},
+                    {$billingNrcExpr},
+                    {$billingProfileCompletedExpr},
                     {$accountStatusExpr},
                     {$createdAtExpr},
                     {$updatedAtExpr},
@@ -543,6 +596,16 @@ if (!function_exists('atenea_apply_session_data')) {
         $_SESSION['PROFILE_PHOTO'] = (string) ($user['PROFILE_PHOTO'] ?? '');
         $_SESSION['BIRTHDATE'] = (string) ($user['BIRTHDATE'] ?? '');
         $_SESSION['GOOGLE_ID'] = (string) ($user['GOOGLE_ID'] ?? '');
+        $_SESSION['BILLING_NAME'] = (string) ($user['BILLING_NAME'] ?? '');
+        $_SESSION['BILLING_EMAIL'] = (string) ($user['BILLING_EMAIL'] ?? '');
+        $_SESSION['TIPO_DOCUMENTO'] = (string) ($user['TIPO_DOCUMENTO'] ?? '');
+        $_SESSION['NUMERO_DOCUMENTO'] = (string) ($user['NUMERO_DOCUMENTO'] ?? '');
+        $_SESSION['BILLING_DEPARTAMENTO'] = (string) ($user['BILLING_DEPARTAMENTO'] ?? '');
+        $_SESSION['BILLING_MUNICIPIO'] = (string) ($user['BILLING_MUNICIPIO'] ?? '');
+        $_SESSION['BILLING_DISTRITO'] = (string) ($user['BILLING_DISTRITO'] ?? '');
+        $_SESSION['BILLING_DIRECCION'] = (string) ($user['BILLING_DIRECCION'] ?? '');
+        $_SESSION['BILLING_NRC'] = (string) ($user['BILLING_NRC'] ?? '');
+        $_SESSION['BILLING_PROFILE_COMPLETED'] = (string) ($user['BILLING_PROFILE_COMPLETED'] ?? '0');
         $_SESSION['PUBLIC_ACCOUNT_STATUS'] = (string) ($user['PUBLIC_ACCOUNT_STATUS'] ?? '1');
         $_SESSION['PUBLIC_CREATED_AT'] = (string) ($user['PUBLIC_CREATED_AT'] ?? '');
         $_SESSION['PUBLIC_UPDATED_AT'] = (string) ($user['PUBLIC_UPDATED_AT'] ?? '');
@@ -576,6 +639,272 @@ if (!function_exists('atenea_apply_session_data')) {
         $_SESSION['GOOGLE_EMAIL'] = (string) ($providerMeta['email'] ?? ($user['GOOGLE_EMAIL'] ?? ''));
         $_SESSION['GOOGLE_SUB'] = (string) ($providerMeta['sub'] ?? ($user['GOOGLE_ID'] ?? ''));
         $_SESSION['last_activity'] = time();
+    }
+}
+
+if (!function_exists('atenea_profile_full_name')) {
+    function atenea_profile_full_name(string $firstName, string $lastName): string
+    {
+        return trim($firstName . ' ' . $lastName);
+    }
+}
+
+if (!function_exists('atenea_billing_clean_text')) {
+    function atenea_billing_clean_text($value, int $maxLength = 255): string
+    {
+        $value = trim((string) $value);
+        $value = preg_replace('/\s+/u', ' ', $value);
+
+        if (!is_string($value)) {
+            $value = '';
+        }
+
+        if ($maxLength > 0 && function_exists('mb_substr')) {
+            return mb_substr($value, 0, $maxLength);
+        }
+
+        return $maxLength > 0 ? substr($value, 0, $maxLength) : $value;
+    }
+}
+
+if (!function_exists('atenea_billing_clean_phone')) {
+    function atenea_billing_clean_phone($value): string
+    {
+        $value = trim((string) $value);
+        $value = preg_replace('/[^0-9+\s().-]/', '', $value);
+
+        return is_string($value) ? substr($value, 0, 25) : '';
+    }
+}
+
+if (!function_exists('atenea_billing_clean_nrc')) {
+    function atenea_billing_clean_nrc($value): string
+    {
+        $value = strtoupper(trim((string) $value));
+        $value = preg_replace('/[^0-9A-Z-]/', '', $value);
+
+        return is_string($value) ? substr($value, 0, 20) : '';
+    }
+}
+
+if (!function_exists('atenea_billing_normalize_document')) {
+    function atenea_billing_normalize_document(string $documentType, $documentNumber): string
+    {
+        $documentType = strtoupper(trim($documentType));
+        $digits = preg_replace('/\D+/', '', (string) $documentNumber);
+        if (!is_string($digits)) {
+            $digits = '';
+        }
+
+        if ($documentType === 'NIT') {
+            if (strlen($digits) !== 14) {
+                return '';
+            }
+
+            return substr($digits, 0, 4) . '-' . substr($digits, 4, 6) . '-' . substr($digits, 10, 3) . '-' . substr($digits, 13, 1);
+        }
+
+        if (strlen($digits) !== 9) {
+            return '';
+        }
+
+        return substr($digits, 0, 8) . '-' . substr($digits, 8, 1);
+    }
+}
+
+if (!function_exists('atenea_billing_profile_is_complete')) {
+    function atenea_billing_profile_is_complete(array $billingData): bool
+    {
+        return trim((string) ($billingData['phone_number'] ?? '')) !== ''
+            && trim((string) ($billingData['tipo_documento'] ?? '')) !== ''
+            && trim((string) ($billingData['numero_documento'] ?? '')) !== ''
+            && trim((string) ($billingData['billing_departamento'] ?? '')) !== ''
+            && trim((string) ($billingData['billing_municipio'] ?? '')) !== ''
+            && trim((string) ($billingData['billing_direccion'] ?? '')) !== '';
+    }
+}
+
+if (!function_exists('atenea_validate_billing_profile_input')) {
+    function atenea_validate_billing_profile_input(array $input, array $options = []): array
+    {
+        $defaults = [
+            'require_name' => false,
+            'require_email' => false,
+            'require_phone' => true,
+            'require_document' => true,
+            'require_location' => true,
+            'require_address' => true,
+        ];
+        $options = array_merge($defaults, $options);
+
+        $billingName = atenea_billing_clean_text($input['billing_name'] ?? $input['full_name'] ?? '', 150);
+        $billingEmail = strtolower(trim((string) ($input['billing_email'] ?? $input['email'] ?? '')));
+        $phoneNumber = atenea_billing_clean_phone($input['billing_phone'] ?? $input['phone_number'] ?? '');
+        $documentType = strtoupper(trim((string) ($input['billing_tipo_documento'] ?? $input['tipo_documento'] ?? '')));
+        $documentNumber = atenea_billing_normalize_document($documentType, $input['billing_numero_documento'] ?? $input['numero_documento'] ?? '');
+        $department = atenea_billing_clean_text($input['billing_departamento'] ?? '', 100);
+        $municipality = atenea_billing_clean_text($input['billing_municipio'] ?? '', 100);
+        $district = atenea_billing_clean_text($input['billing_distrito'] ?? '', 100);
+        $address = atenea_billing_clean_text($input['billing_address'] ?? $input['billing_direccion'] ?? '', 255);
+        $hasNrc = !empty($input['billing_has_nrc']) || trim((string) ($input['billing_nrc'] ?? '')) !== '';
+        $nrc = $hasNrc ? atenea_billing_clean_nrc($input['billing_nrc'] ?? '') : null;
+
+        $errors = [];
+
+        if (!empty($options['require_name']) && $billingName === '') {
+            $errors[] = 'Debes indicar el nombre para el comprobante.';
+        }
+
+        if (!empty($options['require_email'])) {
+            if ($billingEmail === '') {
+                $errors[] = 'Debes indicar el correo para el comprobante.';
+            } elseif (!filter_var($billingEmail, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = 'El correo para el comprobante no es válido.';
+            }
+        } elseif ($billingEmail !== '' && !filter_var($billingEmail, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'El correo para el comprobante no es válido.';
+        }
+
+        if (!empty($options['require_phone']) && $phoneNumber === '') {
+            $errors[] = 'Debes indicar un teléfono o WhatsApp.';
+        } elseif ($phoneNumber !== '' && !preg_match('/^[0-9+\s().-]{7,25}$/', $phoneNumber)) {
+            $errors[] = 'El teléfono o WhatsApp debe tener entre 7 y 25 caracteres válidos.';
+        }
+
+        if (!empty($options['require_document'])) {
+            if (!in_array($documentType, ['DUI', 'NIT'], true)) {
+                $errors[] = 'Debes seleccionar un tipo de documento válido.';
+            }
+
+            if ($documentNumber === '') {
+                $errors[] = $documentType === 'NIT'
+                    ? 'Debes ingresar un NIT válido en formato 0000-000000-000-0.'
+                    : 'Debes ingresar un DUI válido en formato 00000000-0.';
+            }
+        }
+
+        if (!empty($options['require_location'])) {
+            if ($department === '') {
+                $errors[] = 'Debes seleccionar el departamento.';
+            }
+
+            if ($municipality === '') {
+                $errors[] = 'Debes seleccionar el municipio.';
+            }
+        }
+
+        if (!empty($options['require_address']) && $address === '') {
+            $errors[] = 'Debes completar la dirección.';
+        }
+
+        if ($hasNrc && ($nrc === null || $nrc === '')) {
+            $errors[] = 'Debes indicar el NRC cuando compras como contribuyente o empresa inscrita en IVA.';
+        }
+
+        return [
+            'errors' => $errors,
+            'data' => [
+                'billing_name' => $billingName,
+                'billing_email' => $billingEmail,
+                'phone_number' => $phoneNumber,
+                'tipo_documento' => $documentType,
+                'numero_documento' => $documentNumber,
+                'billing_departamento' => $department,
+                'billing_municipio' => $municipality,
+                'billing_distrito' => $district,
+                'billing_direccion' => $address,
+                'billing_nrc' => $nrc,
+                'billing_has_nrc' => $hasNrc ? '1' : '',
+            ],
+        ];
+    }
+}
+
+if (!function_exists('atenea_sync_public_billing_profile')) {
+    function atenea_sync_public_billing_profile(mysqli $db, int $userId, array $billingData): void
+    {
+        atenea_ensure_public_user_schema($db);
+
+        if ($userId <= 0 || !atenea_db_has_table($db, 'public_users')) {
+            return;
+        }
+
+        $billingName = atenea_billing_clean_text($billingData['billing_name'] ?? '', 150);
+        $billingEmail = strtolower(trim((string) ($billingData['billing_email'] ?? '')));
+        $phoneNumber = atenea_billing_clean_phone($billingData['phone_number'] ?? '');
+        $documentType = strtoupper(trim((string) ($billingData['tipo_documento'] ?? '')));
+        $documentNumber = atenea_billing_normalize_document($documentType, $billingData['numero_documento'] ?? '');
+        $department = atenea_billing_clean_text($billingData['billing_departamento'] ?? '', 100);
+        $municipality = atenea_billing_clean_text($billingData['billing_municipio'] ?? '', 100);
+        $district = atenea_billing_clean_text($billingData['billing_distrito'] ?? '', 100);
+        $address = atenea_billing_clean_text($billingData['billing_direccion'] ?? '', 255);
+        $nrc = atenea_billing_clean_nrc($billingData['billing_nrc'] ?? '');
+        $completed = atenea_billing_profile_is_complete([
+            'phone_number' => $phoneNumber,
+            'tipo_documento' => $documentType,
+            'numero_documento' => $documentNumber,
+            'billing_departamento' => $department,
+            'billing_municipio' => $municipality,
+            'billing_direccion' => $address,
+        ]) ? 1 : 0;
+
+        $stmt = $db->prepare(
+            'UPDATE public_users
+             SET BILLING_NAME = ?,
+                 BILLING_EMAIL = ?,
+                 PHONE_NUMBER = ?,
+                 TIPO_DOCUMENTO = ?,
+                 NUMERO_DOCUMENTO = ?,
+                 BILLING_DEPARTAMENTO = ?,
+                 BILLING_MUNICIPIO = ?,
+                 BILLING_DISTRITO = ?,
+                 BILLING_DIRECCION = ?,
+                 BILLING_NRC = ?,
+                 BILLING_PROFILE_COMPLETED = ?
+             WHERE USER_ID = ?
+             LIMIT 1'
+        );
+
+        if (!$stmt) {
+            return;
+        }
+
+        $nrcValue = $nrc !== '' ? $nrc : null;
+        $stmt->bind_param(
+            'ssssssssssii',
+            $billingName,
+            $billingEmail,
+            $phoneNumber,
+            $documentType,
+            $documentNumber,
+            $department,
+            $municipality,
+            $district,
+            $address,
+            $nrcValue,
+            $completed,
+            $userId
+        );
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+if (!function_exists('atenea_sync_public_billing_profile_from_order')) {
+    function atenea_sync_public_billing_profile_from_order(mysqli $db, int $userId, array $order): void
+    {
+        atenea_sync_public_billing_profile($db, $userId, [
+            'billing_name' => (string) ($order['billing_name'] ?? ''),
+            'billing_email' => (string) ($order['billing_email'] ?? ''),
+            'phone_number' => (string) ($order['billing_telefono'] ?? ''),
+            'tipo_documento' => (string) ($order['billing_tipo_documento'] ?? ''),
+            'numero_documento' => (string) ($order['billing_numero_documento'] ?? ''),
+            'billing_departamento' => (string) ($order['billing_departamento'] ?? ''),
+            'billing_municipio' => (string) ($order['billing_municipio'] ?? ''),
+            'billing_distrito' => (string) ($order['billing_distrito'] ?? ''),
+            'billing_direccion' => (string) ($order['billing_address'] ?? ''),
+            'billing_nrc' => (string) ($order['billing_nrc'] ?? ''),
+        ]);
     }
 }
 

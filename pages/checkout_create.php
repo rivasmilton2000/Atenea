@@ -1,7 +1,79 @@
 <?php
 session_start();
+
 include '../includes/connection.php';
 include '../includes/stripe_config.php';
+require_once '../includes/atenea_auth.php';
+require_once '../includes/dte/DteSchema.php';
+
+if (!function_exists('atenea_checkout_redirect_error')) {
+    function atenea_checkout_redirect_error(string $message, array $formData = []): void
+    {
+        $_SESSION['checkout_form'] = $formData;
+        header('Location: carrito.php?checkout_error=' . urlencode($message));
+        exit();
+    }
+}
+
+if (!function_exists('atenea_checkout_clean_text')) {
+    function atenea_checkout_clean_text(string $value, int $maxLength): string
+    {
+        $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+
+        return function_exists('mb_substr')
+            ? mb_substr($value, 0, $maxLength, 'UTF-8')
+            : substr($value, 0, $maxLength);
+    }
+}
+
+if (!function_exists('atenea_checkout_clean_phone')) {
+    function atenea_checkout_clean_phone(string $value): string
+    {
+        $value = preg_replace('/[^0-9+\-\s()]/', '', trim($value)) ?? '';
+        $value = preg_replace('/\s+/', ' ', $value) ?? '';
+
+        return atenea_checkout_clean_text($value, 20);
+    }
+}
+
+if (!function_exists('atenea_checkout_clean_nrc')) {
+    function atenea_checkout_clean_nrc(string $value): string
+    {
+        $value = strtoupper(trim($value));
+        $value = preg_replace('/[^A-Z0-9-]/', '', $value) ?? '';
+
+        return atenea_checkout_clean_text($value, 20);
+    }
+}
+
+if (!function_exists('atenea_checkout_normalize_document')) {
+    function atenea_checkout_normalize_document(string $documentType, string $documentNumber): ?string
+    {
+        $documentType = strtoupper(trim($documentType));
+        $digits = preg_replace('/\D+/', '', $documentNumber) ?? '';
+
+        if ($documentType === 'DUI') {
+            if (strlen($digits) !== 9) {
+                return null;
+            }
+
+            return substr($digits, 0, 8) . '-' . substr($digits, 8, 1);
+        }
+
+        if ($documentType === 'NIT') {
+            if (strlen($digits) !== 14) {
+                return null;
+            }
+
+            return substr($digits, 0, 4)
+                . '-' . substr($digits, 4, 6)
+                . '-' . substr($digits, 10, 3)
+                . '-' . substr($digits, 13, 1);
+        }
+
+        return null;
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: carrito.php');
@@ -13,24 +85,50 @@ if (!isset($_SESSION['cart_session'])) {
     exit();
 }
 
-$session_id = $_SESSION['cart_session'];
-$billing_name = trim($_POST['billing_name'] ?? '');
-$billing_email = trim($_POST['billing_email'] ?? '');
-$billing_address = trim($_POST['billing_address'] ?? '');
+$formData = [
+    'billing_name' => trim((string) ($_POST['billing_name'] ?? '')),
+    'billing_email' => trim((string) ($_POST['billing_email'] ?? '')),
+    'billing_phone' => trim((string) ($_POST['billing_phone'] ?? '')),
+    'billing_tipo_documento' => strtoupper(trim((string) ($_POST['billing_tipo_documento'] ?? ''))),
+    'billing_numero_documento' => trim((string) ($_POST['billing_numero_documento'] ?? '')),
+    'billing_departamento' => trim((string) ($_POST['billing_departamento'] ?? '')),
+    'billing_municipio' => trim((string) ($_POST['billing_municipio'] ?? '')),
+    'billing_distrito' => trim((string) ($_POST['billing_distrito'] ?? '')),
+    'billing_address' => trim((string) ($_POST['billing_address'] ?? '')),
+    'billing_has_nrc' => !empty($_POST['billing_has_nrc']) ? '1' : '',
+    'billing_nrc' => trim((string) ($_POST['billing_nrc'] ?? '')),
+];
 
-if ($billing_name === '' || $billing_email === '' || $billing_address === '') {
-    header('Location: carrito.php?checkout_error=' . urlencode('Completa todos los datos de facturacion.'));
-    exit();
+try {
+    DteSchema::ensureOrderBillingColumns($db);
+} catch (Throwable $exception) {
+    atenea_checkout_redirect_error('No se pudo preparar la facturacion DTE para esta compra.', $formData);
 }
 
-if (!filter_var($billing_email, FILTER_VALIDATE_EMAIL)) {
-    header('Location: carrito.php?checkout_error=' . urlencode('El correo de facturacion no es valido.'));
-    exit();
+$sessionId = (string) $_SESSION['cart_session'];
+$billingValidation = atenea_validate_billing_profile_input($formData, [
+    'require_name' => true,
+    'require_email' => true,
+]);
+
+if ($billingValidation['errors'] !== []) {
+    atenea_checkout_redirect_error((string) $billingValidation['errors'][0], $formData);
 }
+
+$billingData = (array) ($billingValidation['data'] ?? []);
+$billingName = atenea_billing_clean_text($formData['billing_name'], 120);
+$billingEmail = strtolower(trim((string) ($billingData['billing_email'] ?? '')));
+$billingPhone = (string) ($billingData['phone_number'] ?? '');
+$billingDocumentType = (string) ($billingData['tipo_documento'] ?? '');
+$billingDocumentNumber = (string) ($billingData['numero_documento'] ?? '');
+$billingDepartment = (string) ($billingData['billing_departamento'] ?? '');
+$billingMunicipality = (string) ($billingData['billing_municipio'] ?? '');
+$billingDistrict = (string) ($billingData['billing_distrito'] ?? '');
+$billingAddress = (string) ($billingData['billing_direccion'] ?? '');
+$billingNrc = (string) ($billingData['billing_nrc'] ?? '');
 
 if (strpos(STRIPE_SECRET_KEY, 'sk_test_REEMPLAZA_AQUI') === 0) {
-    header('Location: carrito.php?checkout_error=' . urlencode('Debes configurar STRIPE_SECRET_KEY en includes/stripe_config.php.'));
-    exit();
+    atenea_checkout_redirect_error('Debes configurar STRIPE_SECRET_KEY en includes/stripe_config.php.', $formData);
 }
 
 $stmt = $db->prepare("
@@ -39,118 +137,152 @@ $stmt = $db->prepare("
     JOIN productos p ON c.producto_id = p.id
     WHERE c.session_id = ?
 ");
-$stmt->bind_param('s', $session_id);
+
+if (!$stmt) {
+    atenea_checkout_redirect_error('No se pudo leer el carrito actual.', $formData);
+}
+
+$stmt->bind_param('s', $sessionId);
 $stmt->execute();
 $result = $stmt->get_result();
 
-$cart_items = [];
+$cartItems = [];
 $subtotal = 0.0;
 
 while ($row = $result->fetch_assoc()) {
-    $precio = !empty($row['precio_descuento']) ? (float)$row['precio_descuento'] : (float)$row['precio'];
-    $cantidad = (int)$row['cantidad'];
-    $stock = (int)$row['stock'];
+    $price = !empty($row['precio_descuento']) ? (float) $row['precio_descuento'] : (float) $row['precio'];
+    $quantity = (int) $row['cantidad'];
+    $stock = (int) $row['stock'];
 
-    if ($cantidad < 1 || $cantidad > $stock) {
-        header('Location: carrito.php?checkout_error=' . urlencode('Hay productos sin stock suficiente. Ajusta tu carrito.'));
-        exit();
+    if ($quantity < 1 || $quantity > $stock) {
+        $stmt->close();
+        atenea_checkout_redirect_error('Hay productos sin stock suficiente. Ajusta tu carrito.', $formData);
     }
 
-    $line_subtotal = $precio * $cantidad;
-    $subtotal += $line_subtotal;
+    $lineSubtotal = $price * $quantity;
+    $subtotal += $lineSubtotal;
 
-    $cart_items[] = [
-        'producto_id' => (int)$row['producto_id'],
-        'nombre' => $row['nombre'],
-        'precio' => $precio,
-        'cantidad' => $cantidad,
-        'subtotal' => $line_subtotal,
+    $cartItems[] = [
+        'producto_id' => (int) $row['producto_id'],
+        'nombre' => (string) $row['nombre'],
+        'precio' => $price,
+        'cantidad' => $quantity,
+        'subtotal' => $lineSubtotal,
     ];
 }
 
-if (count($cart_items) === 0) {
-    header('Location: carrito.php?checkout_error=' . urlencode('Tu carrito esta vacio.'));
-    exit();
+$stmt->close();
+
+if ($cartItems === []) {
+    atenea_checkout_redirect_error('Tu carrito esta vacio.', $formData);
 }
 
-$envio = 5.00;
-$total = $subtotal + $envio;
+$shippingAmount = 5.00;
+$total = $subtotal + $shippingAmount;
 
 mysqli_begin_transaction($db);
 
 try {
-    $stmt_order = $db->prepare("
+    $stmtOrder = $db->prepare("
         INSERT INTO ordenes (
             session_id,
             billing_name,
             billing_email,
             billing_address,
+            billing_tipo_documento,
+            billing_numero_documento,
+            billing_telefono,
+            billing_departamento,
+            billing_municipio,
+            billing_distrito,
+            billing_nrc,
             subtotal,
             shipping_amount,
             total_amount,
             estado
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_payment')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment')
     ");
-    $stmt_order->bind_param(
-        'ssssddd',
-        $session_id,
-        $billing_name,
-        $billing_email,
-        $billing_address,
-        $subtotal,
-        $envio,
-        $total
-    );
 
-    if (!$stmt_order->execute()) {
+    if (!$stmtOrder) {
         throw new Exception('No se pudo crear la orden.');
     }
 
-    $order_id = (int)$db->insert_id;
+    $billingNrcForDb = $billingNrc !== '' ? $billingNrc : null;
+    $stmtOrder->bind_param(
+        'sssssssssssddd',
+        $sessionId,
+        $billingName,
+        $billingEmail,
+        $billingAddress,
+        $billingDocumentType,
+        $billingDocumentNumber,
+        $billingPhone,
+        $billingDepartment,
+        $billingMunicipality,
+        $billingDistrict,
+        $billingNrcForDb,
+        $subtotal,
+        $shippingAmount,
+        $total
+    );
 
-    $stmt_detail = $db->prepare("
+    if (!$stmtOrder->execute()) {
+        throw new Exception('No se pudo crear la orden.');
+    }
+
+    $orderId = (int) $db->insert_id;
+    $stmtOrder->close();
+
+    $stmtDetail = $db->prepare("
         INSERT INTO orden_detalles (orden_id, producto_id, producto_nombre, precio_unitario, cantidad, subtotal)
         VALUES (?, ?, ?, ?, ?, ?)
     ");
 
-    foreach ($cart_items as $item) {
-        $stmt_detail->bind_param(
+    if (!$stmtDetail) {
+        throw new Exception('No se pudo preparar el detalle de la orden.');
+    }
+
+    foreach ($cartItems as $item) {
+        $stmtDetail->bind_param(
             'iisdid',
-            $order_id,
+            $orderId,
             $item['producto_id'],
             $item['nombre'],
             $item['precio'],
             $item['cantidad'],
             $item['subtotal']
         );
-        if (!$stmt_detail->execute()) {
+
+        if (!$stmtDetail->execute()) {
             throw new Exception('No se pudo guardar el detalle de la orden.');
         }
     }
+
+    $stmtDetail->close();
 
     $payload = [
         'mode' => 'payment',
         'success_url' => APP_BASE_URL . '/pages/checkout_success.php?session_id={CHECKOUT_SESSION_ID}',
         'cancel_url' => APP_BASE_URL . '/pages/carrito.php?checkout_cancelled=1',
         'billing_address_collection' => 'required',
-        'customer_email' => $billing_email,
-        'metadata[order_id]' => (string)$order_id,
-        'metadata[cart_session]' => $session_id,
+        'customer_email' => $billingEmail,
+        'metadata[order_id]' => (string) $orderId,
+        'metadata[cart_session]' => $sessionId,
         'payment_method_types[0]' => 'card',
     ];
 
     $idx = 0;
-    foreach ($cart_items as $item) {
+    foreach ($cartItems as $item) {
         $payload['line_items[' . $idx . '][price_data][currency]'] = 'usd';
         $payload['line_items[' . $idx . '][price_data][product_data][name]'] = $item['nombre'];
-        $payload['line_items[' . $idx . '][price_data][unit_amount]'] = (int)round($item['precio'] * 100);
+        $payload['line_items[' . $idx . '][price_data][unit_amount]'] = (int) round($item['precio'] * 100);
         $payload['line_items[' . $idx . '][quantity]'] = $item['cantidad'];
         $idx++;
     }
 
     $payload['line_items[' . $idx . '][price_data][currency]'] = 'usd';
     $payload['line_items[' . $idx . '][price_data][product_data][name]'] = 'Envio';
-    $payload['line_items[' . $idx . '][price_data][unit_amount]'] = (int)round($envio * 100);
+    $payload['line_items[' . $idx . '][price_data][unit_amount]'] = (int) round($shippingAmount * 100);
     $payload['line_items[' . $idx . '][quantity]'] = 1;
 
     $ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
@@ -159,33 +291,38 @@ try {
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer ' . STRIPE_SECRET_KEY,
-        'Content-Type: application/x-www-form-urlencoded'
+        'Content-Type: application/x-www-form-urlencoded',
     ]);
 
-    $stripe_response = curl_exec($ch);
-    $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $stripeResponse = curl_exec($ch);
+    $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    $session_data = json_decode((string)$stripe_response, true);
+    $sessionData = json_decode((string) $stripeResponse, true);
 
-    if ($http_status < 200 || $http_status >= 300 || empty($session_data['id']) || empty($session_data['url'])) {
+    if ($httpStatus < 200 || $httpStatus >= 300 || empty($sessionData['id']) || empty($sessionData['url'])) {
         throw new Exception('Stripe no pudo iniciar el pago.');
     }
 
-    $stripe_session_id = $session_data['id'];
+    $stripeSessionId = (string) $sessionData['id'];
 
-    $stmt_update = $db->prepare("UPDATE ordenes SET stripe_session_id = ? WHERE id = ?");
-    $stmt_update->bind_param('si', $stripe_session_id, $order_id);
-    if (!$stmt_update->execute()) {
+    $stmtUpdate = $db->prepare('UPDATE ordenes SET stripe_session_id = ? WHERE id = ?');
+    if (!$stmtUpdate) {
         throw new Exception('No se pudo guardar la sesion de Stripe.');
     }
 
-    mysqli_commit($db);
-    header('Location: ' . $session_data['url']);
-    exit();
-} catch (Throwable $e) {
-    mysqli_rollback($db);
-    header('Location: carrito.php?checkout_error=' . urlencode($e->getMessage()));
-    exit();
-}
+    $stmtUpdate->bind_param('si', $stripeSessionId, $orderId);
+    if (!$stmtUpdate->execute()) {
+        throw new Exception('No se pudo guardar la sesion de Stripe.');
+    }
+    $stmtUpdate->close();
 
+    mysqli_commit($db);
+    unset($_SESSION['checkout_form']);
+
+    header('Location: ' . $sessionData['url']);
+    exit();
+} catch (Throwable $exception) {
+    mysqli_rollback($db);
+    atenea_checkout_redirect_error($exception->getMessage(), $formData);
+}

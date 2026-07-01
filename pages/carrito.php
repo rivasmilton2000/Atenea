@@ -24,14 +24,48 @@ $envio = 5.00;
 $checkout_error = isset($_GET['checkout_error']) ? trim((string) $_GET['checkout_error']) : '';
 $checkout_ok = isset($_GET['checkout_ok']) ? trim((string) $_GET['checkout_ok']) : '';
 $checkout_cancelled = isset($_GET['checkout_cancelled']) ? trim((string) $_GET['checkout_cancelled']) : '';
-$billing_name_prefill = trim((string) ($_SESSION['nombres_estudiante'] ?? '') . ' ' . (string) ($_SESSION['apellidos_estudiante'] ?? ''));
+$checkout_form_prefill = $_SESSION['checkout_form'] ?? [];
+unset($_SESSION['checkout_form']);
+
+$billing_name_prefill = trim((string) ($_SESSION['BILLING_NAME'] ?? ''));
+
+if ($billing_name_prefill === '') {
+    $billing_name_prefill = trim((string) ($_SESSION['nombres_estudiante'] ?? '') . ' ' . (string) ($_SESSION['apellidos_estudiante'] ?? ''));
+}
 
 if ($billing_name_prefill === '') {
     $billing_name_prefill = trim((string) ($_SESSION['FIRST_NAME'] ?? '') . ' ' . (string) ($_SESSION['LAST_NAME'] ?? ''));
 }
 
-$billing_email_prefill = trim((string) ($_SESSION['correo_estudiante'] ?? ($_SESSION['EMAIL'] ?? '')));
-$billing_address_prefill = trim((string) ($_SESSION['direccion_estudiante'] ?? ''));
+$billing_email_prefill = trim((string) ($_SESSION['BILLING_EMAIL'] ?? ''));
+
+if ($billing_email_prefill === '') {
+    $billing_email_prefill = trim((string) ($_SESSION['correo_estudiante'] ?? ($_SESSION['EMAIL'] ?? '')));
+}
+
+$billing_phone_prefill = trim((string) ($_SESSION['PHONE_NUMBER'] ?? ''));
+$billing_department_prefill = trim((string) ($_SESSION['BILLING_DEPARTAMENTO'] ?? ($_SESSION['PROVINCE'] ?? '')));
+$billing_municipality_prefill = trim((string) ($_SESSION['BILLING_MUNICIPIO'] ?? ($_SESSION['CITY'] ?? '')));
+$billing_district_prefill = trim((string) ($_SESSION['BILLING_DISTRITO'] ?? ''));
+$billing_address_prefill = trim((string) ($_SESSION['BILLING_DIRECCION'] ?? ($_SESSION['direccion_estudiante'] ?? '')));
+$billing_document_type_prefill = trim((string) ($_SESSION['TIPO_DOCUMENTO'] ?? 'DUI'));
+$billing_document_number_prefill = trim((string) ($_SESSION['NUMERO_DOCUMENTO'] ?? ''));
+$billing_nrc_prefill = trim((string) ($_SESSION['BILLING_NRC'] ?? ''));
+$billing_has_nrc_prefill = $billing_nrc_prefill !== '' ? '1' : '';
+
+if (is_array($checkout_form_prefill)) {
+    $billing_name_prefill = trim((string) ($checkout_form_prefill['billing_name'] ?? $billing_name_prefill));
+    $billing_email_prefill = trim((string) ($checkout_form_prefill['billing_email'] ?? $billing_email_prefill));
+    $billing_phone_prefill = trim((string) ($checkout_form_prefill['billing_phone'] ?? $billing_phone_prefill));
+    $billing_department_prefill = trim((string) ($checkout_form_prefill['billing_departamento'] ?? $billing_department_prefill));
+    $billing_municipality_prefill = trim((string) ($checkout_form_prefill['billing_municipio'] ?? $billing_municipality_prefill));
+    $billing_district_prefill = trim((string) ($checkout_form_prefill['billing_distrito'] ?? $billing_district_prefill));
+    $billing_address_prefill = trim((string) ($checkout_form_prefill['billing_address'] ?? $billing_address_prefill));
+    $billing_document_type_prefill = trim((string) ($checkout_form_prefill['billing_tipo_documento'] ?? $billing_document_type_prefill));
+    $billing_document_number_prefill = trim((string) ($checkout_form_prefill['billing_numero_documento'] ?? ''));
+    $billing_nrc_prefill = trim((string) ($checkout_form_prefill['billing_nrc'] ?? ''));
+    $billing_has_nrc_prefill = !empty($checkout_form_prefill['billing_has_nrc']) ? '1' : '';
+}
 ?>
 
 <?php include '../includes/head_home.php'; ?>
@@ -133,7 +167,18 @@ $billing_address_prefill = trim((string) ($_SESSION['direccion_estudiante'] ?? '
                   <h5 class="font-weight-bold">Total</h5>
                   <h5 class="font-weight-bold">$<?php echo number_format($total + $envio, 2); ?></h5>
                 </div>
-                <form method="POST" action="checkout_create.php" class="mb-2" data-atenea-loading-form data-loader-text="Preparando pago seguro...">
+                <div class="mb-3">
+                  <h5 class="mb-1">Confirma tus datos de pago</h5>
+                  <p class="text-muted mb-0">Usaremos estos datos para generar tu comprobante de compra. Puedes editarlos antes de pagar.</p>
+                </div>
+                <form
+                  method="POST"
+                  action="checkout_create.php"
+                  class="mb-2"
+                  data-atenea-loading-form
+                  data-loader-text="Preparando pago seguro..."
+                  data-atenea-billing-form
+                >
                   <div class="form-group">
                     <label for="billing_name">Nombre completo</label>
                     <input id="billing_name" name="billing_name" type="text" class="form-control" required maxlength="120" value="<?php echo htmlspecialchars($billing_name_prefill); ?>">
@@ -143,8 +188,87 @@ $billing_address_prefill = trim((string) ($_SESSION['direccion_estudiante'] ?? '
                     <input id="billing_email" name="billing_email" type="email" class="form-control" required maxlength="150" value="<?php echo htmlspecialchars($billing_email_prefill); ?>">
                   </div>
                   <div class="form-group">
-                    <label for="billing_address">Dirección de facturación</label>
+                    <label for="billing_phone">Telefono</label>
+                    <input id="billing_phone" name="billing_phone" type="text" class="form-control" required maxlength="20" value="<?php echo htmlspecialchars($billing_phone_prefill); ?>" placeholder="0000-0000">
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group col-md-4">
+                      <label for="billing_tipo_documento">Tipo de documento</label>
+                      <select id="billing_tipo_documento" name="billing_tipo_documento" class="form-control" data-document-type required>
+                        <option value="DUI" <?php echo $billing_document_type_prefill === 'DUI' ? 'selected' : ''; ?>>DUI</option>
+                        <option value="NIT" <?php echo $billing_document_type_prefill === 'NIT' ? 'selected' : ''; ?>>NIT</option>
+                      </select>
+                    </div>
+                    <div class="form-group col-md-8">
+                      <label for="billing_numero_documento">Numero de documento</label>
+                      <input
+                        id="billing_numero_documento"
+                        name="billing_numero_documento"
+                        type="text"
+                        class="form-control"
+                        data-document-number
+                        required
+                        maxlength="25"
+                        value="<?php echo htmlspecialchars($billing_document_number_prefill); ?>"
+                      >
+                      <small id="billing_numero_documento_help" class="form-text text-muted" data-document-help>Ingresa tu DUI o NIT para generar el DTE.</small>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group col-md-6">
+                      <label for="billing_departamento">Departamento</label>
+                      <select
+                        id="billing_departamento"
+                        name="billing_departamento"
+                        class="form-control"
+                        data-billing-department
+                        data-selected="<?php echo htmlspecialchars($billing_department_prefill); ?>"
+                        required
+                      ></select>
+                    </div>
+                    <div class="form-group col-md-6">
+                      <label for="billing_municipio">Municipio</label>
+                      <select
+                        id="billing_municipio"
+                        name="billing_municipio"
+                        class="form-control"
+                        data-billing-municipality
+                        data-selected="<?php echo htmlspecialchars($billing_municipality_prefill); ?>"
+                        required
+                      ></select>
+                    </div>
+                  </div>
+                  <input type="hidden" name="billing_distrito" value="<?php echo htmlspecialchars($billing_district_prefill); ?>" data-billing-district>
+                  <div class="form-group">
+                    <label for="billing_address">Direccion completa</label>
                     <textarea id="billing_address" name="billing_address" class="form-control" rows="2" required maxlength="255"><?php echo htmlspecialchars($billing_address_prefill); ?></textarea>
+                  </div>
+                  <div class="form-group border rounded p-3 bg-light">
+                    <div class="custom-control custom-checkbox">
+                      <input
+                        id="billing_has_nrc"
+                        name="billing_has_nrc"
+                        type="checkbox"
+                        class="custom-control-input"
+                        data-billing-nrc-toggle
+                        value="1"
+                        <?php echo $billing_has_nrc_prefill === '1' ? 'checked' : ''; ?>
+                      >
+                      <label class="custom-control-label" for="billing_has_nrc">Compro como contribuyente o empresa inscrita en IVA</label>
+                    </div>
+                    <small class="form-text text-muted mb-2">NRC solo aplica si compras como contribuyente o empresa inscrita en IVA. Si compras como persona natural, puedes dejarlo vacio.</small>
+                    <div data-billing-nrc-group>
+                      <input
+                        id="billing_nrc"
+                        name="billing_nrc"
+                        type="text"
+                        class="form-control"
+                        data-billing-nrc-input
+                        maxlength="20"
+                        value="<?php echo htmlspecialchars($billing_nrc_prefill); ?>"
+                        placeholder="NRC"
+                      >
+                    </div>
                   </div>
                   <button type="submit" class="btn btn-primary btn-block">Proceder al pago</button>
                 </form>
@@ -173,6 +297,8 @@ $billing_address_prefill = trim((string) ($_SESSION['direccion_estudiante'] ?? '
   <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/sv-location-catalog.js"></script>
+  <script src="../js/atenea-billing.js"></script>
 
   <script>
     function actualizarCantidad(itemId, cambio) {

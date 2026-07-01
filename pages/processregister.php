@@ -9,30 +9,38 @@ if (!function_exists('atenea_register_password_errors')) {
         $errors = [];
 
         if (strlen($password) < 8) {
-            $errors[] = 'La contraseña debe tener al menos 8 caracteres.';
+            $errors[] = 'La contrasena debe tener al menos 8 caracteres.';
         }
 
         if (!preg_match('/[A-Z]/', $password)) {
-            $errors[] = 'La contraseña debe incluir al menos una letra mayúscula.';
+            $errors[] = 'La contrasena debe incluir al menos una letra mayuscula.';
         }
 
         if (!preg_match('/[a-z]/', $password)) {
-            $errors[] = 'La contraseña debe incluir al menos una letra minúscula.';
+            $errors[] = 'La contrasena debe incluir al menos una letra minuscula.';
         }
 
         if (!preg_match('/\d/', $password)) {
-            $errors[] = 'La contraseña debe incluir al menos un número.';
+            $errors[] = 'La contrasena debe incluir al menos un numero.';
         }
 
         if (!preg_match('/[^A-Za-z0-9]/', $password)) {
-            $errors[] = 'La contraseña debe incluir al menos un símbolo.';
+            $errors[] = 'La contrasena debe incluir al menos un simbolo.';
         }
 
         if ($password !== $confirmPassword) {
-            $errors[] = 'La confirmación de la contraseña no coincide.';
+            $errors[] = 'La confirmacion de la contrasena no coincide.';
         }
 
         return $errors;
+    }
+}
+
+if (!function_exists('atenea_register_fail')) {
+    function atenea_register_fail(string $title, string $message, string $icon, array $formData): void
+    {
+        $_SESSION['register_form'] = $formData;
+        atenea_render_auth_alert($icon, $title, $message, 'registro.php');
     }
 }
 
@@ -51,58 +59,80 @@ $birthdate = trim((string) ($_POST['birthdate'] ?? ''));
 $username = trim((string) ($_POST['username'] ?? ''));
 $password = (string) ($_POST['password'] ?? '');
 $passwordConfirm = (string) ($_POST['password_confirm'] ?? '');
+$formData = [
+    'first_name' => $firstName,
+    'last_name' => $lastName,
+    'email' => $email,
+    'phone_number' => $phoneNumber,
+    'birthdate' => $birthdate,
+    'username' => $username,
+    'billing_tipo_documento' => strtoupper(trim((string) ($_POST['billing_tipo_documento'] ?? ''))),
+    'billing_numero_documento' => trim((string) ($_POST['billing_numero_documento'] ?? '')),
+    'billing_departamento' => trim((string) ($_POST['billing_departamento'] ?? '')),
+    'billing_municipio' => trim((string) ($_POST['billing_municipio'] ?? '')),
+    'billing_distrito' => trim((string) ($_POST['billing_distrito'] ?? '')),
+    'billing_address' => trim((string) ($_POST['billing_address'] ?? '')),
+];
 
 if ($firstName === '' || $lastName === '' || $email === '' || $username === '' || $password === '' || $passwordConfirm === '') {
-    atenea_render_auth_alert('warning', 'Completa el registro', 'Debes llenar todos los campos obligatorios para crear tu cuenta.', 'registro.php');
+    atenea_register_fail('Completa el registro', 'Debes llenar todos los campos obligatorios para crear tu cuenta.', 'warning', $formData);
 }
 
 if (!preg_match("/^[\p{L}\p{M}\s'.-]{2,100}$/u", $firstName) || !preg_match("/^[\p{L}\p{M}\s'.-]{2,100}$/u", $lastName)) {
-    atenea_render_auth_alert('warning', 'Nombre no válido', 'Los nombres y apellidos deben contener únicamente letras, espacios y signos básicos.', 'registro.php');
+    atenea_register_fail('Nombre no valido', 'Los nombres y apellidos deben contener unicamente letras, espacios y signos basicos.', 'warning', $formData);
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    atenea_render_auth_alert('warning', 'Correo inválido', 'Escribe un correo electrónico válido para continuar.', 'registro.php');
-}
-
-if ($phoneNumber !== '' && !preg_match('/^[0-9+\s().-]{7,25}$/', $phoneNumber)) {
-    atenea_render_auth_alert('warning', 'Teléfono no válido', 'El teléfono o WhatsApp debe tener entre 7 y 25 caracteres válidos.', 'registro.php');
+    atenea_register_fail('Correo invalido', 'Escribe un correo electronico valido para continuar.', 'warning', $formData);
 }
 
 if (!preg_match('/^[A-Za-z0-9._-]{4,50}$/', $username)) {
-    atenea_render_auth_alert('warning', 'Usuario no válido', 'El nombre de usuario debe tener al menos 4 caracteres y solo puede usar letras, números, punto, guion o guion bajo.', 'registro.php');
+    atenea_register_fail('Usuario no valido', 'El nombre de usuario debe tener al menos 4 caracteres y solo puede usar letras, numeros, punto, guion o guion bajo.', 'warning', $formData);
+}
+
+$billingValidation = atenea_validate_billing_profile_input($formData, [
+    'require_name' => false,
+    'require_email' => false,
+]);
+if ($billingValidation['errors'] !== []) {
+    atenea_register_fail('Datos de facturacion incompletos', (string) $billingValidation['errors'][0], 'warning', $formData);
 }
 
 $passwordErrors = atenea_register_password_errors($password, $passwordConfirm);
 if ($passwordErrors !== []) {
-    atenea_render_auth_alert('warning', 'Contraseña no válida', implode(' ', $passwordErrors), 'registro.php');
+    atenea_register_fail('Contrasena no valida', implode(' ', $passwordErrors), 'warning', $formData);
 }
 
 $birthdateValue = null;
 if ($birthdate !== '') {
     $birthdateTimestamp = strtotime($birthdate);
     if ($birthdateTimestamp === false) {
-        atenea_render_auth_alert('warning', 'Fecha no válida', 'La fecha de nacimiento no tiene un formato válido.', 'registro.php');
+        atenea_register_fail('Fecha no valida', 'La fecha de nacimiento no tiene un formato valido.', 'warning', $formData);
     }
 
     if ($birthdateTimestamp > time()) {
-        atenea_render_auth_alert('warning', 'Fecha no válida', 'La fecha de nacimiento no puede estar en el futuro.', 'registro.php');
+        atenea_register_fail('Fecha no valida', 'La fecha de nacimiento no puede estar en el futuro.', 'warning', $formData);
     }
 
     $birthdateValue = date('Y-m-d', $birthdateTimestamp);
 }
 
 if (atenea_username_exists($db, $username)) {
-    atenea_render_auth_alert('error', 'Usuario ocupado', 'Ese nombre de usuario ya está registrado. Prueba con otro diferente.', 'registro.php');
+    atenea_register_fail('Usuario ocupado', 'Ese nombre de usuario ya esta registrado. Prueba con otro diferente.', 'error', $formData);
 }
 
 if (atenea_email_exists_for_any_account($db, $email)) {
-    atenea_render_auth_alert('error', 'Correo en uso', 'Ese correo ya está vinculado a otra cuenta dentro de Atenea.', 'registro.php');
+    atenea_register_fail('Correo en uso', 'Ese correo ya esta vinculado a otra cuenta dentro de Atenea.', 'error', $formData);
 }
+
+$billingData = (array) ($billingValidation['data'] ?? []);
+$billingName = atenea_profile_full_name($firstName, $lastName);
+$billingNrc = trim((string) ($billingData['billing_nrc'] ?? '')) !== '' ? (string) $billingData['billing_nrc'] : null;
+$billingProfileCompleted = atenea_billing_profile_is_complete($billingData) ? 1 : 0;
 
 mysqli_begin_transaction($db);
 
 try {
-    // TODO: Migrar este almacenamiento heredado de SHA1 a password_hash/password_verify.
     $passwordHash = sha1($password);
 
     if (atenea_db_has_column($db, 'users', 'U_ESTADO')) {
@@ -124,42 +154,65 @@ try {
     $stmtUser->close();
 
     $planStatus = 'pending';
-    $hasBirthdateColumn = atenea_db_has_column($db, 'public_users', 'BIRTHDATE');
+    $stmtPublic = $db->prepare(
+        'INSERT INTO public_users (
+            USER_ID,
+            FIRST_NAME,
+            LAST_NAME,
+            EMAIL,
+            PHONE_NUMBER,
+            BIRTHDATE,
+            BILLING_NAME,
+            BILLING_EMAIL,
+            TIPO_DOCUMENTO,
+            NUMERO_DOCUMENTO,
+            BILLING_DEPARTAMENTO,
+            BILLING_MUNICIPIO,
+            BILLING_DISTRITO,
+            BILLING_DIRECCION,
+            BILLING_NRC,
+            BILLING_PROFILE_COMPLETED,
+            PLAN_STATUS,
+            ACCOUNT_STATUS
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
+    );
 
-    if ($hasBirthdateColumn) {
-        $stmtPublic = $db->prepare(
-            'INSERT INTO public_users (USER_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, BIRTHDATE, PLAN_STATUS, ACCOUNT_STATUS)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
-        );
-
-        if (!$stmtPublic) {
-            throw new Exception('No se pudo preparar el perfil del usuario.');
-        }
-
-        $stmtPublic->bind_param('issssss', $userId, $firstName, $lastName, $email, $phoneNumber, $birthdateValue, $planStatus);
-    } else {
-        $stmtPublic = $db->prepare(
-            'INSERT INTO public_users (USER_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, PLAN_STATUS, ACCOUNT_STATUS)
-             VALUES (?, ?, ?, ?, ?, ?, 1)'
-        );
-
-        if (!$stmtPublic) {
-            throw new Exception('No se pudo preparar el perfil del usuario.');
-        }
-
-        $stmtPublic->bind_param('isssss', $userId, $firstName, $lastName, $email, $phoneNumber, $planStatus);
+    if (!$stmtPublic) {
+        throw new Exception('No se pudo preparar el perfil del usuario.');
     }
 
+    $stmtPublic->bind_param(
+        'issssssssssssssis',
+        $userId,
+        $firstName,
+        $lastName,
+        $email,
+        $billingData['phone_number'],
+        $birthdateValue,
+        $billingName,
+        $email,
+        $billingData['tipo_documento'],
+        $billingData['numero_documento'],
+        $billingData['billing_departamento'],
+        $billingData['billing_municipio'],
+        $billingData['billing_distrito'],
+        $billingData['billing_direccion'],
+        $billingNrc,
+        $billingProfileCompleted,
+        $planStatus
+    );
+
     if (!$stmtPublic->execute()) {
-        throw new Exception('No se pudo guardar la información del usuario.');
+        throw new Exception('No se pudo guardar la informacion del usuario.');
     }
 
     $stmtPublic->close();
     mysqli_commit($db);
+    unset($_SESSION['register_form']);
 
     $user = atenea_fetch_user_by_credentials($db, $username, $passwordHash);
     if (!$user) {
-        throw new Exception('La cuenta fue creada, pero no se pudo iniciar sesión automáticamente.');
+        throw new Exception('La cuenta fue creada, pero no se pudo iniciar sesion automaticamente.');
     }
 
     session_regenerate_id(true);
@@ -173,5 +226,5 @@ try {
     );
 } catch (Throwable $exception) {
     mysqli_rollback($db);
-    atenea_render_auth_alert('error', 'Registro no completado', $exception->getMessage(), 'registro.php');
+    atenea_register_fail('Registro no completado', $exception->getMessage(), 'error', $formData);
 }

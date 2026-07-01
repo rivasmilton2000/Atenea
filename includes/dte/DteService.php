@@ -184,15 +184,20 @@ class DteService
     public static function buildReceiverProfileForUser(array $profile): array
     {
         return [
-            'nombre' => trim((string) ($profile['FIRST_NAME'] ?? '') . ' ' . (string) ($profile['LAST_NAME'] ?? '')),
-            'correo' => trim((string) ($profile['EMAIL'] ?? '')),
+            'nombre' => trim((string) ($profile['BILLING_NAME'] ?? '')) !== ''
+                ? trim((string) ($profile['BILLING_NAME'] ?? ''))
+                : trim((string) ($profile['FIRST_NAME'] ?? '') . ' ' . (string) ($profile['LAST_NAME'] ?? '')),
+            'correo' => trim((string) ($profile['BILLING_EMAIL'] ?? '')) !== ''
+                ? trim((string) ($profile['BILLING_EMAIL'] ?? ''))
+                : trim((string) ($profile['EMAIL'] ?? '')),
             'telefono' => trim((string) ($profile['PHONE_NUMBER'] ?? '')),
-            'direccion' => trim((string) ($profile['direccion_estudiante'] ?? '')),
-            'municipio' => '',
-            'departamento' => '',
-            'tipo_documento' => '',
-            'numero_documento' => '',
-            'nrc' => '',
+            'direccion' => trim((string) ($profile['BILLING_DIRECCION'] ?? ($profile['direccion_estudiante'] ?? ''))),
+            'municipio' => trim((string) ($profile['BILLING_MUNICIPIO'] ?? '')),
+            'departamento' => trim((string) ($profile['BILLING_DEPARTAMENTO'] ?? '')),
+            'distrito' => trim((string) ($profile['BILLING_DISTRITO'] ?? '')),
+            'tipo_documento' => trim((string) ($profile['TIPO_DOCUMENTO'] ?? '')),
+            'numero_documento' => trim((string) ($profile['NUMERO_DOCUMENTO'] ?? '')),
+            'nrc' => trim((string) ($profile['BILLING_NRC'] ?? '')),
             'cod_actividad' => '',
             'desc_actividad' => '',
         ];
@@ -219,7 +224,9 @@ class DteService
 
     private static function loadOrder(mysqli $db, int $orderId): array
     {
-        $sql = 'SELECT id, session_id, stripe_session_id, stripe_payment_intent, billing_name, billing_email, billing_address, subtotal, shipping_amount, total_amount, paid_at, created_at
+        $sql = 'SELECT id, session_id, stripe_session_id, stripe_payment_intent, billing_name, billing_email, billing_address,
+                       billing_tipo_documento, billing_numero_documento, billing_telefono, billing_departamento, billing_municipio, billing_distrito, billing_nrc,
+                       subtotal, shipping_amount, total_amount, paid_at, created_at
                 FROM ordenes
                 WHERE id = ?
                 LIMIT 1';
@@ -281,9 +288,9 @@ class DteService
             return null;
         }
 
-        $stmt = $db->prepare('SELECT USER_ID FROM public_users WHERE LOWER(EMAIL) = LOWER(?) LIMIT 1');
+        $stmt = $db->prepare('SELECT USER_ID FROM public_users WHERE LOWER(EMAIL) = LOWER(?) OR LOWER(BILLING_EMAIL) = LOWER(?) LIMIT 1');
         if ($stmt) {
-            $stmt->bind_param('s', $email);
+            $stmt->bind_param('ss', $email, $email);
             $stmt->execute();
             $result = $stmt->get_result();
             $row = $result instanceof mysqli_result ? $result->fetch_assoc() : null;
@@ -305,13 +312,14 @@ class DteService
         $profile = [
             'nombre' => trim((string) ($order['billing_name'] ?? '')),
             'correo' => trim((string) ($order['billing_email'] ?? '')),
-            'telefono' => '',
+            'telefono' => trim((string) ($order['billing_telefono'] ?? '')),
             'direccion' => trim((string) ($order['billing_address'] ?? '')),
-            'municipio' => '',
-            'departamento' => '',
-            'tipo_documento' => '',
-            'numero_documento' => '',
-            'nrc' => '',
+            'municipio' => trim((string) ($order['billing_municipio'] ?? '')),
+            'departamento' => trim((string) ($order['billing_departamento'] ?? '')),
+            'distrito' => trim((string) ($order['billing_distrito'] ?? '')),
+            'tipo_documento' => trim((string) ($order['billing_tipo_documento'] ?? '')),
+            'numero_documento' => trim((string) ($order['billing_numero_documento'] ?? '')),
+            'nrc' => trim((string) ($order['billing_nrc'] ?? '')),
             'cod_actividad' => '',
             'desc_actividad' => '',
         ];
@@ -319,7 +327,11 @@ class DteService
         if ($userId !== null && $userId > 0 && function_exists('atenea_fetch_user_by_id')) {
             $user = atenea_fetch_user_by_id($db, $userId);
             if (is_array($user)) {
-                $profile = array_merge($profile, self::buildReceiverProfileForUser($user));
+                foreach (self::buildReceiverProfileForUser($user) as $key => $value) {
+                    if (trim((string) ($profile[$key] ?? '')) === '' && trim((string) $value) !== '') {
+                        $profile[$key] = $value;
+                    }
+                }
             }
         }
 

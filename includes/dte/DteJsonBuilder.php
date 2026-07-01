@@ -70,16 +70,19 @@ class DteJsonBuilder
         }
 
         $receiverAddress = trim((string) ($receiverProfile['direccion'] ?? $order['billing_address'] ?? ''));
-        $receiverDepartment = trim((string) ($receiverProfile['departamento'] ?? ''));
-        $receiverMunicipality = trim((string) ($receiverProfile['municipio'] ?? ''));
-        $receiverPhone = trim((string) ($receiverProfile['telefono'] ?? ''));
+        $receiverDepartment = trim((string) ($receiverProfile['departamento'] ?? ($order['billing_departamento'] ?? '')));
+        $receiverMunicipality = trim((string) ($receiverProfile['municipio'] ?? ($order['billing_municipio'] ?? '')));
+        $receiverDistrict = trim((string) ($receiverProfile['distrito'] ?? ($order['billing_distrito'] ?? '')));
+        $receiverPhone = trim((string) ($receiverProfile['telefono'] ?? ($order['billing_telefono'] ?? '')));
         $receiverEmail = trim((string) ($receiverProfile['correo'] ?? $order['billing_email'] ?? ''));
         $receiverName = trim((string) ($receiverProfile['nombre'] ?? $order['billing_name'] ?? 'CLIENTE FINAL'));
-        $receiverNrc = trim((string) ($receiverProfile['nrc'] ?? ''));
-        $receiverDocumentType = trim((string) ($receiverProfile['tipo_documento'] ?? ''));
-        $receiverDocumentNumber = trim((string) ($receiverProfile['numero_documento'] ?? ''));
+        $receiverNrc = trim((string) ($receiverProfile['nrc'] ?? ($order['billing_nrc'] ?? '')));
+        $receiverDocumentType = trim((string) ($receiverProfile['tipo_documento'] ?? ($order['billing_tipo_documento'] ?? '')));
+        $receiverDocumentNumber = trim((string) ($receiverProfile['numero_documento'] ?? ($order['billing_numero_documento'] ?? '')));
         $receiverActivityCode = trim((string) ($receiverProfile['cod_actividad'] ?? ''));
         $receiverActivityDescription = trim((string) ($receiverProfile['desc_actividad'] ?? ''));
+        $receiverDocumentTypeCode = self::documentTypeCode($receiverDocumentType);
+        $receiverAddressComplement = self::buildAddressComplement($receiverDistrict, $receiverAddress);
         $paymentReference = trim((string) ($order['stripe_payment_intent'] ?? $order['stripe_session_id'] ?? 'ORD-' . (int) ($order['id'] ?? 0)));
 
         $payload = [
@@ -119,19 +122,19 @@ class DteJsonBuilder
                 'codPuntoVenta' => trim((string) ($settings['cod_punto_venta'] ?? '')),
             ],
             'receptor' => [
-                'tipoDocumento' => $receiverDocumentType !== '' ? $receiverDocumentType : null,
-                'numDocumento' => $receiverDocumentNumber !== '' ? $receiverDocumentNumber : null,
+                'tipoDocumento' => $receiverDocumentTypeCode,
+                'numDocumento' => self::nullableText($receiverDocumentNumber),
                 'nrc' => $receiverNrc !== '' ? $receiverNrc : null,
-                'nombre' => $receiverName,
+                'nombre' => $receiverName !== '' ? $receiverName : 'CLIENTE FINAL',
                 'codActividad' => $receiverActivityCode !== '' ? $receiverActivityCode : null,
                 'descActividad' => $receiverActivityDescription !== '' ? $receiverActivityDescription : null,
                 'direccion' => [
-                    'departamento' => $receiverDepartment,
-                    'municipio' => $receiverMunicipality,
-                    'complemento' => $receiverAddress,
+                    'departamento' => self::nullableText($receiverDepartment),
+                    'municipio' => self::nullableText($receiverMunicipality),
+                    'complemento' => self::nullableText($receiverAddressComplement),
                 ],
-                'telefono' => $receiverPhone,
-                'correo' => $receiverEmail,
+                'telefono' => self::nullableText($receiverPhone),
+                'correo' => self::nullableText($receiverEmail),
             ],
             'otrosDocumentos' => null,
             'ventaTercero' => null,
@@ -168,7 +171,7 @@ class DteJsonBuilder
                 'numPagoElectronico' => $paymentReference,
             ],
             'extension' => [
-                'nombEntrega' => $receiverName,
+                'nombEntrega' => $receiverName !== '' ? $receiverName : 'CLIENTE FINAL',
                 'docuEntrega' => $receiverDocumentNumber !== '' ? $receiverDocumentNumber : ($receiverEmail !== '' ? $receiverEmail : null),
                 'nombRecibe' => 'ATENEA',
                 'docuRecibe' => trim((string) ($settings['emisor_nit'] ?? '')),
@@ -200,6 +203,14 @@ class DteJsonBuilder
                 ],
             ],
         ];
+
+        if ($receiverDistrict !== '') {
+            $payload['apendice'][] = [
+                'campo' => 'DISTRITO',
+                'etiqueta' => 'Distrito / ciudad',
+                'valor' => $receiverDistrict,
+            ];
+        }
 
         self::assertJsonSerializable($payload);
 
@@ -246,5 +257,45 @@ class DteJsonBuilder
     private static function money(float $value): float
     {
         return round($value, 2);
+    }
+
+    private static function nullableText(string $value): ?string
+    {
+        $value = trim($value);
+
+        return $value !== '' ? $value : null;
+    }
+
+    private static function documentTypeCode(string $documentType): ?string
+    {
+        $documentType = strtoupper(trim($documentType));
+
+        if ($documentType === 'DUI' || $documentType === '13') {
+            return '13';
+        }
+
+        if ($documentType === 'NIT' || $documentType === '36') {
+            return '36';
+        }
+
+        return null;
+    }
+
+    private static function buildAddressComplement(string $district, string $address): string
+    {
+        $parts = [];
+
+        $district = trim($district);
+        $address = trim($address);
+
+        if ($district !== '') {
+            $parts[] = 'Distrito/Ciudad: ' . $district;
+        }
+
+        if ($address !== '') {
+            $parts[] = $address;
+        }
+
+        return implode(' | ', $parts);
     }
 }

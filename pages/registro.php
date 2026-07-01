@@ -11,6 +11,22 @@ if (logged_in()) {
     header('Location: ' . atenea_dashboard_route_for_session());
     exit;
 }
+
+$registerPrefill = is_array($_SESSION['register_form'] ?? null) ? $_SESSION['register_form'] : [];
+unset($_SESSION['register_form']);
+
+$registerFirstName = trim((string) ($registerPrefill['first_name'] ?? ''));
+$registerLastName = trim((string) ($registerPrefill['last_name'] ?? ''));
+$registerEmail = trim((string) ($registerPrefill['email'] ?? ''));
+$registerPhone = trim((string) ($registerPrefill['phone_number'] ?? ''));
+$registerUsername = trim((string) ($registerPrefill['username'] ?? ''));
+$registerBirthdate = trim((string) ($registerPrefill['birthdate'] ?? ''));
+$registerDocumentType = trim((string) ($registerPrefill['billing_tipo_documento'] ?? 'DUI'));
+$registerDocumentNumber = trim((string) ($registerPrefill['billing_numero_documento'] ?? ''));
+$registerDepartment = trim((string) ($registerPrefill['billing_departamento'] ?? ''));
+$registerMunicipality = trim((string) ($registerPrefill['billing_municipio'] ?? ''));
+$registerDistrict = trim((string) ($registerPrefill['billing_distrito'] ?? ''));
+$registerAddress = trim((string) ($registerPrefill['billing_address'] ?? ''));
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -30,6 +46,8 @@ if (logged_in()) {
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="../js/atenea-ui.js" defer></script>
   <script src="../js/atenea-password-strength.js" defer></script>
+  <script src="../js/sv-location-catalog.js" defer></script>
+  <script src="../js/atenea-billing.js" defer></script>
   <style>
     body.atenea-register-page {
       margin: 0;
@@ -224,13 +242,14 @@ if (logged_in()) {
                     class="atenea-register-form"
                     data-atenea-loading-form
                     data-loader-text="Creando tu cuenta..."
+                    data-atenea-billing-form
                   >
                     <div class="form-row">
                       <div class="form-group col-md-6">
-                        <input class="form-control atenea-input" type="text" name="first_name" placeholder="Nombres..." maxlength="100" required>
+                        <input class="form-control atenea-input" type="text" name="first_name" placeholder="Nombres..." maxlength="100" required value="<?php echo htmlspecialchars($registerFirstName); ?>">
                       </div>
                       <div class="form-group col-md-6">
-                        <input class="form-control atenea-input" type="text" name="last_name" placeholder="Apellidos..." maxlength="100" required>
+                        <input class="form-control atenea-input" type="text" name="last_name" placeholder="Apellidos..." maxlength="100" required value="<?php echo htmlspecialchars($registerLastName); ?>">
                       </div>
                     </div>
                     <div class="form-row">
@@ -243,12 +262,63 @@ if (logged_in()) {
                     </div>
                     <div class="form-row">
                       <div class="form-group col-md-6">
-                        <input class="form-control atenea-input" type="text" name="username" placeholder="Nombre de usuario..." maxlength="50" autocomplete="username" required>
+                        <input class="form-control atenea-input" type="text" name="username" placeholder="Nombre de usuario..." maxlength="50" autocomplete="username" required value="<?php echo htmlspecialchars($registerUsername); ?>">
                         <small class="atenea-field-hint">Usa letras, números, punto, guion o guion bajo.</small>
                       </div>
                       <div class="form-group col-md-6">
-                        <input class="form-control atenea-input" type="date" name="birthdate" max="<?php echo date('Y-m-d'); ?>">
+                        <input class="form-control atenea-input" type="date" name="birthdate" max="<?php echo date('Y-m-d'); ?>" value="<?php echo htmlspecialchars($registerBirthdate); ?>">
                         <small class="atenea-field-hint">Opcional. Podrás actualizarla más adelante desde tu perfil.</small>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group col-md-4">
+                        <select class="form-control atenea-input" name="billing_tipo_documento" data-document-type required>
+                          <option value="DUI" <?php echo $registerDocumentType === 'DUI' ? 'selected' : ''; ?>>DUI</option>
+                          <option value="NIT" <?php echo $registerDocumentType === 'NIT' ? 'selected' : ''; ?>>NIT</option>
+                        </select>
+                        <small class="atenea-field-hint">Tipo de documento para tus comprobantes.</small>
+                      </div>
+                      <div class="form-group col-md-8">
+                        <input
+                          class="form-control atenea-input"
+                          type="text"
+                          name="billing_numero_documento"
+                          placeholder="Numero de documento..."
+                          maxlength="25"
+                          data-document-number
+                          required
+                          value="<?php echo htmlspecialchars($registerDocumentNumber); ?>"
+                        >
+                        <small class="atenea-field-hint" data-document-help>Formato permitido para tu DUI o NIT.</small>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group col-md-6">
+                        <select
+                          class="form-control atenea-input"
+                          name="billing_departamento"
+                          data-billing-department
+                          data-selected="<?php echo htmlspecialchars($registerDepartment); ?>"
+                          required
+                        ></select>
+                        <small class="atenea-field-hint">Selecciona el departamento de facturacion.</small>
+                      </div>
+                      <div class="form-group col-md-6">
+                        <select
+                          class="form-control atenea-input"
+                          name="billing_municipio"
+                          data-billing-municipality
+                          data-selected="<?php echo htmlspecialchars($registerMunicipality); ?>"
+                          required
+                        ></select>
+                        <small class="atenea-field-hint">El municipio se carga segun el departamento.</small>
+                      </div>
+                    </div>
+                    <input type="hidden" name="billing_distrito" value="<?php echo htmlspecialchars($registerDistrict); ?>" data-billing-district>
+                    <div class="form-row">
+                      <div class="form-group col-12">
+                        <textarea class="form-control atenea-input" name="billing_address" rows="2" maxlength="255" placeholder="Direccion completa..." required><?php echo htmlspecialchars($registerAddress); ?></textarea>
+                        <small class="atenea-field-hint">Usaremos esta direccion para generar tus comprobantes de compra.</small>
                       </div>
                     </div>
                     <div class="form-row">
@@ -351,6 +421,10 @@ if (logged_in()) {
       var googleEnabled = <?php echo $googleEnabled ? 'true' : 'false'; ?>;
       var googleClientId = <?php echo json_encode($googleClientId, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
       var googleNonce = <?php echo json_encode($googleNonce, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+      var registerPrefill = <?php echo json_encode([
+        'email' => $registerEmail,
+        'phone_number' => $registerPhone,
+      ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 
       var googleContainer = document.getElementById("ateneaGoogleRegisterSlot");
       var googleFallback = document.getElementById("ateneaGoogleRegisterFallback");
@@ -447,6 +521,18 @@ if (logged_in()) {
       }
 
       window.addEventListener("load", function () {
+        Object.keys(registerPrefill || {}).forEach(function (fieldName) {
+          var input = document.querySelector('[name="' + fieldName + '"]');
+          if (input && !input.value && registerPrefill[fieldName]) {
+            input.value = registerPrefill[fieldName];
+          }
+        });
+
+        var phoneInput = document.querySelector('[name="phone_number"]');
+        if (phoneInput) {
+          phoneInput.required = true;
+        }
+
         setTimeout(initGoogleRegister, 120);
       });
     }());

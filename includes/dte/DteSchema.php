@@ -92,6 +92,75 @@ class DteSchema
             }
         }
 
+        self::ensureOrderBillingColumns($db);
         $ensured = true;
+    }
+
+    public static function ensureOrderBillingColumns(mysqli $db): void
+    {
+        static $orderColumnsEnsured = false;
+
+        if ($orderColumnsEnsured) {
+            return;
+        }
+
+        if (!self::tableExists($db, 'ordenes')) {
+            return;
+        }
+
+        $columns = [
+            'billing_tipo_documento' => "VARCHAR(10) NOT NULL DEFAULT '' AFTER billing_address",
+            'billing_numero_documento' => "VARCHAR(25) NOT NULL DEFAULT '' AFTER billing_tipo_documento",
+            'billing_telefono' => "VARCHAR(20) DEFAULT NULL AFTER billing_numero_documento",
+            'billing_departamento' => "VARCHAR(100) DEFAULT NULL AFTER billing_telefono",
+            'billing_municipio' => "VARCHAR(100) DEFAULT NULL AFTER billing_departamento",
+            'billing_distrito' => "VARCHAR(100) DEFAULT NULL AFTER billing_municipio",
+            'billing_nrc' => "VARCHAR(20) DEFAULT NULL AFTER billing_distrito",
+        ];
+
+        foreach ($columns as $column => $definition) {
+            if (self::columnExists($db, 'ordenes', $column)) {
+                continue;
+            }
+
+            $sql = sprintf(
+                'ALTER TABLE `ordenes` ADD COLUMN `%s` %s',
+                str_replace('`', '``', $column),
+                $definition
+            );
+
+            if ($db->query($sql) !== true) {
+                throw new RuntimeException('No se pudo actualizar la tabla de ordenes para datos DTE: ' . $db->error);
+            }
+        }
+
+        $orderColumnsEnsured = true;
+    }
+
+    private static function columnExists(mysqli $db, string $table, string $column): bool
+    {
+        $tableName = str_replace('`', '``', $table);
+        $columnName = str_replace('`', '``', $column);
+        $result = $db->query("SHOW COLUMNS FROM `{$tableName}` LIKE '{$columnName}'");
+        $exists = $result instanceof mysqli_result && $result->num_rows > 0;
+
+        if ($result instanceof mysqli_result) {
+            mysqli_free_result($result);
+        }
+
+        return $exists;
+    }
+
+    private static function tableExists(mysqli $db, string $table): bool
+    {
+        $tableName = str_replace('`', '``', $table);
+        $result = $db->query("SHOW TABLES LIKE '{$tableName}'");
+        $exists = $result instanceof mysqli_result && $result->num_rows > 0;
+
+        if ($result instanceof mysqli_result) {
+            mysqli_free_result($result);
+        }
+
+        return $exists;
     }
 }

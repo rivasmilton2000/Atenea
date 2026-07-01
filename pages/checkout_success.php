@@ -4,6 +4,7 @@ session_start();
 include '../includes/connection.php';
 include '../includes/stripe_config.php';
 include '../includes/invoice_mailer.php';
+require_once '../includes/atenea_auth.php';
 require_once '../includes/dte/bootstrap.php';
 
 if (!function_exists('atenea_checkout_load_order_basic')) {
@@ -36,7 +37,9 @@ if (!function_exists('atenea_checkout_load_order_full')) {
     function atenea_checkout_load_order_full(mysqli $db, int $orderId): ?array
     {
         $stmt = $db->prepare("
-            SELECT id, session_id, stripe_session_id, stripe_payment_intent, billing_name, billing_email, billing_address, subtotal, shipping_amount, total_amount, paid_at, created_at
+            SELECT id, session_id, stripe_session_id, stripe_payment_intent, billing_name, billing_email, billing_address,
+                   billing_tipo_documento, billing_numero_documento, billing_telefono, billing_departamento, billing_municipio, billing_distrito, billing_nrc,
+                   subtotal, shipping_amount, total_amount, paid_at, created_at
             FROM ordenes
             WHERE id = ?
             LIMIT 1
@@ -167,7 +170,7 @@ if ($checkoutSessionId === '') {
 }
 
 $downloadRequest = trim((string) ($_GET['download'] ?? ''));
-$allowedDownloads = ['pdf', 'json'];
+$allowedDownloads = ['pdf'];
 $downloadRequest = in_array($downloadRequest, $allowedDownloads, true) ? $downloadRequest : '';
 
 $ch = curl_init('https://api.stripe.com/v1/checkout/sessions/' . rawurlencode($checkoutSessionId));
@@ -202,7 +205,6 @@ $paymentIntent = trim((string) ($sessionData['payment_intent'] ?? ''));
 $invoiceNotice = '';
 $dteStatusNote = '';
 $invoiceDownloadUrl = '';
-$jsonDownloadUrl = '';
 $order = null;
 
 mysqli_begin_transaction($db);
@@ -274,6 +276,22 @@ if (!$orderFull) {
     exit();
 }
 
+if (atenea_session_is_public_user() && (int) ($_SESSION['MEMBER_ID'] ?? 0) > 0) {
+    atenea_sync_public_billing_profile_from_order($db, (int) $_SESSION['MEMBER_ID'], $orderFull);
+
+    $freshUser = atenea_fetch_user_by_id($db, (int) $_SESSION['MEMBER_ID']);
+    if ($freshUser) {
+        atenea_apply_session_data(
+            $freshUser,
+            (string) ($_SESSION['AUTH_PROVIDER'] ?? 'password'),
+            [
+                'email' => (string) ($_SESSION['GOOGLE_EMAIL'] ?? ($freshUser['GOOGLE_EMAIL'] ?? '')),
+                'sub' => (string) ($_SESSION['GOOGLE_SUB'] ?? ($freshUser['GOOGLE_ID'] ?? '')),
+            ]
+        );
+    }
+}
+
 $items = atenea_checkout_load_order_items($db, $orderId);
 $invoiceRow = atenea_checkout_load_invoice_row($db, $orderId);
 $dteDocument = DteService::getDocumentByOrderId($db, $orderId);
@@ -288,10 +306,6 @@ if ($downloadRequest !== '') {
         if (!empty($legacyInvoiceFile['exists'])) {
             atenea_checkout_stream_file((string) $legacyInvoiceFile['absolute_path'], 'application/pdf', basename((string) $legacyInvoiceFile['absolute_path']));
         }
-    }
-
-    if ($downloadRequest === 'json' && $dteDocument && !empty($dteDocument['json_available'])) {
-        atenea_checkout_stream_file((string) $dteDocument['json_absolute_path'], 'application/json', basename((string) $dteDocument['json_absolute_path']));
     }
 
     header('Location: checkout_success.php?session_id=' . urlencode($checkoutSessionId));
@@ -318,17 +332,6 @@ if ($shouldGenerateDte) {
 
 if ($dteDocument && !empty($dteDocument['pdf_available'])) {
     $invoiceDownloadUrl = 'checkout_success.php?session_id=' . urlencode($checkoutSessionId) . '&download=pdf';
-}
-
-if ($dteDocument && !empty($dteDocument['json_available'])) {
-    $jsonDownloadUrl = 'checkout_success.php?session_id=' . urlencode($checkoutSessionId) . '&download=json';
-}
-
-if ($dteDocument && !empty($dteDocument['estado'])) {
-    $dteStatusNote = 'Estado interno DTE: ' . (string) $dteDocument['estado'];
-    if (strtoupper(trim((string) $dteDocument['estado'])) === 'PROCESADO SIMULADO') {
-        $dteStatusNote .= ' | Validez fiscal: NO VALIDO FISCALMENTE';
-    }
 }
 
 if ($shouldAttemptEmail) {
@@ -361,8 +364,8 @@ if ($shouldAttemptEmail) {
             );
 
             $invoiceNotice = strtolower(trim((string) ($dteDocument['modo'] ?? 'simulation'))) === 'simulation'
-                ? 'La representacion grafica DTE y el JSON fueron enviados a tu correo en modo simulacion.'
-                : 'La factura DTE fue enviada a tu correo.';
+                ? 'Tu comprobante fue enviado a tu correo en modo simulacion.'
+                : 'Tu factura DTE fue enviada a tu correo.';
         } catch (Throwable $mailException) {
             DteService::syncLegacyInvoiceRecord(
                 $db,
@@ -434,20 +437,10 @@ if ($invoiceDownloadUrl === '' && !empty($legacyInvoiceFile['exists'])) {
               <div class="alert alert-info py-2"><?php echo htmlspecialchars($invoiceNotice); ?></div>
             <?php endif; ?>
 
-            <?php if ($dteStatusNote !== '') : ?>
-              <div class="alert alert-warning py-2"><?php echo htmlspecialchars($dteStatusNote); ?></div>
-            <?php endif; ?>
-
             <div class="d-flex flex-wrap" style="gap: 0.75rem;">
               <?php if ($invoiceDownloadUrl !== '') : ?>
                 <a href="<?php echo htmlspecialchars($invoiceDownloadUrl); ?>" class="btn btn-success" target="_blank" rel="noopener">
                   Descargar Factura PDF
-                </a>
-              <?php endif; ?>
-
-              <?php if ($jsonDownloadUrl !== '') : ?>
-                <a href="<?php echo htmlspecialchars($jsonDownloadUrl); ?>" class="btn btn-outline-primary">
-                  Descargar JSON DTE
                 </a>
               <?php endif; ?>
             </div>

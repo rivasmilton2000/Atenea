@@ -13,7 +13,7 @@ $nonce = trim((string) ($input['nonce'] ?? ''));
 if (empty($_SESSION['GOOGLE_REGISTER_NONCE']) || !hash_equals((string) $_SESSION['GOOGLE_REGISTER_NONCE'], $nonce)) {
     echo json_encode([
         'status' => 'error',
-        'message' => 'La validación de seguridad expiró. Recarga la página e intenta nuevamente.',
+        'message' => 'La validacion de seguridad expiro. Recarga la pagina e intenta nuevamente.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -38,7 +38,7 @@ $googleSub = trim((string) ($payload['sub'] ?? ''));
 if ($email === '') {
     echo json_encode([
         'status' => 'error',
-        'message' => 'Google no devolvió un correo válido.',
+        'message' => 'Google no devolvio un correo valido.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -46,7 +46,6 @@ if ($email === '') {
 atenea_ensure_public_user_schema($db);
 
 $existingUser = atenea_fetch_user_by_email($db, $email);
-
 if ($existingUser) {
     atenea_sync_public_google_identity($db, (int) ($existingUser['ID'] ?? 0), $email, $googleSub);
     $freshUser = atenea_fetch_user_by_id($db, (int) ($existingUser['ID'] ?? 0));
@@ -60,10 +59,15 @@ if ($existingUser) {
         'sub' => $googleSub,
     ]);
 
+    $isPublicUser = atenea_user_is_public($existingUser);
+    $needsBillingProfile = $isPublicUser && (int) ($existingUser['BILLING_PROFILE_COMPLETED'] ?? 0) !== 1;
+    $redirect = $needsBillingProfile ? 'billing_profile.php?prompt=1' : atenea_dashboard_route_for_user($existingUser);
+
     echo json_encode([
         'status' => 'success',
-        'message' => 'Este correo ya estaba registrado. Iniciamos sesión con Google.',
-        'redirect' => atenea_dashboard_route_for_user($existingUser),
+        'message' => 'Este correo ya estaba registrado. Iniciamos sesion con Google.',
+        'redirect' => $redirect,
+        'requires_billing_profile' => $needsBillingProfile,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -73,22 +77,20 @@ if ($firstName === '') {
 }
 
 $usernameBase = strtolower((string) preg_replace('/[^a-zA-Z0-9._-]/', '', explode('@', $email)[0]));
-
 if ($usernameBase === '') {
     $usernameBase = 'usuario';
 }
 
 $username = $usernameBase;
 $counter = 1;
-
 while (atenea_username_exists($db, $username)) {
     $username = $usernameBase . $counter;
     $counter++;
 }
 
 $plainRandomPassword = bin2hex(random_bytes(16));
-// TODO: Migrar este almacenamiento heredado de SHA1 a password_hash/password_verify.
 $passwordHash = sha1($plainRandomPassword);
+$billingName = atenea_profile_full_name($firstName, $lastName);
 
 mysqli_begin_transaction($db);
 
@@ -110,7 +112,6 @@ try {
     }
 
     $stmtUser->bind_param('ss', $username, $passwordHash);
-
     if (!$stmtUser->execute()) {
         throw new Exception('No se pudo crear la cuenta principal.');
     }
@@ -120,29 +121,42 @@ try {
 
     $phoneNumber = '';
     $planStatus = 'pending';
+    $billingProfileCompleted = 0;
 
     $stmtPublic = $db->prepare(
-        'INSERT INTO public_users
-         (USER_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, PLAN_STATUS, ACCOUNT_STATUS)
-         VALUES (?, ?, ?, ?, ?, ?, 1)'
+        'INSERT INTO public_users (
+            USER_ID,
+            FIRST_NAME,
+            LAST_NAME,
+            EMAIL,
+            PHONE_NUMBER,
+            BILLING_NAME,
+            BILLING_EMAIL,
+            BILLING_PROFILE_COMPLETED,
+            PLAN_STATUS,
+            ACCOUNT_STATUS
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
     );
 
     if (!$stmtPublic) {
-        throw new Exception('No se pudo preparar el perfil público.');
+        throw new Exception('No se pudo preparar el perfil publico.');
     }
 
     $stmtPublic->bind_param(
-        'isssss',
+        'issssssis',
         $userId,
         $firstName,
         $lastName,
         $email,
         $phoneNumber,
+        $billingName,
+        $email,
+        $billingProfileCompleted,
         $planStatus
     );
 
     if (!$stmtPublic->execute()) {
-        throw new Exception('No se pudo guardar la información del usuario.');
+        throw new Exception('No se pudo guardar la informacion del usuario.');
     }
 
     $stmtPublic->close();
@@ -152,7 +166,7 @@ try {
 
     $user = atenea_fetch_user_by_id($db, $userId);
     if (!$user) {
-        throw new Exception('La cuenta fue creada, pero no se pudo iniciar sesión automáticamente.');
+        throw new Exception('La cuenta fue creada, pero no se pudo iniciar sesion automaticamente.');
     }
 
     session_regenerate_id(true);
@@ -164,7 +178,8 @@ try {
     echo json_encode([
         'status' => 'success',
         'message' => 'Tu cuenta fue creada correctamente con Google.',
-        'redirect' => atenea_dashboard_route_for_user($user),
+        'redirect' => 'billing_profile.php?prompt=1',
+        'requires_billing_profile' => true,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 } catch (Throwable $exception) {

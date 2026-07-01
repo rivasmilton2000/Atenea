@@ -243,6 +243,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lastName = trim((string) ($_POST['last_name'] ?? ''));
         $phoneNumber = trim((string) ($_POST['phone_number'] ?? ''));
         $birthdate = trim((string) ($_POST['birthdate'] ?? ''));
+        $billingValidation = atenea_validate_billing_profile_input(
+            [
+                'phone_number' => $phoneNumber,
+                'billing_tipo_documento' => (string) ($_POST['billing_tipo_documento'] ?? ($profile['TIPO_DOCUMENTO'] ?? '')),
+                'billing_numero_documento' => (string) ($_POST['billing_numero_documento'] ?? ($profile['NUMERO_DOCUMENTO'] ?? '')),
+                'billing_departamento' => (string) ($_POST['billing_departamento'] ?? ''),
+                'billing_municipio' => (string) ($_POST['billing_municipio'] ?? ''),
+                'billing_distrito' => (string) ($_POST['billing_distrito'] ?? ''),
+                'billing_address' => (string) ($_POST['billing_address'] ?? ''),
+                'billing_nrc' => (string) ($profile['BILLING_NRC'] ?? ''),
+                'billing_has_nrc' => !empty($profile['BILLING_NRC']) ? '1' : '',
+            ],
+            [
+                'require_name' => false,
+                'require_email' => false,
+                'require_phone' => true,
+                'require_document' => trim((string) ($profile['NUMERO_DOCUMENTO'] ?? '')) !== ''
+                    || trim((string) ($profile['TIPO_DOCUMENTO'] ?? '')) !== '',
+                'require_location' => true,
+                'require_address' => true,
+            ]
+        );
 
         try {
             if ($firstName === '' || $lastName === '') {
@@ -255,6 +277,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($phoneNumber !== '' && !preg_match('/^[0-9+\s().-]{7,25}$/', $phoneNumber)) {
                 throw new RuntimeException('El teléfono o WhatsApp debe tener entre 7 y 25 caracteres válidos.');
+            }
+
+            if ($billingValidation['errors'] !== []) {
+                throw new RuntimeException((string) $billingValidation['errors'][0]);
+            }
+
+            $billingData = $billingValidation['data'];
+            $phoneNumber = (string) ($billingData['phone_number'] ?? '');
+            $submittedDocumentType = (string) ($billingData['tipo_documento'] ?? '');
+            $submittedDocumentNumber = (string) ($billingData['numero_documento'] ?? '');
+            $storedDocumentType = strtoupper(trim((string) ($profile['TIPO_DOCUMENTO'] ?? '')));
+            $storedDocumentDigits = preg_replace('/\D+/', '', (string) ($profile['NUMERO_DOCUMENTO'] ?? ''));
+            if ($storedDocumentType === '' && is_string($storedDocumentDigits)) {
+                if (strlen($storedDocumentDigits) === 14) {
+                    $storedDocumentType = 'NIT';
+                } elseif (strlen($storedDocumentDigits) === 9) {
+                    $storedDocumentType = 'DUI';
+                }
+            }
+            $storedDocumentNumber = atenea_billing_normalize_document(
+                $storedDocumentType !== '' ? $storedDocumentType : 'DUI',
+                (string) ($profile['NUMERO_DOCUMENTO'] ?? '')
+            );
+
+            if (($storedDocumentType !== '' || $storedDocumentNumber !== '')
+                && ($storedDocumentType !== $submittedDocumentType || $storedDocumentNumber !== $submittedDocumentNumber)
+            ) {
+                throw new RuntimeException('El documento fiscal esta bloqueado y no se puede editar desde esta seccion.');
             }
 
             if ($birthdate !== '') {
@@ -328,9 +378,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'FIRST_NAME = ?',
                 'LAST_NAME = ?',
                 'PHONE_NUMBER = ?',
+                'BILLING_NAME = ?',
+                'BILLING_EMAIL = ?',
+                'TIPO_DOCUMENTO = ?',
+                'NUMERO_DOCUMENTO = ?',
+                'BILLING_DEPARTAMENTO = ?',
+                'BILLING_MUNICIPIO = ?',
+                'BILLING_DISTRITO = ?',
+                'BILLING_DIRECCION = ?',
+                'BILLING_PROFILE_COMPLETED = ?',
             ];
-            $types = 'sss';
-            $values = [$firstName, $lastName, $phoneNumber];
+            $types = 'sssssssssssi';
+            $values = [
+                $firstName,
+                $lastName,
+                $phoneNumber,
+                trim($firstName . ' ' . $lastName),
+                strtolower(trim((string) ($profile['EMAIL'] ?? ($_SESSION['EMAIL'] ?? ($profile['BILLING_EMAIL'] ?? ''))))),
+                $submittedDocumentType,
+                $submittedDocumentNumber,
+                (string) ($billingData['billing_departamento'] ?? ''),
+                (string) ($billingData['billing_municipio'] ?? ''),
+                (string) ($billingData['billing_distrito'] ?? ''),
+                (string) ($billingData['billing_direccion'] ?? ''),
+                atenea_billing_profile_is_complete([
+                    'phone_number' => $phoneNumber,
+                    'tipo_documento' => $submittedDocumentType,
+                    'numero_documento' => $submittedDocumentNumber,
+                    'billing_departamento' => (string) ($billingData['billing_departamento'] ?? ''),
+                    'billing_municipio' => (string) ($billingData['billing_municipio'] ?? ''),
+                    'billing_direccion' => (string) ($billingData['billing_direccion'] ?? ''),
+                ]) ? 1 : 0,
+            ];
 
             if ($hasBirthdateColumn) {
                 $setClauses[] = 'BIRTHDATE = ?';
@@ -454,6 +533,20 @@ $planStatusLabel = $planStatus === 'active' ? 'Activo' : 'Pendiente de activar';
 $accountStatus = (string) ($profile['ACCOUNT_STATUS'] ?? ($_SESSION['PUBLIC_ACCOUNT_STATUS'] ?? '1'));
 $accountStatusLabel = (string) $accountStatus === '1' ? 'Cuenta activa' : 'Cuenta restringida';
 $birthdate = $hasBirthdateColumn ? trim((string) ($profile['BIRTHDATE'] ?? ($_SESSION['BIRTHDATE'] ?? ''))) : '';
+$billingDocumentType = strtoupper(trim((string) ($profile['TIPO_DOCUMENTO'] ?? '')));
+$billingDocumentNumber = trim((string) ($profile['NUMERO_DOCUMENTO'] ?? ''));
+$billingDocumentDigits = preg_replace('/\D+/', '', $billingDocumentNumber);
+if ($billingDocumentType === '' && is_string($billingDocumentDigits)) {
+    if (strlen($billingDocumentDigits) === 14) {
+        $billingDocumentType = 'NIT';
+    } elseif (strlen($billingDocumentDigits) === 9) {
+        $billingDocumentType = 'DUI';
+    }
+}
+$billingDepartment = trim((string) ($profile['BILLING_DEPARTAMENTO'] ?? ''));
+$billingMunicipality = trim((string) ($profile['BILLING_MUNICIPIO'] ?? ''));
+$billingDistrict = trim((string) ($profile['BILLING_DISTRITO'] ?? ''));
+$billingAddress = trim((string) ($profile['BILLING_DIRECCION'] ?? ''));
 $createdAt = $hasPublicCreatedAtColumn ? (string) ($profile['CREATED_AT'] ?? ($_SESSION['PUBLIC_CREATED_AT'] ?? '')) : '';
 $updatedAt = $hasPublicUpdatedAtColumn ? (string) ($profile['UPDATED_AT'] ?? ($_SESSION['PUBLIC_UPDATED_AT'] ?? '')) : '';
 $profilePhotoRelative = $hasProfilePhotoColumn ? trim((string) ($profile['PROFILE_PHOTO'] ?? ($_SESSION['PROFILE_PHOTO'] ?? ''))) : trim((string) ($_SESSION['PROFILE_PHOTO'] ?? ''));
@@ -1008,6 +1101,45 @@ ob_start();
                   </article>
                   <article class="profile-info-item atenea-profile-info-card">
                     <div class="atenea-profile-info-card__icon" aria-hidden="true">
+                      <span class="material-symbols-rounded">credit_card</span>
+                    </div>
+                    <div class="atenea-profile-info-card__body">
+                      <span>Documento</span>
+                      <strong><?php echo dashboard_h(usuario_profile_display_value(trim($billingDocumentType . ($billingDocumentNumber !== '' ? ': ' . $billingDocumentNumber : '')), 'Pendiente de completar')); ?></strong>
+                    </div>
+                  </article>
+                  <article class="profile-info-item atenea-profile-info-card">
+                    <div class="atenea-profile-info-card__icon" aria-hidden="true">
+                      <span class="material-symbols-rounded">map</span>
+                    </div>
+                    <div class="atenea-profile-info-card__body">
+                      <span>Departamento</span>
+                      <strong><?php echo dashboard_h(usuario_profile_display_value($billingDepartment, 'Pendiente de completar')); ?></strong>
+                    </div>
+                  </article>
+                  <article class="profile-info-item atenea-profile-info-card">
+                    <div class="atenea-profile-info-card__icon" aria-hidden="true">
+                      <span class="material-symbols-rounded">location_city</span>
+                    </div>
+                    <div class="atenea-profile-info-card__body">
+                      <span>Municipio</span>
+                      <strong><?php echo dashboard_h(usuario_profile_display_value($billingMunicipality, 'Pendiente de completar')); ?></strong>
+                      <?php if ($billingDistrict !== ''): ?>
+                        <small><?php echo dashboard_h('Distrito/Ciudad: ' . $billingDistrict); ?></small>
+                      <?php endif; ?>
+                    </div>
+                  </article>
+                  <article class="profile-info-item profile-info-item--wide atenea-profile-info-card">
+                    <div class="atenea-profile-info-card__icon" aria-hidden="true">
+                      <span class="material-symbols-rounded">home</span>
+                    </div>
+                    <div class="atenea-profile-info-card__body">
+                      <span>Direccion</span>
+                      <strong><?php echo dashboard_h(usuario_profile_display_value($billingAddress, 'Pendiente de completar')); ?></strong>
+                    </div>
+                  </article>
+                  <article class="profile-info-item atenea-profile-info-card">
+                    <div class="atenea-profile-info-card__icon" aria-hidden="true">
                       <span class="material-symbols-rounded">cake</span>
                     </div>
                     <div class="atenea-profile-info-card__body">
@@ -1078,8 +1210,10 @@ ob_start();
                   <h5>Editar perfil</h5>
                   <p>Actualiza tus datos personales y tu foto sin alterar la información sensible con la que se autentica tu cuenta.</p>
                 </div>
-                <form method="post" enctype="multipart/form-data" data-atenea-loading-form data-loader-text="Guardando perfil...">
+                <form method="post" enctype="multipart/form-data" data-atenea-billing-form data-atenea-loading-form data-loader-text="Guardando perfil...">
                   <input type="hidden" name="account_action" value="update_profile">
+                  <input type="hidden" name="billing_tipo_documento" value="<?php echo dashboard_h($billingDocumentType); ?>" data-document-type>
+                  <input type="hidden" name="billing_distrito" value="<?php echo dashboard_h($billingDistrict); ?>" data-billing-district>
                   <div class="profile-form-grid">
                     <div class="profile-form-field atenea-profile-field">
                       <label class="form-label" for="profileFirstName">Nombres</label>
@@ -1091,11 +1225,55 @@ ob_start();
                     </div>
                     <div class="profile-form-field atenea-profile-field">
                       <label class="form-label" for="profilePhone">Teléfono o WhatsApp</label>
-                      <input id="profilePhone" class="form-control" type="text" name="phone_number" maxlength="25" value="<?php echo dashboard_h((string) ($profile['PHONE_NUMBER'] ?? '')); ?>">
+                      <input id="profilePhone" class="form-control" type="text" name="phone_number" maxlength="25" required value="<?php echo dashboard_h((string) ($profile['PHONE_NUMBER'] ?? '')); ?>">
                     </div>
                     <div class="profile-form-field atenea-profile-field">
                       <label class="form-label" for="profileBirthdate">Fecha de nacimiento</label>
                       <input id="profileBirthdate" class="form-control" type="date" name="birthdate" value="<?php echo dashboard_h($birthdate); ?>">
+                    </div>
+                    <div class="profile-form-field atenea-profile-field">
+                      <label class="form-label" for="profileDocumentType">Tipo de documento</label>
+                      <input id="profileDocumentType" class="form-control" type="text" readonly value="<?php echo dashboard_h($billingDocumentType !== '' ? $billingDocumentType : 'No registrado'); ?>">
+                    </div>
+                    <div class="profile-form-field atenea-profile-field">
+                      <label class="form-label" for="profileDocumentNumber">Numero de documento</label>
+                      <input
+                        id="profileDocumentNumber"
+                        class="form-control"
+                        type="text"
+                        name="billing_numero_documento"
+                        maxlength="25"
+                        readonly
+                        data-document-number
+                        value="<?php echo dashboard_h($billingDocumentNumber); ?>"
+                      >
+                      <small class="atenea-profile-field__help" data-document-help>Tu documento fiscal se muestra solo como referencia y no puede editarse desde esta seccion.</small>
+                    </div>
+                    <div class="profile-form-field atenea-profile-field">
+                      <label class="form-label" for="profileDepartment">Departamento</label>
+                      <select
+                        id="profileDepartment"
+                        class="form-control"
+                        name="billing_departamento"
+                        data-billing-department
+                        data-selected="<?php echo dashboard_h($billingDepartment); ?>"
+                        required
+                      ></select>
+                    </div>
+                    <div class="profile-form-field atenea-profile-field">
+                      <label class="form-label" for="profileMunicipality">Municipio</label>
+                      <select
+                        id="profileMunicipality"
+                        class="form-control"
+                        name="billing_municipio"
+                        data-billing-municipality
+                        data-selected="<?php echo dashboard_h($billingMunicipality); ?>"
+                        required
+                      ></select>
+                    </div>
+                    <div class="profile-form-field profile-form-field--wide atenea-profile-field">
+                      <label class="form-label" for="profileBillingAddress">Direccion completa</label>
+                      <textarea id="profileBillingAddress" class="form-control" name="billing_address" maxlength="255" rows="3" required><?php echo dashboard_h($billingAddress); ?></textarea>
                     </div>
                     <div class="profile-form-field profile-form-field--wide atenea-profile-field">
                       <label class="form-label" for="profilePhoto">Foto de perfil</label>
@@ -1278,6 +1456,8 @@ ob_start();
     </div>
   </div>
 </div>
+<script src="../js/sv-location-catalog.js"></script>
+<script src="../js/atenea-billing.js"></script>
 <script src="../js/atenea-password-strength.js" defer></script>
 <script>
 window.addEventListener('load', function () {

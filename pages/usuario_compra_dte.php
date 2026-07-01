@@ -11,6 +11,13 @@ if (!atenea_session_is_public_user()) {
     exit;
 }
 
+atenea_render_auth_alert(
+    'info',
+    'Informacion restringida',
+    'La informacion tecnica del DTE solo esta disponible para administracion. Desde tu cuenta puedes ver y descargar tu factura PDF.',
+    'historial_compras.php'
+);
+
 if (!function_exists('usuario_dte_format_date')) {
     function usuario_dte_format_date(string $value): string
     {
