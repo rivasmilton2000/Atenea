@@ -1,8 +1,13 @@
 <?php
-session_start();
+require 'session.php';
+require_once '../includes/atenea_auth.php';
 include '../includes/connection.php';
 
 header('Content-Type: application/json');
+
+if (!logged_in()) {
+    atenea_login_required_response('productos.php', 'login_required', true);
+}
 
 // Crear session del carrito si no existe
 if (!isset($_SESSION['cart_session'])) {
@@ -69,14 +74,13 @@ if ($result_check->num_rows > 0) {
     $row = $result_check->fetch_assoc();
     $cantidad_actual = (int) $row['cantidad'];
 
-    if($cantidad_actual + 1 > $prodcuto['cantidad'])
-        {
-             echo json_encode([
+    if ($cantidad_actual + 1 > (int) $producto['stock']) {
+        echo json_encode([
             'success' => false,
             'message' => 'No hay suficiente stock disponible'
-            ]);
-            exit();
-        }
+        ]);
+        exit();
+    }
         
     $stmt_update = $db->prepare("
         UPDATE carrito 

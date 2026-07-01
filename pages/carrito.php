@@ -1,23 +1,41 @@
 <!DOCTYPE html>
 <html lang="es">
 <?php
-session_start();
-include '../includes/connection.php';
+require 'session.php';
 require_once '../includes/atenea_auth.php';
+include '../includes/connection.php';
 
 atenea_handle_session_timeout();
+
+if (!logged_in()) {
+    header('Location: ' . atenea_build_login_url('carrito.php', 'cart_required'));
+    exit;
+}
 
 if (!isset($_SESSION['cart_session'])) {
     $_SESSION['cart_session'] = uniqid('cart_', true);
 }
 
-$session_id = $_SESSION['cart_session'];
+$session_id = (string) $_SESSION['cart_session'];
+$stmtCarrito = $db->prepare("
+    SELECT c.*, p.nombre, p.descripcion_corta, p.precio, p.precio_descuento, p.imagen, p.stock
+    FROM carrito c
+    JOIN productos p ON c.producto_id = p.id
+    WHERE c.session_id = ?
+");
 
-$sql_carrito = "SELECT c.*, p.nombre, p.descripcion_corta, p.precio, p.precio_descuento, p.imagen, p.stock
-                FROM carrito c
-                JOIN productos p ON c.producto_id = p.id
-                WHERE c.session_id = '$session_id'";
-$resultado_carrito = mysqli_query($db, $sql_carrito);
+if (!$stmtCarrito) {
+    atenea_render_auth_alert(
+        'error',
+        'Carrito no disponible',
+        'No pudimos cargar tu carrito en este momento. Intenta nuevamente en unos segundos.',
+        'productos.php'
+    );
+}
+
+$stmtCarrito->bind_param('s', $session_id);
+$stmtCarrito->execute();
+$resultado_carrito = $stmtCarrito->get_result();
 
 $total = 0;
 $envio = 5.00;
@@ -311,6 +329,11 @@ if (is_array($checkout_form_prefill)) {
       })
         .then(response => response.json())
         .then(data => {
+          if (data.login_required && data.redirect) {
+            window.location.href = data.redirect;
+            return;
+          }
+
           if (data.success) {
             location.reload();
           } else {
@@ -335,9 +358,20 @@ if (is_array($checkout_form_prefill)) {
         cancelButtonText: 'Cancelar'
       }).then((result) => {
         if (result.isConfirmed) {
-          fetch('carrito_delete.php?id=' + itemId)
+          fetch('carrito_delete.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'item_id=' + itemId
+          })
             .then(response => response.json())
             .then(data => {
+              if (data.login_required && data.redirect) {
+                window.location.href = data.redirect;
+                return;
+              }
+
               if (data.success) {
                 location.reload();
               } else {

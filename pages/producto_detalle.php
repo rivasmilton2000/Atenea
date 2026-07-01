@@ -1,7 +1,8 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <?php
-session_start();
+require 'session.php';
+require_once '../includes/atenea_auth.php';
 include '../includes/connection.php';
 
 // Validar ID del producto
@@ -11,38 +12,45 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 
 $id_producto = intval($_GET['id']);
+$ateneaCanPurchase = logged_in();
+$loginToBuyUrl = atenea_build_login_url('productos.php', 'login_required');
 
 // Generar session_id del carrito si no existe
-if (!isset($_SESSION['cart_session'])) {
+if ($ateneaCanPurchase && !isset($_SESSION['cart_session'])) {
     $_SESSION['cart_session'] = uniqid('cart_', true);
 }
 
 // Consulta del producto
-$sql_producto = "
+$stmtProducto = $db->prepare("
     SELECT p.*, c.nombre AS categoria_nombre 
     FROM productos p
     JOIN categorias_productos c ON p.categoria_id = c.id
-    WHERE p.id = $id_producto AND p.estado = 1
+    WHERE p.id = ? AND p.estado = 1
     LIMIT 1
-";
-$resultado_producto = mysqli_query($db, $sql_producto);
+");
 
-if (mysqli_num_rows($resultado_producto) === 0) {
+if (!$stmtProducto) {
     header('Location: productos.php');
     exit;
 }
 
-$producto = mysqli_fetch_assoc($resultado_producto);
+$stmtProducto->bind_param('i', $id_producto);
+$stmtProducto->execute();
+$resultadoProducto = $stmtProducto->get_result();
+
+if (!$resultadoProducto || $resultadoProducto->num_rows === 0) {
+    $stmtProducto->close();
+    header('Location: productos.php');
+    exit;
+}
+
+$producto = $resultadoProducto->fetch_assoc();
+$stmtProducto->close();
 
 // Precio
 $precio_final = $producto['precio_descuento'] ?: $producto['precio'];
 $tiene_descuento = !empty($producto['precio_descuento']);
 
-// Cantidad en carrito
-$session_id = $_SESSION['cart_session'];
-$sql_cart_count = "SELECT SUM(cantidad) as total FROM carrito WHERE session_id = '$session_id'";
-$result_cart_count = mysqli_query($db, $sql_cart_count);
-$cart_count = mysqli_fetch_assoc($result_cart_count)['total'] ?? 0;
 ?>
 
 <?php include '../includes/head_home.php'; ?>
@@ -102,10 +110,16 @@ $cart_count = mysqli_fetch_assoc($result_cart_count)['total'] ?? 0;
       </p>
 
       <?php if ($producto['stock'] > 0): ?>
-        <button class="btn btn-primary btn-lg mt-3"
-                onclick="agregarAlCarrito(<?php echo $producto['id']; ?>)">
-          <i class="fa fa-shopping-cart"></i> Agregar al carrito
-        </button>
+        <?php if ($ateneaCanPurchase): ?>
+          <button class="btn btn-primary btn-lg mt-3"
+                  onclick="agregarAlCarrito(<?php echo $producto['id']; ?>)">
+            <i class="fa fa-shopping-cart"></i> Agregar al carrito
+          </button>
+        <?php else: ?>
+          <a href="<?php echo htmlspecialchars($loginToBuyUrl); ?>" class="btn btn-outline-primary btn-lg mt-3">
+            <i class="fa fa-user"></i> Iniciar sesión para comprar
+          </a>
+        <?php endif; ?>
       <?php else: ?>
         <button class="btn btn-secondary btn-lg mt-3" disabled>
           Sin stock
@@ -142,6 +156,11 @@ function agregarAlCarrito(productoId) {
   })
   .then(res => res.json())
   .then(data => {
+    if (data.login_required && data.redirect) {
+      window.location.href = data.redirect;
+      return;
+    }
+
     if (data.success) {
       Swal.fire({
         icon: 'success',

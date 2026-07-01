@@ -54,7 +54,7 @@ $logoutUrlEscaped = htmlspecialchars($logoutUrl, ENT_QUOTES, 'UTF-8');
         <a href="contacto.php" class="nav-item nav-link<?php echo $ateneaIsActive('contacto.php'); ?>" data-loader-text="Cargando contacto...">Contáctanos</a>
       </div>
       <div class="atenea-nav-actions">
-        <a href="carrito.php" class="btn atenea-cart-btn" data-loader-text="Abriendo carrito...">Carrito</a>
+        <a href="productos.php" class="btn atenea-cart-btn" data-loader-text="Cargando tienda...">Tienda</a>
         <?php if (!$ateneaLoggedIn): ?>
           <a href="registro.php" class="btn atenea-cart-btn" data-loader-text="Abriendo registro...">Registrarme</a>
         <?php endif; ?>

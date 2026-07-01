@@ -1,5 +1,5 @@
 <?php
-session_start();
+require 'session.php';
 
 include '../includes/connection.php';
 include '../includes/stripe_config.php';
@@ -73,6 +73,10 @@ if (!function_exists('atenea_checkout_normalize_document')) {
 
         return null;
     }
+}
+
+if (!logged_in()) {
+    atenea_login_required_response('carrito.php', 'checkout_required');
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

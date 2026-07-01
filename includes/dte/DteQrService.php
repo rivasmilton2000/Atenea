@@ -41,12 +41,21 @@ class DteQrService
             $pdf->write2DBarcode($payload, 'QRCODE,M', $x, $y, $size, $size, $style, 'N');
         } catch (Throwable $exception) {
             $pdf->SetXY($x, $y);
-            $pdf->SetFont('helvetica', '', 7);
-            $pdf->MultiCell($size, 6, "QR no disponible\n" . $payload, 1, 'C');
+            $pdf->SetFont('helvetica', '', 5.4);
+            $fallbackPayload = trim($payload);
+            if (function_exists('mb_substr')) {
+                $fallbackPayload = mb_substr($fallbackPayload, 0, 42, 'UTF-8');
+            } else {
+                $fallbackPayload = substr($fallbackPayload, 0, 42);
+            }
+            if ($fallbackPayload !== trim($payload)) {
+                $fallbackPayload .= '...';
+            }
+            $pdf->MultiCell($size, 3.2, "QR no disponible\n" . $fallbackPayload, 1, 'C');
         }
 
         $pdf->SetXY($x, $y + $size + 1.2);
-        $pdf->SetFont('helvetica', '', 8);
-        $pdf->MultiCell($size, 5, $label, 0, 'C');
+        $pdf->SetFont('helvetica', '', 6.0);
+        $pdf->MultiCell($size, 3.2, $label, 0, 'C');
     }
 }

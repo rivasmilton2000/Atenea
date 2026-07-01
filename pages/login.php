@@ -2,8 +2,21 @@
 require 'session.php';
 require_once '../includes/atenea_auth.php';
 
+$requestedRedirect = trim((string) ($_GET['redirect'] ?? ''));
+$loginRedirect = $requestedRedirect !== ''
+    ? atenea_resolve_login_redirect($requestedRedirect, 'productos.php')
+    : '';
+$loginMessageCode = trim((string) ($_GET['msg'] ?? ''));
+$loginMessage = atenea_login_message_for_code($loginMessageCode);
+
+if ($loginRedirect !== '') {
+    $_SESSION['ATENEA_LOGIN_REDIRECT'] = $loginRedirect;
+} else {
+    unset($_SESSION['ATENEA_LOGIN_REDIRECT']);
+}
+
 if (logged_in()) {
-    header('Location: ' . atenea_dashboard_route_for_session());
+    header('Location: ' . ($loginRedirect !== '' ? $loginRedirect : atenea_dashboard_route_for_session()));
     exit;
 }
 
@@ -115,6 +128,19 @@ $sessionExpired = isset($_GET['expired']) && (string) $_GET['expired'] === '1';
       border: 1px solid #f3d7a0;
       border-radius: 16px;
       color: #7a5518;
+      font-size: 0.93rem;
+      font-weight: 700;
+      line-height: 1.55;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .atenea-login-flow-note {
+      background: #ecf8f1;
+      border: 1px solid #b8dfcb;
+      border-radius: 16px;
+      color: #0d5b38;
       font-size: 0.93rem;
       font-weight: 700;
       line-height: 1.55;
@@ -246,7 +272,15 @@ $sessionExpired = isset($_GET['expired']) && (string) $_GET['expired'] === '1';
                     </div>
                   <?php endif; ?>
 
+                  <?php if ($loginMessage !== ''): ?>
+                    <div class="atenea-login-flow-note" role="alert">
+                      <?php echo htmlspecialchars($loginMessage); ?>
+                    </div>
+                  <?php endif; ?>
+
                   <form class="user atenea-form-stack" role="form" action="processlogin.php" method="post" data-atenea-loading-form data-loader-text="Validando credenciales...">
+                    <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($loginRedirect); ?>">
+                    <input type="hidden" name="msg" value="<?php echo htmlspecialchars($loginMessageCode); ?>">
                     <div class="form-group mb-0">
                       <input class="form-control atenea-input" placeholder="Nombre de usuario..." name="user" type="text" autocomplete="username" autofocus required>
                     </div>
@@ -298,6 +332,7 @@ $sessionExpired = isset($_GET['expired']) && (string) $_GET['expired'] === '1';
       var googleEnabled = <?php echo $googleEnabled ? 'true' : 'false'; ?>;
       var googleClientId = <?php echo json_encode($googleClientId, JSON_UNESCAPED_SLASHES); ?>;
       var googleNonce = <?php echo json_encode($googleNonce, JSON_UNESCAPED_SLASHES); ?>;
+      var loginRedirect = <?php echo json_encode($loginRedirect, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
       var googleContainer = document.getElementById("ateneaGoogleSlot");
       var googleFallback = document.getElementById("ateneaGoogleFallback");
       var googleHelp = document.getElementById("ateneaGoogleHelp");
@@ -339,7 +374,8 @@ $sessionExpired = isset($_GET['expired']) && (string) $_GET['expired'] === '1';
           },
           body: JSON.stringify({
             credential: response.credential,
-            nonce: googleNonce
+            nonce: googleNonce,
+            redirect: loginRedirect
           })
         })
           .then(function (apiResponse) {

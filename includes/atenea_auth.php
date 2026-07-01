@@ -1102,6 +1102,94 @@ if (!function_exists('atenea_normalize_internal_redirect')) {
     }
 }
 
+if (!function_exists('atenea_allowed_login_redirects')) {
+    function atenea_allowed_login_redirects(): array
+    {
+        return [
+            'productos.php',
+            'carrito.php',
+            'checkout_success.php',
+            'historial_compras.php',
+            'usuario_vista.php',
+        ];
+    }
+}
+
+if (!function_exists('atenea_resolve_login_redirect')) {
+    function atenea_resolve_login_redirect(string $candidate, string $fallback = 'productos.php'): string
+    {
+        $allowed = atenea_allowed_login_redirects();
+        $fallback = atenea_normalize_internal_redirect($fallback, 'productos.php');
+        $fallbackPath = strtok($fallback, '?');
+
+        if (!in_array($fallbackPath, $allowed, true)) {
+            $fallback = 'productos.php';
+        }
+
+        $normalized = atenea_normalize_internal_redirect($candidate, $fallback);
+        $normalizedPath = strtok($normalized, '?');
+
+        return in_array($normalizedPath, $allowed, true) ? $normalized : $fallback;
+    }
+}
+
+if (!function_exists('atenea_login_message_for_code')) {
+    function atenea_login_message_for_code(string $messageCode): string
+    {
+        switch (trim($messageCode)) {
+            case 'cart_required':
+                return 'Inicia sesión para ver tu carrito.';
+            case 'checkout_required':
+                return 'Debes iniciar sesión antes de pagar.';
+            case 'login_required':
+                return 'Inicia sesión para continuar con tu compra.';
+            default:
+                return '';
+        }
+    }
+}
+
+if (!function_exists('atenea_build_login_url')) {
+    function atenea_build_login_url(string $redirect = 'productos.php', string $messageCode = 'login_required'): string
+    {
+        $params = [
+            'redirect' => atenea_resolve_login_redirect($redirect, 'productos.php'),
+        ];
+
+        if (trim($messageCode) !== '') {
+            $params['msg'] = trim($messageCode);
+        }
+
+        return 'login.php?' . http_build_query($params);
+    }
+}
+
+if (!function_exists('atenea_login_required_response')) {
+    function atenea_login_required_response(string $redirect = 'productos.php', string $messageCode = 'login_required', bool $json = false): void
+    {
+        $loginUrl = atenea_build_login_url($redirect, $messageCode);
+        $message = atenea_login_message_for_code($messageCode);
+
+        if ($json) {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(
+                [
+                    'success' => false,
+                    'login_required' => true,
+                    'message' => $message !== '' ? $message : 'Debes iniciar sesión para continuar.',
+                    'redirect' => $loginUrl,
+                ],
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            );
+            exit;
+        }
+
+        header('Location: ' . $loginUrl);
+        exit;
+    }
+}
+
 if (!function_exists('atenea_http_get_json')) {
     function atenea_http_get_json(string $url): ?array
     {

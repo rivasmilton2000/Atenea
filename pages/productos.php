@@ -1,11 +1,15 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
   <?php 
-  session_start();
+  require 'session.php';
+  require_once '../includes/atenea_auth.php';
   include '../includes/connection.php'; 
+  $ateneaCanPurchase = logged_in();
+  $loginToBuyUrl = atenea_build_login_url('productos.php', 'login_required');
+  $loginToCartUrl = atenea_build_login_url('carrito.php', 'cart_required');
   
   // Generar session_id si no existe
-  if (!isset($_SESSION['cart_session'])) {
+  if ($ateneaCanPurchase && !isset($_SESSION['cart_session'])) {
       $_SESSION['cart_session'] = uniqid('cart_', true);
   }
   
@@ -46,18 +50,24 @@
   $resultado_categorias = mysqli_query($db, $sql_categorias);
   
   // Obtener cantidad de items en el carrito
-  $session_id = $_SESSION['cart_session'];
+  $cart_count = 0;
+  if ($ateneaCanPurchase && !empty($_SESSION['cart_session'])) {
+    $session_id = (string) $_SESSION['cart_session'];
 
-$stmt_cart = $db->prepare("
-    SELECT COALESCE(SUM(cantidad), 0) AS total
-    FROM carrito
-    WHERE session_id = ?
-");
+    $stmt_cart = $db->prepare("
+        SELECT COALESCE(SUM(cantidad), 0) AS total
+        FROM carrito
+        WHERE session_id = ?
+    ");
 
-$stmt_cart->bind_param("s", $session_id);
-$stmt_cart->execute();
-$result_cart_count = $stmt_cart->get_result();
-$cart_count = $result_cart_count->fetch_assoc()['total'];
+    if ($stmt_cart) {
+      $stmt_cart->bind_param("s", $session_id);
+      $stmt_cart->execute();
+      $result_cart_count = $stmt_cart->get_result();
+      $cart_count = (int) (($result_cart_count->fetch_assoc()['total'] ?? 0));
+      $stmt_cart->close();
+    }
+  }
   ?>
   
   <!-- Head start -->
@@ -109,11 +119,16 @@ $cart_count = $result_cart_count->fetch_assoc()['total'];
             <!-- Carrito Widget -->
             <div class="bg-light p-4 mb-5">
               <h4 class="mb-3">Mi Carrito</h4>
-              <div class="d-flex justify-content-between mb-3">
-                <span>Items:</span>
-                <span class="badge badge-primary badge-pill"><?php echo $cart_count; ?></span>
-              </div>
-              <a href="carrito.php" class="btn btn-primary btn-block">Ver Carrito</a>
+              <?php if ($ateneaCanPurchase): ?>
+                <div class="d-flex justify-content-between mb-3">
+                  <span>Items:</span>
+                  <span class="badge badge-primary badge-pill"><?php echo $cart_count; ?></span>
+                </div>
+                <a href="carrito.php" class="btn btn-primary btn-block">Ver carrito</a>
+              <?php else: ?>
+                <p class="text-muted small mb-3">Inicia sesión para guardar productos y continuar con tu compra.</p>
+                <a href="<?php echo htmlspecialchars($loginToCartUrl); ?>" class="btn btn-outline-primary btn-block">Iniciar sesión</a>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -152,9 +167,15 @@ $cart_count = $result_cart_count->fetch_assoc()['total'];
                           <?php endif; ?>
                         </div>
                         <?php if ($producto['stock'] > 0) : ?>
-                          <button class="btn btn-primary btn-sm" onclick="agregarAlCarrito(<?php echo $producto['id']; ?>)">
-                            <i class="fa fa-shopping-cart"></i> Agregar
-                          </button>
+                          <?php if ($ateneaCanPurchase): ?>
+                            <button class="btn btn-primary btn-sm" onclick="agregarAlCarrito(<?php echo $producto['id']; ?>)">
+                              <i class="fa fa-shopping-cart"></i> Agregar
+                            </button>
+                          <?php else: ?>
+                            <a href="<?php echo htmlspecialchars($loginToBuyUrl); ?>" class="btn btn-outline-primary btn-sm">
+                              <i class="fa fa-user"></i> Iniciar sesión para comprar
+                            </a>
+                          <?php endif; ?>
                         <?php else : ?>
                           <button class="btn btn-secondary btn-sm" disabled>Sin stock</button>
                         <?php endif; ?>
@@ -202,6 +223,11 @@ $cart_count = $result_cart_count->fetch_assoc()['total'];
         })
         .then(response => response.json())
         .then(data => {
+          if (data.login_required && data.redirect) {
+            window.location.href = data.redirect;
+            return;
+          }
+
           if (data.success) {
             Swal.fire({
               icon: 'success',

@@ -1,5 +1,5 @@
 <?php
-session_start();
+require 'session.php';
 
 include '../includes/connection.php';
 include '../includes/stripe_config.php';
@@ -163,15 +163,62 @@ if (!function_exists('atenea_checkout_stream_file')) {
     }
 }
 
+if (!function_exists('atenea_checkout_session_emails')) {
+    function atenea_checkout_session_emails(mysqli $db): array
+    {
+        $emails = [];
+        $memberId = (int) ($_SESSION['MEMBER_ID'] ?? 0);
+
+        if ($memberId > 0 && function_exists('atenea_fetch_public_profile_by_user_id')) {
+            $profile = atenea_fetch_public_profile_by_user_id($db, $memberId);
+            if (is_array($profile)) {
+                $profileEmail = strtolower(trim((string) ($profile['EMAIL'] ?? '')));
+                if ($profileEmail !== '') {
+                    $emails[] = $profileEmail;
+                }
+            }
+        }
+
+        $sessionCandidates = [
+            $_SESSION['BILLING_EMAIL'] ?? '',
+            $_SESSION['correo_estudiante'] ?? '',
+            $_SESSION['EMAIL'] ?? '',
+            $_SESSION['GOOGLE_EMAIL'] ?? '',
+        ];
+
+        foreach ($sessionCandidates as $candidate) {
+            $candidate = strtolower(trim((string) $candidate));
+            if ($candidate !== '' && !in_array($candidate, $emails, true)) {
+                $emails[] = $candidate;
+            }
+        }
+
+        return $emails;
+    }
+}
+
 $checkoutSessionId = trim((string) ($_GET['session_id'] ?? ''));
+$downloadRequest = trim((string) ($_GET['download'] ?? ''));
+$allowedDownloads = ['pdf'];
+$downloadRequest = in_array($downloadRequest, $allowedDownloads, true) ? $downloadRequest : '';
+$checkoutRedirectTarget = 'checkout_success.php';
+
+if ($checkoutSessionId !== '') {
+    $checkoutRedirectTarget .= '?session_id=' . rawurlencode($checkoutSessionId);
+
+    if ($downloadRequest !== '') {
+        $checkoutRedirectTarget .= '&download=' . rawurlencode($downloadRequest);
+    }
+}
+
+if (!logged_in()) {
+    atenea_login_required_response($checkoutRedirectTarget, 'checkout_required');
+}
+
 if ($checkoutSessionId === '') {
     header('Location: carrito.php?checkout_error=' . urlencode('Sesion de pago no valida.'));
     exit();
 }
-
-$downloadRequest = trim((string) ($_GET['download'] ?? ''));
-$allowedDownloads = ['pdf'];
-$downloadRequest = in_array($downloadRequest, $allowedDownloads, true) ? $downloadRequest : '';
 
 $ch = curl_init('https://api.stripe.com/v1/checkout/sessions/' . rawurlencode($checkoutSessionId));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -205,16 +252,37 @@ $paymentIntent = trim((string) ($sessionData['payment_intent'] ?? ''));
 $invoiceNotice = '';
 $dteStatusNote = '';
 $invoiceDownloadUrl = '';
-$order = null;
+$order = atenea_checkout_load_order_basic($db, $orderId, $checkoutSessionId);
+
+if (!$order) {
+    header('Location: carrito.php?checkout_error=' . urlencode('Orden no encontrada para esta sesion de pago.'));
+    exit();
+}
+
+$allowedEmails = atenea_checkout_session_emails($db);
+$orderEmail = strtolower(trim((string) ($order['billing_email'] ?? '')));
+
+if ($allowedEmails === []) {
+    atenea_render_auth_alert(
+        'warning',
+        'Acceso restringido',
+        'No pudimos validar la cuenta asociada a esta compra. Inicia sesion nuevamente para continuar.',
+        'logout.php?redirect=login.php'
+    );
+}
+
+if ($orderEmail !== '' && $allowedEmails !== [] && !in_array($orderEmail, $allowedEmails, true)) {
+    atenea_render_auth_alert(
+        'warning',
+        'Acceso restringido',
+        'No puedes acceder a una compra que no pertenece a tu cuenta.',
+        atenea_dashboard_route_for_session()
+    );
+}
 
 mysqli_begin_transaction($db);
 
 try {
-    $order = atenea_checkout_load_order_basic($db, $orderId, $checkoutSessionId);
-    if (!$order) {
-        throw new Exception('Orden no encontrada para esta sesion de pago.');
-    }
-
     if (($order['estado'] ?? '') !== 'paid') {
         $stmtItems = $db->prepare("
             SELECT producto_id, cantidad

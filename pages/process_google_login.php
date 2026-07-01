@@ -43,6 +43,7 @@ if (!is_array($payload)) {
 
 $credential = trim((string) ($payload['credential'] ?? ''));
 $nonce = trim((string) ($payload['nonce'] ?? ''));
+$requestedRedirect = trim((string) ($payload['redirect'] ?? ($_SESSION['ATENEA_LOGIN_REDIRECT'] ?? '')));
 $storedNonce = (string) ($_SESSION['GOOGLE_LOGIN_NONCE'] ?? '');
 
 if ($storedNonce === '' || $nonce === '' || !hash_equals($storedNonce, $nonce)) {
@@ -94,13 +95,19 @@ atenea_apply_session_data(
     ]
 );
 
+unset($_SESSION['ATENEA_LOGIN_REDIRECT']);
 unset($_SESSION['GOOGLE_LOGIN_NONCE']);
+
+$defaultRedirect = atenea_dashboard_route_for_user($user);
+$redirect = $requestedRedirect !== ''
+    ? atenea_resolve_login_redirect($requestedRedirect, $defaultRedirect)
+    : $defaultRedirect;
 
 atenea_json_response(
     'success',
     'Hola ' . atenea_user_display_name($user, true) . ', tu acceso con Google fue validado correctamente.',
     [
-        'redirect' => atenea_dashboard_route_for_user($user),
+        'redirect' => $redirect,
         'provider' => 'google',
     ]
 );

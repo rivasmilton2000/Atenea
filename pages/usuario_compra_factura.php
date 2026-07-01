@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/session.php';
-confirm_logged_in();
+if (!logged_in()) {
+    header('Location: ' . atenea_build_login_url('historial_compras.php', 'login_required'));
+    exit;
+}
 
 require_once __DIR__ . '/../includes/connection.php';
 require_once __DIR__ . '/../includes/material_dashboard.php';
