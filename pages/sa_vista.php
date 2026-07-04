@@ -28,6 +28,9 @@ $gradosCount = dashboard_count($db, "SELECT COUNT(*) FROM grados");
 $docAsignaturasCount = dashboard_count($db, "SELECT COUNT(*) FROM docentes_asignaturas");
 $estudiantesCount = dashboard_count($db, "SELECT COUNT(*) FROM estudiantes");
 $distribucionCount = dashboard_count($db, "SELECT COUNT(*) FROM estudiantes_docentes");
+$academicPendingCount = atenea_db_has_table($db, 'academic_charges')
+    ? dashboard_count($db, "SELECT COUNT(*) FROM academic_charges WHERE status IN ('pending','partial','overdue')")
+    : 0;
 $inventarioCount = dashboard_count($db, "SELECT COUNT(*) FROM inventario");
 $documentacionCount = dashboard_count($db, "SELECT COUNT(*) FROM archivos");
 $contenidosCount = dashboard_count($db, "SELECT COUNT(*) FROM contenidos");
@@ -59,6 +62,7 @@ $navSections = [
             ['label' => 'Grados', 'href' => 'sa_grados.php', 'icon' => 'domain'],
             ['label' => 'Doc. asignaturas', 'href' => 'sa_doc_asignaturas.php', 'icon' => 'assignment'],
             ['label' => 'Estudiantes', 'href' => 'sa_estudiantes.php', 'icon' => 'school'],
+            ['label' => 'Pagos academicos', 'href' => 'sa_pagos_academicos.php', 'icon' => 'payments'],
             ['label' => 'Dis. asignaturas', 'href' => 'sa_dis_asignaturas.php', 'icon' => 'account_tree'],
             ['label' => 'Inventario', 'href' => 'sa_inventario.php', 'icon' => 'inventory_2'],
             ['label' => 'Facturacion DTE', 'href' => 'sa_dte_config.php', 'icon' => 'receipt_long'],
@@ -85,6 +89,7 @@ $cards = [
     ['title' => 'Doc. asignaturas', 'value' => $docAsignaturasCount, 'icon' => 'assignment', 'accent' => 'success', 'href' => 'sa_doc_asignaturas.php', 'metricLabel' => 'Asignaciones registradas', 'footerLabel' => 'Revisar módulo'],
     ['title' => 'Estudiantes', 'value' => $estudiantesCount, 'icon' => 'school', 'accent' => 'info', 'href' => 'sa_estudiantes.php', 'metricLabel' => 'Alumnos registrados', 'footerLabel' => 'Abrir listado'],
     ['title' => 'Dis. asignaturas', 'value' => $distribucionCount, 'icon' => 'account_tree', 'accent' => 'warning', 'href' => 'sa_dis_asignaturas.php', 'metricLabel' => 'Relaciones cargadas', 'footerLabel' => 'Ver distribución'],
+    ['title' => 'Pagos academicos', 'value' => $academicPendingCount, 'icon' => 'payments', 'accent' => 'warning', 'href' => 'sa_pagos_academicos.php', 'metricLabel' => 'Cargos pendientes', 'footerLabel' => 'Gestionar pagos'],
     ['title' => 'Inventario', 'value' => $inventarioCount, 'icon' => 'inventory_2', 'accent' => 'danger', 'href' => 'sa_inventario.php', 'metricLabel' => 'Items registrados', 'footerLabel' => 'Abrir inventario'],
     ['title' => 'Documentación', 'value' => $documentacionCount, 'icon' => 'description', 'accent' => 'dark', 'href' => 'sa_documentacion.php', 'metricLabel' => 'Archivos totales', 'footerLabel' => 'Ver documentos'],
     ['title' => 'Con. evaluación', 'value' => $contenidosCount, 'icon' => 'edit_note', 'accent' => 'success', 'href' => 'sa_con_evaluacion.php', 'metricLabel' => 'Contenidos cargados', 'footerLabel' => 'Gestionar contenidos'],
@@ -101,6 +106,7 @@ $quickLinks = [
     ['label' => 'Administrar usuarios', 'href' => 'sa_cuentas_usuarios.php', 'icon' => 'badge'],
     ['label' => 'Revisar notas', 'href' => 'sa_not_estudiantes.php', 'icon' => 'book_2'],
     ['label' => 'Controlar evaluaciones', 'href' => 'sa_evaluaciones.php', 'icon' => 'fact_check'],
+    ['label' => 'Gestionar pagos academicos', 'href' => 'sa_pagos_academicos.php', 'icon' => 'payments'],
     ['label' => 'Ver entregas', 'href' => 'sa_eva_entregadas.php', 'icon' => 'download'],
     ['label' => 'Abrir inventario', 'href' => 'sa_inventario.php', 'icon' => 'inventory_2'],
     ['label' => 'Configurar DTE', 'href' => 'sa_dte_config.php', 'icon' => 'receipt_long'],

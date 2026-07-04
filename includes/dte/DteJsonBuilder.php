@@ -83,7 +83,14 @@ class DteJsonBuilder
         $receiverActivityDescription = trim((string) ($receiverProfile['desc_actividad'] ?? ''));
         $receiverDocumentTypeCode = self::documentTypeCode($receiverDocumentType);
         $receiverAddressComplement = self::buildAddressComplement($receiverDistrict, $receiverAddress);
-        $paymentReference = trim((string) ($order['stripe_payment_intent'] ?? $order['stripe_session_id'] ?? 'ORD-' . (int) ($order['id'] ?? 0)));
+        $paymentReference = trim((string) ($order['payment_reference'] ?? ''));
+        if ($paymentReference === '') {
+            $paymentReference = trim((string) ($order['stripe_payment_intent'] ?? $order['stripe_session_id'] ?? 'ORD-' . (int) ($order['id'] ?? 0)));
+        }
+        $paymentCode = trim((string) ($order['payment_code'] ?? '03'));
+        if ($paymentCode === '') {
+            $paymentCode = '03';
+        }
 
         $payload = [
             'identificacion' => [
@@ -161,7 +168,7 @@ class DteJsonBuilder
                 'condicionOperacion' => 1,
                 'pagos' => [
                     [
-                        'codigo' => '03',
+                        'codigo' => $paymentCode,
                         'montoPago' => $totalExpected,
                         'referencia' => $paymentReference,
                         'periodo' => null,

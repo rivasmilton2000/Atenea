@@ -44,3 +44,4 @@ require_once __DIR__ . '/DteMockHaciendaClient.php';
 require_once __DIR__ . '/DteHaciendaClient.php';
 require_once __DIR__ . '/DtePdfRenderer.php';
 require_once __DIR__ . '/DteService.php';
+require_once __DIR__ . '/DteAcademicService.php';

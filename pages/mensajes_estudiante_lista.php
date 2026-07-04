@@ -71,7 +71,7 @@ $resultSubjects = mysqli_query($db, $querySubjects);
             // 🔔 Contar mensajes
             $queryMsg = "SELECT COUNT(*) as total 
                          FROM mensajes 
-                         WHERE asignatura_id = $asignatura_id";
+                         WHERE asignatura_id = $asignatura_id AND estado = 1";
 
             $resMsg = mysqli_query($db, $queryMsg);
             $msgData = mysqli_fetch_assoc($resMsg);

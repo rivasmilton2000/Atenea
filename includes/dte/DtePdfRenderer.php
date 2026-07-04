@@ -258,7 +258,7 @@ class DtePdfRenderer
 
         $columnThree = [
             ['NRC', self::displayValue($receiverNrc, 'No aplica')],
-            ['Forma pago', 'Tarjeta (Stripe)'],
+            ['Forma pago', self::displayValue($order['payment_method_label'] ?? '', 'Tarjeta (Stripe)')],
             ['Moneda', self::displayValue($dte['identificacion']['tipoMoneda'] ?? 'USD', 'USD')],
             ['Pago electronico', self::displayValue($resumen['numPagoElectronico'] ?? '', 'No disponible')],
         ];

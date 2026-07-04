@@ -26,6 +26,7 @@ module_shell_begin([
                 ['label' => 'Grados', 'href' => 'sa_grados.php', 'icon' => 'domain', 'match' => ['sa_grados.php', 'sa_grados_searchfrm.php', 'sa_grados_edit.php']],
                 ['label' => 'Doc. asignaturas', 'href' => 'sa_doc_asignaturas.php', 'icon' => 'assignment', 'match' => ['sa_doc_asignaturas.php', 'sa_doc_asignaturas_searchfrm.php', 'sa_doc_asignaturas_edit.php']],
                 ['label' => 'Estudiantes', 'href' => 'sa_estudiantes.php', 'icon' => 'school', 'match' => ['sa_estudiantes.php', 'sa_estudiantes_searchfrm.php', 'sa_estudiantes_searchfrm2.php', 'sa_estudiantes_edit.php', 'sa_estudiantes_edit2.php']],
+                ['label' => 'Pagos academicos', 'href' => 'sa_pagos_academicos.php', 'icon' => 'payments', 'match' => ['sa_pagos_academicos.php']],
                 ['label' => 'Dis. asignaturas', 'href' => 'sa_dis_asignaturas.php', 'icon' => 'account_tree', 'match' => ['sa_dis_asignaturas.php', 'sa_dis_asignaturas_searchfrm.php', 'sa_dis_asignaturas_edit.php']],
                 ['label' => 'Inventario', 'href' => 'sa_inventario.php', 'icon' => 'inventory_2', 'match' => ['sa_inventario.php', 'sa_inventario_searchfrm.php', 'sa_inventario_edit.php']],
                 ['label' => 'Facturacion DTE', 'href' => 'sa_dte_config.php', 'icon' => 'receipt_long', 'match' => ['sa_dte_config.php']],

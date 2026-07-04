@@ -38,6 +38,7 @@ module_shell_begin([
                 ['label' => 'Grados', 'href' => 'grados.php', 'icon' => 'domain', 'match' => ['grados.php', 'grados_searchfrm.php']],
                 ['label' => 'Doc. asignaturas', 'href' => 'doc_asignaturas.php', 'icon' => 'assignment', 'match' => ['doc_asignaturas.php', 'doc_asignaturas_searchfrm.php', 'doc_asignaturas_edit.php']],
                 ['label' => 'Estudiantes', 'href' => 'estudiantes.php', 'icon' => 'school', 'match' => ['estudiantes.php', 'estudiantes_searchfrm.php', 'estudiantes_searchfrm2.php', 'estudiantes_edit.php', 'estudiantes_edit2.php']],
+                ['label' => 'Pagos academicos', 'href' => 'pagos_academicos.php', 'icon' => 'payments', 'match' => ['pagos_academicos.php']],
                 ['label' => 'Dis. asignaturas', 'href' => 'dis_asignaturas.php', 'icon' => 'account_tree', 'match' => ['dis_asignaturas.php', 'dis_asignaturas_searchfrm.php', 'dis_asignaturas_edit.php']],
                 ['label' => 'Productos', 'href' => 'productos_admin.php', 'icon' => 'storefront', 'match' => ['productos_admin.php', 'productos_add.php', 'productos_edit.php']],
                 ['label' => 'Facturacion DTE', 'href' => 'dte_config.php', 'icon' => 'receipt_long', 'match' => ['dte_config.php']],

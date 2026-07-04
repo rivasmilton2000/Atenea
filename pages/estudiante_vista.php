@@ -31,6 +31,9 @@ $profileUrl = 'estudiante_vista_perfil.php?action=edit&id=' . (int) $_SESSION['M
 
 $asignaturasCount = dashboard_count($db, "SELECT COUNT(*) FROM estudiantes_docentes WHERE estudiante_id = $estudianteId AND ed_estado = 1");
 $promediosCount = $asignaturasCount;
+$academicPendingCount = atenea_db_has_table($db, 'academic_charges')
+    ? dashboard_count($db, "SELECT COUNT(*) FROM academic_charges WHERE student_id = $estudianteId AND status IN ('pending','partial','overdue')")
+    : 0;
 $calendarioCount = dashboard_count($db, "SELECT COUNT(*) FROM actividades WHERE ACT_ESTADO = 1");
 $mensajesCount = dashboard_count($db, "SELECT COUNT(*) FROM mensajes WHERE estado = 1");
 
@@ -46,6 +49,7 @@ $navSections = [
         'items' => [
             ['label' => 'Asignaturas', 'href' => 'estudiantes_vista_asignaturas.php', 'icon' => 'menu_book'],
             ['label' => 'Promedios', 'href' => 'estudiantes_vista_promedios.php', 'icon' => 'bar_chart'],
+            ['label' => 'Pagos', 'href' => 'estudiante_pagos.php', 'icon' => 'payments'],
             ['label' => 'Cal. actividades', 'href' => 'estudiantes_vista_calendario.php', 'icon' => 'calendar_month'],
             ['label' => 'Mensajes', 'href' => 'mensajes_estudiante_lista.php', 'icon' => 'menu_book', 'match' => ['mensajes_estudiante_lista.php', 'mensajes_estudiante.php']],
         ],
@@ -55,6 +59,7 @@ $navSections = [
 $cards = [
     ['title' => 'Mis asignaturas', 'value' => $asignaturasCount, 'icon' => 'menu_book', 'accent' => 'primary', 'href' => 'estudiantes_vista_asignaturas.php', 'metricLabel' => 'Materias asignadas', 'footerLabel' => 'Abrir materias'],
     ['title' => 'Promedios', 'value' => $promediosCount, 'icon' => 'bar_chart', 'accent' => 'success', 'href' => 'estudiantes_vista_promedios.php', 'metricLabel' => 'Asignaturas evaluables', 'footerLabel' => 'Consultar notas'],
+    ['title' => 'Pagos', 'value' => $academicPendingCount, 'icon' => 'payments', 'accent' => 'warning', 'href' => 'estudiante_pagos.php', 'metricLabel' => 'Cargos pendientes', 'footerLabel' => 'Ver estado de cuenta'],
     ['title' => 'Calendario', 'value' => $calendarioCount, 'icon' => 'calendar_month', 'accent' => 'info', 'href' => 'estudiantes_vista_calendario.php', 'metricLabel' => 'Eventos visibles', 'footerLabel' => 'Ver agenda'],
     ['title' => 'Mensajes', 'value' => $mensajesCount, 'icon' => 'menu_book', 'accent' => 'success', 'href' => 'mensajes_estudiante_lista.php', 'metricLabel' => 'Mensajes visibles', 'footerLabel' => 'Ver mensajes'],
 ];
@@ -62,6 +67,7 @@ $cards = [
 $quickLinks = [
     ['label' => 'Entrar a mis asignaturas', 'href' => 'estudiantes_vista_asignaturas.php', 'icon' => 'menu_book'],
     ['label' => 'Consultar promedios', 'href' => 'estudiantes_vista_promedios.php', 'icon' => 'bar_chart'],
+    ['label' => 'Ver pagos academicos', 'href' => 'estudiante_pagos.php', 'icon' => 'payments'],
     ['label' => 'Abrir calendario', 'href' => 'estudiantes_vista_calendario.php', 'icon' => 'calendar_month'],
     ['label' => 'Ver mi perfil', 'href' => $profileUrl, 'icon' => 'person'],
 ];
