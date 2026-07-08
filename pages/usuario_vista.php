@@ -592,7 +592,7 @@ $navSections = [
     [
         'title' => 'Explorar',
         'items' => [
-            ['label' => 'Planes de clase', 'href' => 'educacion.php', 'icon' => 'school'],
+            ['label' => 'Capacitación', 'href' => 'educacion.php', 'icon' => 'school'],
             ['label' => 'Productos', 'href' => 'productos.php', 'icon' => 'storefront'],
             ['label' => 'Carrito y pago', 'href' => 'carrito.php', 'icon' => 'shopping_cart'],
             ['label' => 'Historial de compras', 'href' => 'historial_compras.php', 'icon' => 'receipt_long', 'loaderText' => 'Cargando historial de compras...'],
@@ -602,14 +602,14 @@ $navSections = [
 ];
 
 $cards = [
-    ['title' => 'Planes de clase', 'value' => $programCount, 'icon' => 'school', 'accent' => 'primary', 'href' => 'educacion.php', 'metricLabel' => 'Opciones disponibles', 'footerLabel' => 'Explorar planes'],
+    ['title' => 'Capacitación', 'value' => $programCount, 'icon' => 'school', 'accent' => 'primary', 'href' => 'educacion.php', 'metricLabel' => 'Opciones disponibles', 'footerLabel' => 'Explorar oferta'],
     ['title' => 'Productos', 'value' => $productCount, 'icon' => 'storefront', 'accent' => 'success', 'href' => 'productos.php', 'metricLabel' => 'Ítems visibles', 'footerLabel' => 'Ir a tienda'],
     ['title' => 'Pagos confirmados', 'value' => $paidOrdersCount, 'icon' => 'payments', 'accent' => 'warning', 'href' => 'carrito.php', 'metricLabel' => 'Compras finalizadas', 'footerLabel' => 'Revisar carrito'],
 ];
 
 $quickLinks = [
     ['label' => 'Explorar Atenea', 'href' => 'homepage.php', 'icon' => 'public'],
-    ['label' => 'Ver planes de clase', 'href' => 'educacion.php', 'icon' => 'school'],
+    ['label' => 'Ver capacitación', 'href' => 'educacion.php', 'icon' => 'school'],
     ['label' => 'Comprar productos', 'href' => 'productos.php', 'icon' => 'storefront'],
     ['label' => 'Abrir carrito', 'href' => 'carrito.php', 'icon' => 'shopping_cart'],
     ['label' => 'Hablar con Atenea', 'href' => 'contacto.php', 'icon' => 'support_agent'],
@@ -624,313 +624,12 @@ $summaryItems = [
     ['label' => 'Miembro desde', 'value' => usuario_profile_format_date($createdAt, 'No disponible')],
 ];
 
-if (false) {
-ob_start();
-?>
-<style>
-  .atenea-purchases-card {
-    border-radius: 1.1rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
-  }
+$accountMetaItems = [
+    ['label' => 'Rol', 'value' => $roleLabel],
+    ['label' => 'Estado', 'value' => $accountStatusLabel],
+    ['label' => 'Miembro desde', 'value' => usuario_profile_format_date($createdAt, 'No disponible')],
+];
 
-  .atenea-purchases-card .card-header {
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-    background: #fff;
-    border-radius: 1.1rem 1.1rem 0 0;
-  }
-
-  .atenea-purchases-table {
-    margin-bottom: 0;
-  }
-
-  .atenea-purchases-table th {
-    font-size: 0.75rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #64748b;
-    border-bottom-width: 1px;
-  }
-
-  .atenea-purchases-table td {
-    vertical-align: middle;
-    border-color: rgba(15, 23, 42, 0.08);
-  }
-
-  .atenea-purchase-concept strong,
-  .atenea-purchase-amount strong,
-  .atenea-purchase-mobile-title {
-    color: #0f172a;
-    font-weight: 700;
-  }
-
-  .atenea-purchase-concept span,
-  .atenea-purchase-amount span,
-  .atenea-purchase-method,
-  .atenea-purchase-mobile-meta,
-  .atenea-purchase-mobile-value,
-  .atenea-purchase-unavailable {
-    display: block;
-    font-size: 0.82rem;
-    color: #64748b;
-  }
-
-  .atenea-purchase-status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 96px;
-    padding: 0.4rem 0.8rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .atenea-purchase-status.is-paid {
-    background: rgba(22, 163, 74, 0.14);
-    color: #166534;
-  }
-
-  .atenea-purchase-status.is-pending {
-    background: rgba(245, 158, 11, 0.16);
-    color: #b45309;
-  }
-
-  .atenea-purchase-status.is-failed {
-    background: rgba(239, 68, 68, 0.14);
-    color: #b91c1c;
-  }
-
-  .atenea-purchase-status.is-refunded {
-    background: rgba(59, 130, 246, 0.14);
-    color: #1d4ed8;
-  }
-
-  .atenea-purchase-status.is-neutral {
-    background: rgba(100, 116, 139, 0.12);
-    color: #334155;
-  }
-
-  .atenea-purchase-invoice-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .atenea-invoice-button {
-    border-radius: 0.85rem;
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 0.55rem 0.9rem;
-  }
-
-  .atenea-purchase-empty {
-    border: 1px dashed rgba(15, 23, 42, 0.14);
-    border-radius: 1rem;
-    padding: 2rem 1.5rem;
-    text-align: center;
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 1));
-  }
-
-  .atenea-purchase-empty-icon {
-    width: 4rem;
-    height: 4rem;
-    margin: 0 auto 1rem;
-    border-radius: 1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 23, 42, 0.05);
-    color: #046845;
-  }
-
-  .atenea-purchase-empty-icon .material-symbols-rounded {
-    font-size: 2rem;
-  }
-
-  .atenea-purchase-mobile-item {
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 1rem;
-    padding: 1rem;
-    background: #fff;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-  }
-
-  .atenea-purchase-mobile-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.85rem;
-    margin-top: 1rem;
-  }
-
-  .atenea-purchase-mobile-label {
-    display: block;
-    font-size: 0.76rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #94a3b8;
-    margin-bottom: 0.2rem;
-  }
-
-  @media (max-width: 767.98px) {
-    .atenea-purchases-card .card-header {
-      align-items: flex-start !important;
-    }
-
-    .atenea-purchase-mobile-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .atenea-purchase-invoice-actions .atenea-invoice-button {
-      width: 100%;
-      text-align: center;
-    }
-  }
-</style>
-<div class="row mt-2" id="ateneaPurchaseHistory">
-  <div class="col-12 mb-4">
-    <div class="card atenea-purchases-card h-100">
-      <div class="card-header pb-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-        <div>
-          <h6 class="mb-1">Historial de compras</h6>
-          <p class="text-sm mb-0">Consulta tus compras registradas, el estado del pago y la disponibilidad de tu factura o recibo.</p>
-        </div>
-        <span class="badge bg-gradient-dark"><?php echo dashboard_h((string) $purchaseCount); ?> compras</span>
-      </div>
-      <div class="card-body p-3 p-md-4">
-        <?php if ($purchaseHistory !== []): ?>
-          <div class="table-responsive d-none d-md-block">
-            <table class="table align-items-center atenea-purchases-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Concepto</th>
-                  <th>Tipo</th>
-                  <th>Monto</th>
-                  <th>Estado</th>
-                  <th>Factura</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($purchaseHistory as $purchase): ?>
-                  <tr>
-                    <td><?php echo dashboard_h(usuario_profile_format_date((string) $purchase['date'], 'No disponible', true)); ?></td>
-                    <td>
-                      <div class="atenea-purchase-concept">
-                        <strong><?php echo dashboard_h((string) $purchase['concept']); ?></strong>
-                        <span><?php echo dashboard_h(((int) $purchase['line_count']) > 0 ? ((int) $purchase['total_quantity']) . ' artículo(s) en la orden' : 'Compra registrada en el sistema'); ?></span>
-                      </div>
-                    </td>
-                    <td><?php echo dashboard_h((string) $purchase['type']); ?></td>
-                    <td>
-                      <div class="atenea-purchase-amount">
-                        <strong><?php echo dashboard_h(usuario_purchase_format_amount((float) $purchase['amount'], (string) $purchase['currency'])); ?></strong>
-                        <span>Precio pagado</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="atenea-purchase-status <?php echo dashboard_h((string) ($purchase['status_meta']['class'] ?? 'is-neutral')); ?>">
-                        <?php echo dashboard_h((string) ($purchase['status_meta']['label'] ?? 'Desconocido')); ?>
-                      </span>
-                      <span class="atenea-purchase-method mt-2"><?php echo dashboard_h((string) $purchase['payment_method']); ?></span>
-                    </td>
-                    <td>
-                      <?php if (!empty($purchase['invoice_available'])): ?>
-                        <div class="atenea-purchase-invoice-actions">
-                          <a
-                            class="btn btn-outline-dark btn-sm mb-0 atenea-invoice-button"
-                            href="<?php echo dashboard_h(usuario_purchase_invoice_url((int) $purchase['order_id'], 'view')); ?>"
-                            target="_blank"
-                            rel="noopener"
-                          >Ver factura</a>
-                          <a
-                            class="btn bg-gradient-dark btn-sm mb-0 atenea-invoice-button"
-                            href="<?php echo dashboard_h(usuario_purchase_invoice_url((int) $purchase['order_id'], 'download')); ?>"
-                          >Descargar PDF</a>
-                        </div>
-                      <?php else: ?>
-                        <span class="atenea-purchase-unavailable">Factura no disponible</span>
-                      <?php endif; ?>
-                    </td>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="d-md-none">
-            <div class="d-flex flex-column gap-3">
-              <?php foreach ($purchaseHistory as $purchase): ?>
-                <article class="atenea-purchase-mobile-item">
-                  <div class="d-flex justify-content-between align-items-start gap-3">
-                    <div>
-                      <h6 class="atenea-purchase-mobile-title mb-1"><?php echo dashboard_h((string) $purchase['concept']); ?></h6>
-                      <span class="atenea-purchase-mobile-meta"><?php echo dashboard_h(usuario_profile_format_date((string) $purchase['date'], 'No disponible', true)); ?></span>
-                    </div>
-                    <span class="atenea-purchase-status <?php echo dashboard_h((string) ($purchase['status_meta']['class'] ?? 'is-neutral')); ?>">
-                      <?php echo dashboard_h((string) ($purchase['status_meta']['label'] ?? 'Desconocido')); ?>
-                    </span>
-                  </div>
-
-                  <div class="atenea-purchase-mobile-grid">
-                    <div>
-                      <span class="atenea-purchase-mobile-label">Tipo</span>
-                      <span class="atenea-purchase-mobile-value"><?php echo dashboard_h((string) $purchase['type']); ?></span>
-                    </div>
-                    <div>
-                      <span class="atenea-purchase-mobile-label">Monto</span>
-                      <span class="atenea-purchase-mobile-value"><?php echo dashboard_h(usuario_purchase_format_amount((float) $purchase['amount'], (string) $purchase['currency'])); ?></span>
-                    </div>
-                    <div>
-                      <span class="atenea-purchase-mobile-label">Método</span>
-                      <span class="atenea-purchase-mobile-value"><?php echo dashboard_h((string) $purchase['payment_method']); ?></span>
-                    </div>
-                    <div>
-                      <span class="atenea-purchase-mobile-label">Detalle</span>
-                      <span class="atenea-purchase-mobile-value"><?php echo dashboard_h(((int) $purchase['line_count']) > 0 ? ((int) $purchase['total_quantity']) . ' artículo(s)' : 'Compra registrada'); ?></span>
-                    </div>
-                  </div>
-
-                  <div class="mt-3">
-                    <?php if (!empty($purchase['invoice_available'])): ?>
-                      <div class="atenea-purchase-invoice-actions">
-                        <a
-                          class="btn btn-outline-dark btn-sm mb-0 atenea-invoice-button"
-                          href="<?php echo dashboard_h(usuario_purchase_invoice_url((int) $purchase['order_id'], 'view')); ?>"
-                          target="_blank"
-                          rel="noopener"
-                        >Ver factura</a>
-                        <a
-                          class="btn bg-gradient-dark btn-sm mb-0 atenea-invoice-button"
-                          href="<?php echo dashboard_h(usuario_purchase_invoice_url((int) $purchase['order_id'], 'download')); ?>"
-                        >Descargar PDF</a>
-                      </div>
-                    <?php else: ?>
-                      <span class="atenea-purchase-unavailable">Factura no disponible</span>
-                    <?php endif; ?>
-                  </div>
-                </article>
-              <?php endforeach; ?>
-            </div>
-          </div>
-        <?php else: ?>
-          <div class="atenea-purchase-empty">
-            <div class="atenea-purchase-empty-icon" aria-hidden="true">
-              <span class="material-symbols-rounded">shopping_bag</span>
-            </div>
-            <h6 class="mb-2">No tienes compras registradas todavía.</h6>
-            <p class="text-sm text-muted mb-3">Cuando compres un plan o producto, aparecerá aquí tu historial.</p>
-            <a class="btn bg-gradient-dark mb-0" href="productos.php">Ir a la tienda</a>
-          </div>
-        <?php endif; ?>
-      </div>
-    </div>
-  </div>
-</div>
-<?php
-$purchaseHistoryBodyHtml = ob_get_clean();
-}
 
 ob_start();
 ?>
@@ -1576,10 +1275,13 @@ window.addEventListener('load', function () {
 $extraBodyHtml = ob_get_clean();
 
 dashboard_render_material_page([
+    'bodyClass' => 'atenea-user-dashboard',
+    'contentClass' => 'cecsb-dashboard-page',
+    'stylesheets' => ['../css/usuario_vista.css'],
     'pageTitle' => 'Dashboard usuario',
     'roleLabel' => $roleLabel,
     'welcomeTitle' => 'Tu acceso inicial a Atenea',
-    'welcomeText' => 'Desde aquí puedes explorar planes de clase, gestionar pagos y mantener tu perfil al día. Cuando tu plan académico esté activo, esta misma cuenta podrá redirigirte al dashboard estudiantil.',
+    'welcomeText' => 'Desde aquí puedes explorar la oferta de capacitación, gestionar pagos y mantener tu perfil al día. Cuando tu plan académico esté activo, esta misma cuenta podrá redirigirte al dashboard estudiantil.',
     'profileUrl' => 'usuario_vista.php',
     'profileAction' => [
         'type' => 'modal',
@@ -1588,12 +1290,14 @@ dashboard_render_material_page([
     ],
     'logoutUrl' => 'logout.php?redirect=homepage.php',
     'navSections' => $navSections,
+    'cardsColumnClass' => 'col-12 col-md-6 col-xl-4 mb-4',
     'cards' => $cards,
     'quickLinks' => $quickLinks,
     'summaryItems' => $summaryItems,
+    'accountMetaItems' => $accountMetaItems,
     'heroBadges' => [
         $planStatusLabel,
-        $programCount . ' planes disponibles',
+        $programCount . ' opciones de capacitación',
         $paidOrdersCount . ' pagos confirmados',
     ],
     'heroActions' => [

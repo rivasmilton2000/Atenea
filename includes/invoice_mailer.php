@@ -68,6 +68,8 @@ if (!function_exists('atenea_build_legacy_invoice_pdf')) {
         $pdf->SetAutoPageBreak(true, 14);
         $pdf->AddPage();
 
+        $shippingLabel = ((float) ($order['shipping_amount'] ?? 0) > 0) ? 'Envio' : 'Entrega digital';
+
         // Header visual
         $pdf->SetFillColor(14, 115, 74);
         $pdf->Rect(12, 12, 186, 24, 'F');
@@ -104,7 +106,8 @@ if (!function_exists('atenea_build_legacy_invoice_pdf')) {
 
         // Datos de cliente
         $pdf->SetTextColor(40, 40, 40);
-        $pdf->SetFillColor(245, 248, 247);
+        $pdf->SetDrawColor(184, 208, 194);
+        $pdf->SetFillColor(244, 249, 245);
         $pdf->Rect(12, 40, 186, 32, 'F');
         $pdf->SetXY(16, 44);
         $pdf->SetFont('helvetica', 'B', 10);
@@ -119,8 +122,8 @@ if (!function_exists('atenea_build_legacy_invoice_pdf')) {
 
         // Tabla encabezado
         $pdf->Ln(4);
-        $pdf->SetFillColor(224, 241, 235);
-        $pdf->SetDrawColor(192, 212, 204);
+        $pdf->SetFillColor(219, 236, 226);
+        $pdf->SetDrawColor(181, 203, 191);
         $pdf->SetFont('helvetica', 'B', 10);
         $pdf->Cell(86, 8, 'Producto', 1, 0, 'L', true);
         $pdf->Cell(22, 8, 'Cant.', 1, 0, 'C', true);
@@ -143,12 +146,14 @@ if (!function_exists('atenea_build_legacy_invoice_pdf')) {
         $pdf->Ln(4);
         $totalsX = 112;
         $pdf->SetX($totalsX);
+        $pdf->SetDrawColor(181, 203, 191);
+        $pdf->SetFillColor(245, 250, 246);
         $pdf->SetFont('helvetica', '', 10);
-        $pdf->Cell(46, 7, 'Subtotal', 1, 0, 'R');
-        $pdf->Cell(40, 7, '$' . number_format((float)$order['subtotal'], 2), 1, 1, 'R');
+        $pdf->Cell(46, 7, 'Subtotal', 1, 0, 'R', true);
+        $pdf->Cell(40, 7, '$' . number_format((float)$order['subtotal'], 2), 1, 1, 'R', true);
         $pdf->SetX($totalsX);
-        $pdf->Cell(46, 7, 'Envio', 1, 0, 'R');
-        $pdf->Cell(40, 7, '$' . number_format((float)$order['shipping_amount'], 2), 1, 1, 'R');
+        $pdf->Cell(46, 7, $shippingLabel, 1, 0, 'R', true);
+        $pdf->Cell(40, 7, '$' . number_format((float)$order['shipping_amount'], 2), 1, 1, 'R', true);
         $pdf->SetX($totalsX);
         $pdf->SetFillColor(14, 115, 74);
         $pdf->SetTextColor(255, 255, 255);

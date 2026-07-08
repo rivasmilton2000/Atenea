@@ -4,6 +4,7 @@ require 'session.php';
 include '../includes/connection.php';
 include '../includes/stripe_config.php';
 require_once '../includes/atenea_auth.php';
+require_once '../includes/atenea_catalog.php';
 require_once '../includes/dte/DteSchema.php';
 
 if (!function_exists('atenea_checkout_redirect_error')) {
@@ -136,7 +137,8 @@ if (strpos(STRIPE_SECRET_KEY, 'sk_test_REEMPLAZA_AQUI') === 0) {
 }
 
 $stmt = $db->prepare("
-    SELECT c.producto_id, c.cantidad, p.nombre, p.precio, p.precio_descuento, p.stock
+    SELECT c.producto_id, c.cantidad, p.nombre, p.precio, p.precio_descuento, p.stock,
+           " . atenea_catalog_product_select_sql($db, 'p') . "
     FROM carrito c
     JOIN productos p ON c.producto_id = p.id
     WHERE c.session_id = ?
@@ -169,6 +171,7 @@ while ($row = $result->fetch_assoc()) {
     $cartItems[] = [
         'producto_id' => (int) $row['producto_id'],
         'nombre' => (string) $row['nombre'],
+        'tipo_oferta' => (string) ($row['tipo_oferta'] ?? 'producto'),
         'precio' => $price,
         'cantidad' => $quantity,
         'subtotal' => $lineSubtotal,
@@ -181,7 +184,7 @@ if ($cartItems === []) {
     atenea_checkout_redirect_error('Tu carrito esta vacio.', $formData);
 }
 
-$shippingAmount = 5.00;
+$shippingAmount = atenea_catalog_cart_requires_shipping($cartItems) ? 5.00 : 0.00;
 $total = $subtotal + $shippingAmount;
 
 mysqli_begin_transaction($db);
@@ -284,10 +287,12 @@ try {
         $idx++;
     }
 
-    $payload['line_items[' . $idx . '][price_data][currency]'] = 'usd';
-    $payload['line_items[' . $idx . '][price_data][product_data][name]'] = 'Envio';
-    $payload['line_items[' . $idx . '][price_data][unit_amount]'] = (int) round($shippingAmount * 100);
-    $payload['line_items[' . $idx . '][quantity]'] = 1;
+    if ($shippingAmount > 0) {
+        $payload['line_items[' . $idx . '][price_data][currency]'] = 'usd';
+        $payload['line_items[' . $idx . '][price_data][product_data][name]'] = 'Envio';
+        $payload['line_items[' . $idx . '][price_data][unit_amount]'] = (int) round($shippingAmount * 100);
+        $payload['line_items[' . $idx . '][quantity]'] = 1;
+    }
 
     $ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

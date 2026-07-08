@@ -68,7 +68,7 @@ $programa = mysqli_fetch_assoc($result);
                     </div>
                     
                     <div class="form-group">
-                        <label>Descripción Completa (Educación)</label>
+                        <label>Descripción Completa (Capacitación)</label>
                         <textarea class="form-control" placeholder="Descripción completa del programa" name="descripcion_completa" rows="6" required><?php echo htmlspecialchars($programa['descripcion_completa']); ?></textarea>
                     </div>
                 </div>

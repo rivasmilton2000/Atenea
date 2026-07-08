@@ -3,6 +3,7 @@
 <?php
 require 'session.php';
 require_once '../includes/atenea_auth.php';
+require_once '../includes/atenea_catalog.php';
 include '../includes/connection.php';
 
 atenea_handle_session_timeout();
@@ -18,7 +19,8 @@ if (!isset($_SESSION['cart_session'])) {
 
 $session_id = (string) $_SESSION['cart_session'];
 $stmtCarrito = $db->prepare("
-    SELECT c.*, p.nombre, p.descripcion_corta, p.precio, p.precio_descuento, p.imagen, p.stock
+    SELECT c.*, p.nombre, p.descripcion_corta, p.precio, p.precio_descuento, p.imagen, p.stock,
+           " . atenea_catalog_product_select_sql($db, 'p') . "
     FROM carrito c
     JOIN productos p ON c.producto_id = p.id
     WHERE c.session_id = ?
@@ -38,7 +40,8 @@ $stmtCarrito->execute();
 $resultado_carrito = $stmtCarrito->get_result();
 
 $total = 0;
-$envio = 5.00;
+$envio = 0.00;
+$cartRequiresShipping = false;
 $checkout_error = isset($_GET['checkout_error']) ? trim((string) $_GET['checkout_error']) : '';
 $checkout_ok = isset($_GET['checkout_ok']) ? trim((string) $_GET['checkout_ok']) : '';
 $checkout_cancelled = isset($_GET['checkout_cancelled']) ? trim((string) $_GET['checkout_cancelled']) : '';
@@ -96,7 +99,7 @@ if (is_array($checkout_form_prefill)) {
       <p class="atenea-carrito-kicker">Atenea Escuela de Naturopatía Holística</p>
       <h1 class="atenea-carrito-title">Mi carrito</h1>
       <p class="atenea-carrito-summary">
-        Revisa tus productos, ajusta cantidades y completa tu compra de forma rápida y segura.
+        Revisa tus productos, cursos y certificaciones, ajusta cantidades y completa tu compra de forma rápida y segura.
       </p>
     </div>
   </section>
@@ -133,6 +136,7 @@ if (is_array($checkout_form_prefill)) {
                     $precio = $item['precio_descuento'] ? $item['precio_descuento'] : $item['precio'];
                     $subtotal = $precio * $item['cantidad'];
                     $total += $subtotal;
+                    $cartRequiresShipping = $cartRequiresShipping || atenea_catalog_cart_requires_shipping([$item]);
                     ?>
                     <tr>
                       <td class="align-middle">
@@ -163,6 +167,7 @@ if (is_array($checkout_form_prefill)) {
                       </td>
                     </tr>
                   <?php endwhile; ?>
+                  <?php $envio = $cartRequiresShipping ? 5.00 : 0.00; ?>
                 </tbody>
               </table>
             </div>
@@ -177,7 +182,7 @@ if (is_array($checkout_form_prefill)) {
                   <h6 class="font-weight-medium">$<?php echo number_format($total, 2); ?></h6>
                 </div>
                 <div class="d-flex justify-content-between mb-3">
-                  <h6 class="font-weight-medium">Envío</h6>
+                  <h6 class="font-weight-medium"><?php echo $cartRequiresShipping ? 'Envío' : 'Entrega digital'; ?></h6>
                   <h6 class="font-weight-medium">$<?php echo number_format($envio, 2); ?></h6>
                 </div>
                 <hr class="mt-0">
@@ -299,8 +304,8 @@ if (is_array($checkout_form_prefill)) {
         <div class="text-center py-5">
           <i class="fa fa-shopping-cart" style="font-size: 100px; color: #ccc;"></i>
           <h3 class="mt-4">Tu carrito está vacío</h3>
-          <p class="text-muted">Agrega productos para comenzar tu compra.</p>
-          <a href="productos.php" class="btn btn-primary mt-3">Ver productos</a>
+          <p class="text-muted">Agrega productos, cursos o certificaciones para comenzar tu compra.</p>
+          <a href="productos.php" class="btn btn-primary mt-3">Ver catálogo</a>
         </div>
       <?php endif; ?>
     </div>

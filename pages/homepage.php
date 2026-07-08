@@ -57,10 +57,10 @@ if (!$resultado_programas) {
           <h4 class="atenea-kicker">Atenea Escuela de Naturopatía Holística</h4>
           <h1 class="atenea-hero-title">"La salud se aprende, el cuerpo sana"</h1>
           <p class="atenea-hero-text text-justify">
-            Atenea Escuela de Naturopatía Holística es una institución enfocada en la educación,
+            Atenea Escuela de Naturopatía Holística es una institución enfocada en la capacitación,
             la divulgación del conocimiento en salud natural y la comercialización de productos alineados con un estilo de vida saludable.
-            Su propuesta combina una escuela online de naturopatía, la venta de herramientas pedagógicas educativas especializadas
-            y la comercialización de productos naturopáticos, creando un entorno armónico entre salud, enseñanza y bienestar.
+            Su propuesta combina una escuela online de naturopatía, cursos y certificaciones especializadas
+            y la comercialización de productos naturopáticos, creando un entorno armónico entre salud, capacitación y bienestar.
           </p>
         </div>
         <div class="col-lg-6 atenea-hero-media">
@@ -105,7 +105,7 @@ if (!$resultado_programas) {
           <p class="section-title pr-5">
             <span class="pr-2">Descubre más sobre nosotros</span>
           </p>
-          <h1 class="mb-4">¡La mejor opción educativa!</h1>
+          <h1 class="mb-4">¡La mejor opción para tu capacitación!</h1>
           <p class="text-justify">
             <?php echo $about['descripcion_corta']; ?>
           </p>
@@ -137,7 +137,7 @@ if (!$resultado_programas) {
     <div class="container">
       <div class="text-center pb-2">
         <p class="section-title px-5">
-          <span class="px-2">Nuestros programas</span>
+          <span class="px-2">Capacitación destacada</span>
         </p>
         <h1 class="mb-4">Formación integral en Naturopatía</h1>
       </div>
@@ -171,7 +171,7 @@ if (!$resultado_programas) {
         <?php endwhile; ?>
       </div>
       <div class="text-center mt-4">
-        <a href="educacion.php" class="btn btn-primary2 py-2 px-4">Ver todos los programas</a>
+        <a href="educacion.php" class="btn btn-primary2 py-2 px-4">Ver toda la capacitación</a>
       </div>
     </div>
   </div>

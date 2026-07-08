@@ -1,5 +1,6 @@
 <?php 
 include '../includes/connection.php';
+require_once '../includes/atenea_catalog.php';
 include '../includes/sidebar_admin.php'; 
 
 $query = 'SELECT ID, t.TYPE FROM users u JOIN type t ON t.TYPE_ID=u.TYPE_ID WHERE ID = '.$_SESSION['MEMBER_ID'].'';
@@ -29,12 +30,12 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h4 class="m-2 font-weight-bold text-primary">Productos&nbsp;
+        <h4 class="m-2 font-weight-bold text-primary">Catálogo Atenea&nbsp;
             <a href="productos_add.php" type="button" class="btn btn-primary bg-gradient-primary" style="border-radius: 0px;">
-                <i class="fas fa-fw fa-plus"></i> Agregar Producto
+                <i class="fas fa-fw fa-plus"></i> Agregar elemento
             </a>
             <a href="categorias_productos.php" type="button" class="btn btn-secondary bg-gradient-secondary" style="border-radius: 0px;">
-                <i class="fas fa-fw fa-list"></i> Categorias
+                <i class="fas fa-fw fa-list"></i> Categorías
             </a>
         </h4>
     </div>
@@ -47,9 +48,12 @@ while ($row = mysqli_fetch_assoc($result)) {
                         <th>ID</th>
                         <th>IMAGEN</th>
                         <th>NOMBRE</th>
+                        <th>TIPO</th>
                         <th>CATEGORIA</th>
+                        <th>DURACIÓN</th>
                         <th>PRECIO</th>
                         <th>STOCK</th>
+                        <th>VIDEO</th>
                         <th>DESTACADO</th>
                         <th>ESTADO</th>
                         <th>ACCIONES</th>
@@ -64,6 +68,13 @@ while ($row = mysqli_fetch_assoc($result)) {
                     $result = mysqli_query($db, $query) or die(mysqli_error($db));
 
                     while ($row = mysqli_fetch_assoc($result)) {
+                        $offerType = atenea_catalog_normalize_type($row['tipo_oferta'] ?? 'producto');
+                        $offerTypeLabel = atenea_catalog_type_label($offerType);
+                        $offerTypeClass = $offerType === 'curso'
+                            ? 'badge-primary'
+                            : ($offerType === 'certificacion' ? 'badge-success' : 'badge-info');
+                        $duration = trim((string) ($row['duracion'] ?? ''));
+                        $hasVideo = atenea_catalog_has_active_video($row);
                         $estadoClass = $row['estado'] == 1 ? 'badge-success' : 'badge-danger';
                         $estadoText = $row['estado'] == 1 ? 'Activo' : 'Inactivo';
                         $destacadoClass = $row['destacado'] == 1 ? 'badge-warning' : 'badge-secondary';
@@ -73,9 +84,11 @@ while ($row = mysqli_fetch_assoc($result)) {
                         
                         echo '<tr>';
                         echo '<td>' . $row['id'] . '</td>';
-                        echo '<td><img src="../img/' . $row['imagen'] . '" alt="' . $row['nombre'] . '" style="width: 60px; height: 60px; object-fit: cover;" class="rounded"></td>';
-                        echo '<td>' . $row['nombre'] . '</td>';
-                        echo '<td><span class="badge badge-info">' . $row['categoria_nombre'] . '</span></td>';
+                        echo '<td><img src="../img/' . htmlspecialchars((string) $row['imagen'], ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars((string) $row['nombre'], ENT_QUOTES, 'UTF-8') . '" style="width: 60px; height: 60px; object-fit: cover;" class="rounded"></td>';
+                        echo '<td>' . htmlspecialchars((string) $row['nombre'], ENT_QUOTES, 'UTF-8') . '</td>';
+                        echo '<td><span class="badge ' . $offerTypeClass . '">' . htmlspecialchars($offerTypeLabel, ENT_QUOTES, 'UTF-8') . '</span></td>';
+                        echo '<td><span class="badge badge-info">' . htmlspecialchars((string) ($row['categoria_nombre'] ?? 'Sin categoría'), ENT_QUOTES, 'UTF-8') . '</span></td>';
+                        echo '<td>' . ($duration !== '' ? htmlspecialchars($duration, ENT_QUOTES, 'UTF-8') : '<span class="text-muted">No aplica</span>') . '</td>';
                         echo '<td>';
                         if ($row['precio_descuento']) {
                             echo '<strong>$' . number_format($precio_mostrar, 2) . '</strong><br>';
@@ -85,6 +98,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                         }
                         echo '</td>';
                         echo '<td>' . $row['stock'] . '</td>';
+                        echo '<td><span class="badge ' . ($hasVideo ? 'badge-success' : 'badge-secondary') . '">' . ($hasVideo ? 'Activo' : 'Oculto') . '</span></td>';
                         echo '<td><span class="badge ' . $destacadoClass . '">' . $destacadoText . '</span></td>';
                         echo '<td><span class="badge ' . $estadoClass . '">' . $estadoText . '</span></td>';
                         echo '<td align="right">

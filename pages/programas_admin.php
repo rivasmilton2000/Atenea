@@ -29,7 +29,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h4 class="m-2 font-weight-bold text-primary">Programas Educativos&nbsp;
+        <h4 class="m-2 font-weight-bold text-primary">Programas de Capacitación&nbsp;
             <a href="#" data-toggle="modal" data-target="#addProgramModal" type="button" class="btn btn-primary bg-gradient-primary" style="border-radius: 0px;">
                 <i class="fas fa-fw fa-plus"></i>
             </a>
@@ -179,7 +179,7 @@ function confirmDelete(programId) {
                                 <textarea class="form-control" placeholder="Descripción breve para la página principal" name="descripcion_corta" rows="3" required></textarea>
                             </div>
                             <div class="form-group">
-                                <label>Descripción Completa (Educación)</label>
+                                <label>Descripción Completa (Capacitación)</label>
                                 <textarea class="form-control" placeholder="Descripción completa del programa" name="descripcion_completa" rows="5" required></textarea>
                             </div>
                         </div>

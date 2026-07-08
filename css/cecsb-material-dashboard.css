@@ -835,6 +835,7 @@ body.cecsb-module-layout #sidenav-main {
     max-height: none;
   }
 
+  body.cecsb-dashboard-body #sidenav-main,
   body.cecsb-module-layout #sidenav-main {
     left: 0;
     max-width: 290px;
@@ -843,10 +844,12 @@ body.cecsb-module-layout #sidenav-main {
     z-index: 1040;
   }
 
+  body.cecsb-dashboard-body.cecsb-sidebar-open #sidenav-main,
   body.cecsb-module-layout.cecsb-sidebar-open #sidenav-main {
     transform: translateX(0);
   }
 
+  body.cecsb-dashboard-body.cecsb-sidebar-open .cecsb-sidenav-backdrop,
   body.cecsb-module-layout.cecsb-sidebar-open .cecsb-sidenav-backdrop {
     opacity: 1;
     pointer-events: auto;

@@ -98,7 +98,7 @@ $navSections = [
     [
         'title' => 'Explorar',
         'items' => [
-            ['label' => 'Planes de clase', 'href' => 'educacion.php', 'icon' => 'school', 'loaderText' => 'Cargando planes...'],
+            ['label' => 'Capacitación', 'href' => 'educacion.php', 'icon' => 'school', 'loaderText' => 'Cargando capacitaciones...'],
             ['label' => 'Productos', 'href' => 'productos.php', 'icon' => 'storefront', 'loaderText' => 'Cargando productos...'],
             ['label' => 'Carrito y pago', 'href' => 'carrito.php', 'icon' => 'shopping_cart', 'loaderText' => 'Abriendo carrito y pago...'],
             ['label' => 'Historial de compras', 'href' => 'historial_compras.php', 'icon' => 'receipt_long', 'active' => true, 'loaderText' => 'Cargando historial de compras...'],

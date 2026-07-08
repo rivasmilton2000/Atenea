@@ -13,7 +13,7 @@ class AteneaDtePdfDocument extends TCPDF
     {
         $this->SetY(-10);
         $this->SetFont('helvetica', '', 6.4);
-        $this->SetTextColor(95, 95, 95);
+        $this->SetTextColor(82, 96, 88);
         $this->Cell(58, 3.8, 'Documento generado por Atenea', 0, 0, 'L');
 
         $fiscalValidity = trim((string) ($this->footerContext['fiscal_validity'] ?? ''));
@@ -25,7 +25,7 @@ class AteneaDtePdfDocument extends TCPDF
             $this->Cell(84, 3.8, '', 0, 0, 'C');
         }
 
-        $this->SetTextColor(110, 110, 110);
+        $this->SetTextColor(96, 108, 101);
         $this->SetFont('helvetica', '', 6.4);
         $this->Cell(0, 3.8, 'Pagina ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'R');
     }
@@ -144,8 +144,8 @@ class DtePdfRenderer
 
         $boxHeight = max(46.0, $leftHeight, $rightHeight);
 
-        $pdf->SetDrawColor(198, 206, 214);
-        $pdf->SetFillColor(248, 249, 251);
+        $pdf->SetDrawColor(182, 205, 191);
+        $pdf->SetFillColor(245, 250, 246);
         $pdf->RoundedRect($leftX, $startY, $leftWidth, $boxHeight, 1.8, '1111', 'DF');
         $pdf->RoundedRect($rightX, $startY, $rightWidth, $boxHeight, 1.8, '1111', 'DF');
 
@@ -154,7 +154,7 @@ class DtePdfRenderer
         }
 
         $headerTextX = $leftX + $padding + ($logoWidth > 0 ? $logoWidth + 2.0 : 0.0);
-        $pdf->SetTextColor(25, 35, 50);
+        $pdf->SetTextColor(23, 68, 45);
         $pdf->SetFont('helvetica', 'B', 10.5);
         $pdf->SetXY($headerTextX, $startY + $padding);
         $pdf->MultiCell($headerTextWidth, 4.2, $commercialName, 0, 'L');
@@ -168,7 +168,7 @@ class DtePdfRenderer
         $pdf->SetXY($leftX + $padding, $detailY);
         $pdf->MultiCell($detailWidth, 3.5, implode("\n", $emitterLines), 0, 'L');
 
-        $pdf->SetTextColor(25, 35, 50);
+        $pdf->SetTextColor(23, 68, 45);
         $pdf->SetFont('helvetica', 'B', 9.2);
         $pdf->SetXY($rightX + $padding, $startY + $padding);
         $pdf->MultiCell($rightWidth - ($padding * 2), 4.2, "DOCUMENTO TRIBUTARIO ELECTRONICO\nFACTURA", 0, 'C');
@@ -215,8 +215,8 @@ class DtePdfRenderer
 
         $x = self::PAGE_LEFT;
         foreach ($cells as $cell) {
-            $pdf->SetDrawColor(214, 220, 226);
-            $pdf->SetFillColor(252, 252, 252);
+            $pdf->SetDrawColor(196, 215, 203);
+            $pdf->SetFillColor(251, 253, 251);
             $pdf->RoundedRect($x, $startY, $cellWidth, $cellHeight, 1.6, '1111', 'DF');
 
             $qrX = $x + (($cellWidth - $qrSize) / 2);
@@ -278,11 +278,11 @@ class DtePdfRenderer
         $rightHeight = self::measureInfoTableHeight($pdf, $columnThree, $columnWidth, $labelWidth);
         $blockHeight = ($padding * 2) + $headerHeight + max($leftHeight, $middleHeight, $rightHeight);
 
-        $pdf->SetDrawColor(198, 206, 214);
-        $pdf->SetFillColor(248, 249, 251);
+        $pdf->SetDrawColor(182, 205, 191);
+        $pdf->SetFillColor(245, 250, 246);
         $pdf->RoundedRect(self::PAGE_LEFT, $startY, self::CONTENT_WIDTH, $blockHeight, 1.8, '1111', 'DF');
 
-        $pdf->SetTextColor(25, 35, 50);
+        $pdf->SetTextColor(23, 68, 45);
         $pdf->SetFont('helvetica', 'B', 8.1);
         $pdf->SetXY(self::PAGE_LEFT + $padding, $startY + $padding);
         $pdf->Cell(self::CONTENT_WIDTH - ($padding * 2), 4.2, 'Datos del cliente / receptor', 0, 1, 'L');
@@ -330,7 +330,7 @@ class DtePdfRenderer
 
             $x = self::PAGE_LEFT;
             $pdf->SetFont('helvetica', '', 5.8);
-            $pdf->SetTextColor(35, 35, 35);
+            $pdf->SetTextColor(45, 61, 51);
 
             foreach ($rowValues as $index => $value) {
                 $pdf->SetXY($x, $y);
@@ -370,7 +370,7 @@ class DtePdfRenderer
 
         $startY = self::prepareSectionStart($pdf, $startY, $blockHeight);
 
-        $pdf->SetTextColor(25, 35, 50);
+        $pdf->SetTextColor(23, 68, 45);
         $pdf->SetFont('helvetica', 'B', 7.6);
         $pdf->SetXY(self::PAGE_LEFT, $startY);
         $pdf->Cell($lettersWidth, 3.8, 'Valor en letras', 0, 1, 'L');
@@ -391,12 +391,12 @@ class DtePdfRenderer
         foreach ($totalsRows as $index => $row) {
             $isGrandTotal = $index === count($totalsRows) - 1;
             if ($isGrandTotal) {
-                $pdf->SetFillColor(29, 78, 137);
+                $pdf->SetFillColor(11, 122, 75);
                 $pdf->SetTextColor(255, 255, 255);
                 $pdf->SetFont('helvetica', 'B', 7.1);
             } else {
-                $pdf->SetFillColor(248, 249, 251);
-                $pdf->SetTextColor(25, 35, 50);
+                $pdf->SetFillColor(245, 250, 246);
+                $pdf->SetTextColor(23, 68, 45);
                 $pdf->SetFont('helvetica', '', 6.9);
             }
 
@@ -443,11 +443,11 @@ class DtePdfRenderer
         $boxHeight = max(8.5, $pdf->getStringHeight(self::CONTENT_WIDTH - 6.0, $text) + 3.0);
         $startY = self::prepareSectionStart($pdf, $startY, $boxHeight);
 
-        $pdf->SetFillColor(248, 249, 251);
-        $pdf->SetDrawColor(198, 206, 214);
+        $pdf->SetFillColor(245, 250, 246);
+        $pdf->SetDrawColor(182, 205, 191);
         $pdf->RoundedRect(self::PAGE_LEFT, $startY, self::CONTENT_WIDTH, $boxHeight, 1.8, '1111', 'DF');
 
-        $pdf->SetTextColor(25, 35, 50);
+        $pdf->SetTextColor(23, 68, 45);
         $pdf->SetFont('helvetica', '', 6.4);
         $pdf->SetXY(self::PAGE_LEFT + 3.0, $startY + 1.8);
         $pdf->MultiCell(self::CONTENT_WIDTH - 6.0, 3.4, $text, 0, 'L');
@@ -458,8 +458,8 @@ class DtePdfRenderer
     private static function renderItemsTableHeader(TCPDF $pdf, array $headers, array $widths, float $y): float
     {
         $pdf->SetXY(self::PAGE_LEFT, $y);
-        $pdf->SetFillColor(226, 231, 236);
-        $pdf->SetTextColor(35, 45, 60);
+        $pdf->SetFillColor(220, 237, 226);
+        $pdf->SetTextColor(31, 68, 50);
         $pdf->SetFont('helvetica', 'B', 5.9);
 
         foreach ($headers as $index => $header) {
@@ -483,7 +483,7 @@ class DtePdfRenderer
             $valueHeight = $pdf->getStringHeight($valueWidth, $value) + 0.3;
             $rowHeight = max(3.8, $labelHeight, $valueHeight);
 
-            $pdf->SetTextColor(25, 35, 50);
+            $pdf->SetTextColor(23, 68, 45);
             $pdf->SetFont('helvetica', 'B', 6.5);
             $pdf->SetXY($x, $y);
             $pdf->MultiCell($labelWidth, $rowHeight, $label . ':', 0, 'L');

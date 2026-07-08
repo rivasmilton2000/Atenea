@@ -19,6 +19,7 @@ $config
         'blank_line_after_namespace' => true,
         'blank_line_after_opening_tag' => true,
         'blank_line_before_statement' => true,
+
         'braces' => true,
         'cast_spaces' => true,
         'class_attributes_separation' => ['elements' => ['method' => 'one', 'property' => 'one']], // const are often grouped with other related const
@@ -61,6 +62,7 @@ $config
         'general_phpdoc_annotation_remove' => ['annotations' => ['access', 'category', 'copyright']],
         'general_phpdoc_tag_rename' => true,
         'global_namespace_import' => true,
+        
         'group_import' => false, // I feel it makes the code actually harder to read
         'header_comment' => false, // We don't use common header in all our files
         'heredoc_indentation' => true,

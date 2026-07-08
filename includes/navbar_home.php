@@ -47,7 +47,7 @@ $logoutUrlEscaped = htmlspecialchars($logoutUrl, ENT_QUOTES, 'UTF-8');
       <div class="navbar-nav font-weight-bold mx-auto py-0 atenea-main-menu">
         <a href="homepage.php" class="nav-item nav-link<?php echo $ateneaIsActive('homepage.php'); ?>" data-loader-text="Cargando inicio...">Inicio</a>
         <a href="about.php" class="nav-item nav-link<?php echo $ateneaIsActive('about.php'); ?>" data-loader-text="Cargando información...">¿Quiénes somos?</a>
-        <a href="educacion.php" class="nav-item nav-link<?php echo $ateneaIsActive('educacion.php'); ?>" data-loader-text="Cargando programas...">Educación</a>
+        <a href="educacion.php" class="nav-item nav-link<?php echo $ateneaIsActive('educacion.php'); ?>" data-loader-text="Cargando capacitaciones...">Capacitación</a>
         <a href="galeria.php" class="nav-item nav-link<?php echo $ateneaIsActive('galeria.php'); ?>" data-loader-text="Cargando galería...">Galería</a>
         <a href="noticias.php" class="nav-item nav-link<?php echo $ateneaIsActive('noticias.php'); ?>" data-loader-text="Cargando noticias...">Noticias</a>
         <a href="productos.php" class="nav-item nav-link<?php echo $ateneaIsActive('productos.php'); ?>" data-loader-text="Cargando productos...">Productos</a>

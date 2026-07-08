@@ -23,7 +23,7 @@ $resultado_categorias = mysqli_query($db, $sql_categorias);
       <h1 class="atenea-galeria-title">Galería</h1>
       <p class="atenea-galeria-summary">
         Explora nuestros espacios, actividades y experiencias formativas.
-        Cada imagen refleja el compromiso de Atenea con una educación práctica, humana y transformadora.
+        Cada imagen refleja el compromiso de Atenea con una capacitación práctica, humana y transformadora.
       </p>
     </div>
   </section>

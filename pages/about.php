@@ -22,7 +22,7 @@ $about = mysqli_fetch_assoc($resultado_about);
       <h1 class="atenea-about-title">¿Quiénes somos?</h1>
       <p class="atenea-about-summary">
         Atenea Escuela es una institución dedicada a la formación integral en terapias naturales y salud holística.
-        Nos enfocamos en brindar educación académica y práctica con un enfoque humano y ético.
+        Nos enfocamos en brindar capacitación académica y práctica con un enfoque humano y ético.
       </p>
     </div>
   </section>

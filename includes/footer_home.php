@@ -8,7 +8,7 @@
           <span>ATENEA</span>
         </a>
         <p class="atenea-footer-about">
-          Atenea Escuela de Naturopatía Holística combina formación académica de calidad y principios de la salud natural,
+          Atenea Escuela de Naturopatía Holística combina capacitación académica de calidad y principios de la salud natural,
           formando una comunidad de aprendizaje consciente orientada al bienestar integral.
         </p>
         <div class="atenea-footer-social">
@@ -39,7 +39,7 @@
         <div class="atenea-footer-links">
           <a href="homepage.php">Inicio</a>
           <a href="about.php">¿Quiénes somos?</a>
-          <a href="educacion.php">Educación</a>
+          <a href="educacion.php">Capacitación</a>
           <a href="noticias.php">Noticias</a>
         </div>
       </div>

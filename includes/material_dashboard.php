@@ -300,6 +300,17 @@ if (!function_exists('dashboard_render_material_page')) {
         $heroActions = $config['heroActions'] ?? [];
         $bodySectionsHtml = $config['bodySectionsHtml'] ?? '';
         $extraBodyHtml = $config['extraBodyHtml'] ?? '';
+        $extraHeadHtml = $config['extraHeadHtml'] ?? '';
+        $stylesheets = array_values(array_filter((array) ($config['stylesheets'] ?? []), static function ($value): bool {
+            return is_string($value) && trim($value) !== '';
+        }));
+        $bodyClass = trim((string) ($config['bodyClass'] ?? ''));
+        $contentClass = trim((string) ($config['contentClass'] ?? ''));
+        $cardsColumnClass = trim((string) ($config['cardsColumnClass'] ?? 'col-xl-3 col-sm-6 mb-4'));
+        $accountMetaItems = $config['accountMetaItems'] ?? [
+            ['label' => 'Rol', 'value' => $roleLabel],
+            ['label' => 'Fecha', 'value' => date('d/m/Y')],
+        ];
         $footerText = $config['footerText'] ?? '2026 © Derechos reservados Atenea Escuela de Naturopatía Holística';
         $userName = dashboard_user_name();
         if (!isset($config['footerText'])) {
@@ -308,7 +319,8 @@ if (!function_exists('dashboard_render_material_page')) {
         $avatarUrl = dashboard_avatar_url();
         $profileAction = dashboard_resolve_profile_action($config);
         $logoutUrl = dashboard_logout_url($config);
-        $today = date('d/m/Y');
+        $bodyClasses = trim('g-sidenav-show bg-gray-100 cecsb-dashboard-body ' . $bodyClass);
+        $contentClasses = trim('container-fluid py-4 ' . $contentClass);
         ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -326,13 +338,20 @@ if (!function_exists('dashboard_render_material_page')) {
   <link id="pagestyle" href="<?php echo dashboard_h(dashboard_material_asset('css/material-dashboard.min.css')); ?>" rel="stylesheet" />
   <link href="../css/cecsb-material-dashboard.css" rel="stylesheet" />
   <link href="../css/atenea-ui.css" rel="stylesheet" />
+  <?php foreach ($stylesheets as $stylesheet): ?>
+  <link href="<?php echo dashboard_h($stylesheet); ?>" rel="stylesheet" />
+  <?php endforeach; ?>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="../js/atenea-ui.js" defer></script>
+  <?php echo $extraHeadHtml; ?>
 </head>
-<body class="g-sidenav-show bg-gray-100 cecsb-dashboard-body" data-loader-text="Cargando aula virtual...">
+<body class="<?php echo dashboard_h($bodyClasses); ?>" data-loader-text="Cargando aula virtual...">
+  <div class="cecsb-sidenav-backdrop d-xl-none" id="cecsbSidenavBackdrop"></div>
   <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-radius-xl fixed-start ms-3 my-3 bg-white shadow-sm" id="sidenav-main">
     <div class="sidenav-header px-3">
-      <i class="material-symbols-rounded p-3 cursor-pointer text-dark opacity-5 position-absolute end-0 top-0 d-none d-xl-none" aria-hidden="true" id="iconSidenav">close</i>
+      <button class="cecsb-sidenav-close d-xl-none" type="button" id="iconSidenavClose" aria-label="Cerrar menu">
+        <span class="material-symbols-rounded">close</span>
+      </button>
       <a class="navbar-brand m-0 d-flex align-items-center gap-2" href="#">
         <img src="../img/Atenea Logo.png" class="navbar-brand-img" alt="Atenea">
         <div class="cecsb-brand-copy">
@@ -371,25 +390,25 @@ if (!function_exists('dashboard_render_material_page')) {
   </aside>
 
   <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
-    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl" id="navbarBlur" data-scroll="true">
-      <div class="container-fluid py-2 px-0">
-        <nav aria-label="breadcrumb">
+    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl cecsb-dashboard-topbar" id="navbarBlur" data-scroll="true">
+      <div class="container-fluid py-2 px-0 cecsb-dashboard-topbar__inner">
+        <div class="cecsb-dashboard-heading">
           <ol class="breadcrumb bg-transparent mb-1 pb-0 pt-1 px-0 me-sm-6 me-5">
             <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="javascript:;">Aula Virtual Atenea</a></li>
             <li class="breadcrumb-item text-sm text-dark active" aria-current="page"><?php echo dashboard_h($pageTitle); ?></li>
           </ol>
           <h6 class="font-weight-bolder mb-0"><?php echo dashboard_h($pageTitle); ?></h6>
-        </nav>
-        <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4" id="navbar">
-          <ul class="navbar-nav ms-md-auto justify-content-end align-items-center">
-            <li class="nav-item d-xl-none ps-3 d-flex align-items-center">
-              <a href="javascript:;" class="nav-link text-body p-0" id="iconNavbarSidenav">
+        </div>
+        <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4 cecsb-dashboard-topbar__actions" id="navbar">
+          <ul class="navbar-nav ms-md-auto justify-content-end align-items-center cecsb-dashboard-topbar__nav">
+            <li class="nav-item d-xl-none d-flex align-items-center cecsb-dashboard-topbar__toggle-item">
+              <button type="button" class="nav-link text-body p-0 border-0 bg-transparent cecsb-sidenav-toggle" id="iconNavbarSidenav" aria-label="Abrir menu">
                 <div class="sidenav-toggler-inner">
                   <i class="sidenav-toggler-line"></i>
                   <i class="sidenav-toggler-line"></i>
                   <i class="sidenav-toggler-line"></i>
                 </div>
-              </a>
+              </button>
             </li>
             <li class="nav-item d-flex align-items-center me-3 cecsb-user-role-badge">
               <span class="badge badge-sm bg-gradient-dark"><?php echo dashboard_h($roleLabel); ?></span>
@@ -438,29 +457,29 @@ if (!function_exists('dashboard_render_material_page')) {
       </div>
     </nav>
 
-    <div class="container-fluid py-4">
-      <div class="row mb-4">
-        <div class="col-lg-8">
-          <div class="card cecsb-hero h-100">
+    <div class="<?php echo dashboard_h($contentClasses); ?>">
+      <div class="row mb-4 cecsb-dashboard-overview">
+        <div class="col-lg-8 cecsb-dashboard-overview__hero">
+          <div class="card cecsb-hero cecsb-dashboard-hero h-100">
             <div class="card-body p-4">
               <p class="text-sm text-uppercase font-weight-bold mb-2 opacity-8"><?php echo dashboard_h($roleLabel); ?></p>
               <h3 class="text-white mb-3"><?php echo dashboard_h($welcomeTitle); ?></h3>
               <p class="text-white-50 mb-4"><?php echo dashboard_h($welcomeText); ?></p>
               <?php if (!empty($heroBadges)): ?>
-                <div class="d-flex flex-wrap gap-2">
+                <div class="d-flex flex-wrap gap-2 cecsb-dashboard-hero__badges">
                   <?php foreach ($heroBadges as $badge): ?>
                     <span class="cecsb-hero-badge"><?php echo dashboard_h($badge); ?></span>
                   <?php endforeach; ?>
                 </div>
               <?php endif; ?>
               <?php if (!empty($heroActions)): ?>
-                <div class="d-flex flex-wrap gap-2 mt-3">
+                <div class="d-flex flex-wrap gap-2 mt-3 cecsb-dashboard-hero__actions">
                   <?php foreach ($heroActions as $heroAction): ?>
                     <?php
                     $variant = (string) ($heroAction['variant'] ?? 'light');
                     $buttonClass = $variant === 'outline'
-                        ? 'btn btn-outline-light mb-0'
-                        : 'btn bg-white text-dark mb-0';
+                        ? 'btn btn-outline-light mb-0 cecsb-dashboard-hero-action'
+                        : 'btn bg-white text-dark mb-0 cecsb-dashboard-hero-action';
                     ?>
                     <a class="<?php echo dashboard_h($buttonClass); ?>" href="<?php echo dashboard_h((string) ($heroAction['href'] ?? '#')); ?>">
                       <?php if (!empty($heroAction['icon'])): ?>
@@ -474,27 +493,25 @@ if (!function_exists('dashboard_render_material_page')) {
             </div>
           </div>
         </div>
-        <div class="col-lg-4 mt-4 mt-lg-0">
-          <div class="card h-100">
+        <div class="col-lg-4 mt-4 mt-lg-0 cecsb-dashboard-overview__account">
+          <div class="card h-100 cecsb-dashboard-account">
             <div class="card-body p-4">
-              <div class="d-flex align-items-center mb-4">
+              <div class="d-flex align-items-center mb-4 cecsb-dashboard-account__header">
                 <img src="<?php echo dashboard_h($avatarUrl); ?>" class="cecsb-user-avatar" alt="usuario">
                 <div class="ms-3">
-                  <p class="text-sm mb-1 text-uppercase font-weight-bold opacity-7">Cuenta activa</p>
+                  <p class="text-sm mb-1 text-uppercase font-weight-bold opacity-7 cecsb-dashboard-account__eyebrow">Cuenta activa</p>
                   <h5 class="mb-0"><?php echo dashboard_h($userName); ?></h5>
                 </div>
               </div>
-              <div class="cecsb-meta-grid">
-                <div>
-                  <span class="cecsb-meta-label">Rol</span>
-                  <span class="cecsb-meta-value"><?php echo dashboard_h($roleLabel); ?></span>
-                </div>
-                <div>
-                  <span class="cecsb-meta-label">Fecha</span>
-                  <span class="cecsb-meta-value"><?php echo dashboard_h($today); ?></span>
-                </div>
+              <div class="cecsb-meta-grid cecsb-dashboard-account__meta">
+                <?php foreach ($accountMetaItems as $metaItem): ?>
+                  <div class="cecsb-dashboard-account__meta-item">
+                    <span class="cecsb-meta-label"><?php echo dashboard_h((string) ($metaItem['label'] ?? '')); ?></span>
+                    <span class="cecsb-meta-value"><?php echo dashboard_h((string) ($metaItem['value'] ?? '')); ?></span>
+                  </div>
+                <?php endforeach; ?>
               </div>
-              <div class="mt-4 d-flex gap-2 flex-wrap">
+              <div class="mt-4 d-flex gap-2 flex-wrap cecsb-dashboard-account__actions">
                 <a <?php echo dashboard_profile_link_attrs($profileAction, 'btn bg-gradient-dark mb-0'); ?>>Ver perfil</a>
                 <button class="btn btn-outline-dark mb-0" type="button" data-bs-toggle="modal" data-bs-target="#logoutModal">Salir</button>
               </div>
@@ -504,7 +521,7 @@ if (!function_exists('dashboard_render_material_page')) {
       </div>
 
       <?php if (!empty($cards)): ?>
-      <div class="row">
+      <div class="row cecsb-dashboard-stats">
         <?php foreach ($cards as $card): ?>
           <?php
           $accent = dashboard_accent_map($card['accent'] ?? 'primary');
@@ -514,8 +531,9 @@ if (!function_exists('dashboard_render_material_page')) {
           $metricLabel = $card['metricLabel'] ?? 'Registros activos';
           $footerLabel = $card['footerLabel'] ?? 'Abrir módulo';
           $href = $card['href'] ?? '';
+          $columnClass = trim((string) ($card['columnClass'] ?? $cardsColumnClass));
           ?>
-          <div class="col-xl-3 col-sm-6 mb-4">
+          <div class="<?php echo dashboard_h($columnClass); ?> cecsb-dashboard-stat-column">
             <?php if ($href !== ''): ?>
               <a class="card cecsb-stat-card h-100" href="<?php echo dashboard_h($href); ?>">
             <?php else: ?>
@@ -552,10 +570,10 @@ if (!function_exists('dashboard_render_material_page')) {
       <?php endif; ?>
 
       <?php if (!empty($quickLinks) || !empty($summaryItems)): ?>
-      <div class="row mt-2">
+      <div class="row mt-2 cecsb-dashboard-secondary">
         <?php if (!empty($quickLinks)): ?>
         <div class="col-lg-7 mb-4">
-          <div class="card h-100">
+          <div class="card h-100 cecsb-dashboard-panel cecsb-dashboard-panel--links">
             <div class="card-header pb-0">
               <h6 class="mb-0">Accesos rápidos</h6>
               <p class="text-sm mb-0">Entradas directas a los módulos más usados de este perfil.</p>
@@ -583,7 +601,7 @@ if (!function_exists('dashboard_render_material_page')) {
         <?php endif; ?>
         <?php if (!empty($summaryItems)): ?>
         <div class="col-lg-<?php echo !empty($quickLinks) ? '5' : '12'; ?> mb-4">
-          <div class="card h-100">
+          <div class="card h-100 cecsb-dashboard-panel cecsb-dashboard-panel--summary">
             <div class="card-header pb-0">
               <h6 class="mb-0">Resumen del perfil</h6>
               <p class="text-sm mb-0">Datos clave visibles sin tocar la lógica del sistema.</p>
@@ -654,6 +672,62 @@ if (!function_exists('dashboard_render_material_page')) {
 
   <script src="<?php echo dashboard_h(dashboard_material_asset('js/core/bootstrap.bundle.min.js')); ?>"></script>
   <script src="<?php echo dashboard_h(dashboard_material_asset('js/material-dashboard.min.js')); ?>"></script>
+  <script>
+  (function () {
+    var body = document.body;
+    var openTrigger = document.getElementById('iconNavbarSidenav');
+    var closeTrigger = document.getElementById('iconSidenavClose');
+    var backdrop = document.getElementById('cecsbSidenavBackdrop');
+    var desktopBreakpoint = window.matchMedia('(min-width: 1200px)');
+
+    function setSidebarState(isOpen) {
+      if (!body) {
+        return;
+      }
+
+      body.classList.toggle('cecsb-sidebar-open', !!isOpen);
+    }
+
+    if (openTrigger) {
+      openTrigger.addEventListener('click', function (event) {
+        event.preventDefault();
+        setSidebarState(true);
+      });
+    }
+
+    if (closeTrigger) {
+      closeTrigger.addEventListener('click', function () {
+        setSidebarState(false);
+      });
+    }
+
+    if (backdrop) {
+      backdrop.addEventListener('click', function () {
+        setSidebarState(false);
+      });
+    }
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        setSidebarState(false);
+      }
+    });
+
+    if (desktopBreakpoint) {
+      var handleDesktopChange = function (event) {
+        if (event.matches) {
+          setSidebarState(false);
+        }
+      };
+
+      if (typeof desktopBreakpoint.addEventListener === 'function') {
+        desktopBreakpoint.addEventListener('change', handleDesktopChange);
+      } else if (typeof desktopBreakpoint.addListener === 'function') {
+        desktopBreakpoint.addListener(handleDesktopChange);
+      }
+    }
+  }());
+  </script>
 </body>
 </html>
 <?php
