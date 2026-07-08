@@ -115,7 +115,7 @@ $pdfUrl = 'certificado_pdf.php?' . http_build_query(atenea_certificate_query_dat
         </a>
     </div>
     <div class="card-body">
-        <p class="mb-3">Genera certificados con datos dinámicos y vista previa inmediata. La plantilla fue ajustada para conservar un estilo ornamental formal, lista para impresión o PDF.</p>
+        <p class="mb-3">Genera certificados con datos dinámicos y una plantilla reconstruida sobre la referencia visual original, respetando cinta superior, marcos ornamentales y composición clásica.</p>
         <div class="atenea-certificate-admin-grid">
             <div class="card">
                 <div class="card-body">
@@ -135,6 +135,11 @@ $pdfUrl = 'certificado_pdf.php?' . http_build_query(atenea_certificate_query_dat
                                 <small class="form-text text-muted">Si lo seleccionas, se toma como base para el nombre del certificado.</small>
                             </div>
                         <?php endif; ?>
+
+                        <div class="form-group">
+                            <label><strong>Nombre institucional</strong></label>
+                            <input type="text" name="institution_name" class="form-control" maxlength="120" value="<?php echo htmlspecialchars((string) $certificateData['institution_name'], ENT_QUOTES, 'UTF-8'); ?>">
+                        </div>
 
                         <div class="form-group">
                             <label><strong>Nombre del estudiante</strong></label>
@@ -217,10 +222,10 @@ $pdfUrl = 'certificado_pdf.php?' . http_build_query(atenea_certificate_query_dat
 
             <div>
                 <div class="atenea-certificate-note mb-3">
-                    Plantilla ornamental en tonos rosado/lila claro con borde decorativo verde/gris, marco interior discontinuo y distribución centrada para pantalla y PDF.
+                    Plantilla basada directamente en la imagen de referencia: fondo rosado/lila claro, franja ornamental verde/gris, doble marco punteado, logo lateral y cinta superior.
                 </div>
                 <div class="atenea-certificate-preview-wrap">
-                    <?php echo atenea_certificate_html($certificateData); ?>
+                    <?php echo atenea_certificate_html($certificateData, '../img/certificados/certificado_base.jpg'); ?>
                 </div>
             </div>
         </div>
