@@ -35,6 +35,7 @@ module_shell_begin([
                 ['label' => 'Vehículos', 'href' => 'vehiculos.php', 'icon' => 'directions_car', 'match' => ['vehiculos.php', 'vehiculos_searchfrm.php', 'vehiculos_edit.php']],
                 ['label' => 'Videos curso', 'href' => 'videos_admin.php', 'icon' => 'play_circle', 'match' => ['videos_admin.php', 'videos_edit.php']],
                 ['label' => 'Videos capacitacion', 'href' => 'curso_videos_admin.php', 'icon' => 'smart_display', 'match' => ['curso_videos_admin.php', 'curso_videos_edit.php']],
+                ['label' => 'Certificados capacitacion', 'href' => 'curso_certificados_admin.php', 'icon' => 'workspace_premium', 'match' => ['curso_certificados_admin.php', 'curso_certificados_transac.php', 'certificado_curso_pdf.php']],
                 ['label' => 'Configuración email', 'href' => 'configmail_admin.php', 'icon' => 'mail', 'match' => ['configmail_admin.php']],
                 ['label' => 'Grados', 'href' => 'grados.php', 'icon' => 'domain', 'match' => ['grados.php', 'grados_searchfrm.php']],
                 ['label' => 'Doc. asignaturas', 'href' => 'doc_asignaturas.php', 'icon' => 'assignment', 'match' => ['doc_asignaturas.php', 'doc_asignaturas_searchfrm.php', 'doc_asignaturas_edit.php']],

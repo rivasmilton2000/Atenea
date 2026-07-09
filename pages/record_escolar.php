@@ -32,12 +32,22 @@ if (!atenea_capacitacion_phase_two_ready($db)) {
     );
 }
 
+$phaseThreeReady = atenea_capacitacion_phase_three_ready($db);
 $publicUserId = (int) ($_SESSION['PUBLIC_USER_ID'] ?? 0);
 $enrollments = atenea_capacitacion_fetch_enrollments_for_public_user($db, $publicUserId);
 $activeCount = 0;
 $approvedCount = 0;
+$certificateCount = 0;
 
-foreach ($enrollments as $row) {
+foreach ($enrollments as $index => $row) {
+    if ($phaseThreeReady) {
+        $updatedEnrollment = atenea_capacitacion_recalculate_enrollment_progress($db, (int) ($row['id'] ?? 0));
+        if ($updatedEnrollment) {
+            $enrollments[$index] = $updatedEnrollment;
+            $row = $updatedEnrollment;
+        }
+    }
+
     $courseStatus = atenea_capacitacion_normalize_course_status((string) ($row['estado_curso'] ?? ''));
     $approvalStatus = atenea_capacitacion_normalize_approval_status((string) ($row['estado_aprobacion'] ?? ''));
 
@@ -47,6 +57,10 @@ foreach ($enrollments as $row) {
 
     if ($approvalStatus === 'aprobado') {
         $approvedCount++;
+    }
+
+    if (atenea_capacitacion_certificate_eligible($row)) {
+        $certificateCount++;
     }
 }
 
@@ -89,6 +103,13 @@ ob_start();
   }
 </style>
 
+<?php if (!$phaseThreeReady && $enrollments !== []) : ?>
+  <div class="alert alert-warning mb-4">
+    Aplica la migracion <code>Database/migrations/2026_07_09_capacitacion_finalizacion_certificados.sql</code> para habilitar
+    finalizacion, aprobacion y certificado dinamico en el record escolar.
+  </div>
+<?php endif; ?>
+
 <?php if ($enrollments === []) : ?>
   <div class="row">
     <div class="col-12">
@@ -108,6 +129,10 @@ ob_start();
       $courseStatusMeta = atenea_capacitacion_course_status_meta((string) ($enrollment['estado_curso'] ?? ''));
       $approvalStatusMeta = atenea_capacitacion_approval_status_meta((string) ($enrollment['estado_aprobacion'] ?? ''));
       $progress = atenea_capacitacion_progress_percentage($enrollment['progreso'] ?? 0);
+      $certificateAvailable = atenea_capacitacion_certificate_eligible($enrollment);
+      $videoTotals = $phaseThreeReady
+          ? atenea_capacitacion_enrollment_accessible_video_counts($db, (int) ($enrollment['id'] ?? 0))
+          : ['total' => 0, 'completed' => 0];
       ?>
       <div class="col-12 col-xl-6 mb-4">
         <div class="card atenea-record-card border-0 h-100">
@@ -125,6 +150,9 @@ ob_start();
                   <span class="badge badge-<?php echo dashboard_h((string) $courseStatusMeta['class']); ?>"><?php echo dashboard_h((string) $courseStatusMeta['label']); ?></span>
                   <span class="badge badge-<?php echo dashboard_h((string) $approvalStatusMeta['class']); ?>"><?php echo dashboard_h((string) $approvalStatusMeta['label']); ?></span>
                   <span class="badge badge-light border"><?php echo dashboard_h(atenea_capacitacion_type_label((string) ($enrollment['tipo_programa'] ?? 'curso'))); ?></span>
+                  <?php if ($certificateAvailable) : ?>
+                    <span class="badge badge-success">Certificado disponible</span>
+                  <?php endif; ?>
                 </div>
 
                 <h4 class="mb-2"><?php echo dashboard_h((string) ($enrollment['programa_titulo'] ?? 'Curso inscrito')); ?></h4>
@@ -137,11 +165,16 @@ ob_start();
                     <p class="mb-2"><strong>Instructor:</strong> <?php echo dashboard_h((string) ($enrollment['programa_instructor'] ?? 'Por definir')); ?></p>
                     <p class="mb-2"><strong>Nivel:</strong> <?php echo dashboard_h((string) ($enrollment['programa_nivel'] ?? 'Por definir')); ?></p>
                     <p class="mb-2"><strong>Fecha de inscripcion:</strong> <?php echo dashboard_h(record_escolar_format_date((string) ($enrollment['fecha_inscripcion'] ?? ''))); ?></p>
+                    <p class="mb-2"><strong>Fecha de finalizacion:</strong> <?php echo dashboard_h(record_escolar_format_date((string) ($enrollment['fecha_finalizacion'] ?? ''), 'Pendiente')); ?></p>
                   </div>
                   <div class="col-sm-6">
                     <p class="mb-2"><strong>Duracion:</strong> <?php echo dashboard_h(atenea_capacitacion_text_value($enrollment['duracion'] ?? '') !== '' ? (string) $enrollment['duracion'] : 'Por definir'); ?></p>
                     <p class="mb-2"><strong>Modalidad:</strong> <?php echo dashboard_h(atenea_capacitacion_text_value($enrollment['modalidad'] ?? '') !== '' ? (string) $enrollment['modalidad'] : 'Por definir'); ?></p>
                     <p class="mb-2"><strong>Progreso:</strong> <?php echo $progress; ?>%</p>
+                    <p class="mb-2"><strong>Aprobacion final:</strong> <?php echo dashboard_h((string) $approvalStatusMeta['label']); ?></p>
+                    <?php if ($phaseThreeReady) : ?>
+                      <p class="mb-2"><strong>Videos completados:</strong> <?php echo (int) ($videoTotals['completed'] ?? 0); ?> / <?php echo (int) ($videoTotals['total'] ?? 0); ?></p>
+                    <?php endif; ?>
                   </div>
                 </div>
 
@@ -152,6 +185,9 @@ ob_start();
                 <div class="d-flex flex-wrap" style="gap: 0.75rem;">
                   <a href="mi_curso_activo.php?programa=<?php echo (int) $enrollment['programa_id']; ?>" class="btn btn-outline-success btn-sm">Ver curso</a>
                   <a href="curso_videos.php?programa=<?php echo (int) $enrollment['programa_id']; ?>" class="btn btn-outline-primary btn-sm">Videos</a>
+                  <?php if ($certificateAvailable) : ?>
+                    <a href="certificado_curso.php?enrollment_id=<?php echo (int) $enrollment['id']; ?>" class="btn btn-primary btn-sm">Ver certificado</a>
+                  <?php endif; ?>
                 </div>
               </div>
             </div>
@@ -164,12 +200,31 @@ ob_start();
 <?php
 $bodySectionsHtml = ob_get_clean();
 
+$quickLinks = [
+    ['label' => 'Mi curso activo', 'href' => 'mi_curso_activo.php', 'icon' => 'workspace_premium'],
+    ['label' => 'Videos del curso', 'href' => 'curso_videos.php', 'icon' => 'play_circle'],
+    ['label' => 'Capacitacion', 'href' => 'educacion.php', 'icon' => 'public'],
+];
+
+if ($certificateCount > 0) {
+    $quickLinks[] = ['label' => 'Mi certificado', 'href' => 'certificado_curso.php', 'icon' => 'workspace_premium'];
+}
+
+$heroActions = [
+    ['label' => 'Mi curso activo', 'href' => 'mi_curso_activo.php', 'icon' => 'workspace_premium'],
+    ['label' => 'Videos del curso', 'href' => 'curso_videos.php', 'icon' => 'play_circle', 'variant' => 'outline'],
+];
+
+if ($certificateCount > 0) {
+    $heroActions[] = ['label' => 'Abrir certificado', 'href' => 'certificado_curso.php', 'icon' => 'workspace_premium'];
+}
+
 dashboard_render_material_page([
     'bodyClass' => 'atenea-record-page',
     'pageTitle' => 'Record escolar',
     'roleLabel' => 'Usuario registrado',
     'welcomeTitle' => 'Seguimiento academico de tu capacitacion',
-    'welcomeText' => 'Aqui se resume el curso inscrito, su estado, el avance acumulado y la aprobacion registrada para tu perfil.',
+    'welcomeText' => 'Aqui se resume el curso inscrito, su estado final, el avance acumulado, la aprobacion y la disponibilidad del certificado.',
     'profileUrl' => 'usuario_vista.php',
     'logoutUrl' => 'logout.php?redirect=homepage.php',
     'navSections' => atenea_capacitacion_user_nav_sections('record_escolar.php'),
@@ -177,27 +232,21 @@ dashboard_render_material_page([
     'cards' => [
         ['title' => 'Inscripciones', 'value' => count($enrollments), 'icon' => 'school', 'accent' => 'primary', 'href' => 'record_escolar.php', 'metricLabel' => 'Registros en tu cuenta', 'footerLabel' => 'Ver historial'],
         ['title' => 'Cursos activos', 'value' => $activeCount, 'icon' => 'workspace_premium', 'accent' => 'success', 'href' => 'mi_curso_activo.php', 'metricLabel' => 'Accesos vigentes', 'footerLabel' => 'Ver curso'],
-        ['title' => 'Aprobados', 'value' => $approvedCount, 'icon' => 'verified', 'accent' => 'warning', 'href' => 'record_escolar.php', 'metricLabel' => 'Resultados finales', 'footerLabel' => 'Seguir avance'],
+        ['title' => 'Certificados', 'value' => $certificateCount, 'icon' => 'workspace_premium', 'accent' => 'warning', 'href' => $certificateCount > 0 ? 'certificado_curso.php' : 'record_escolar.php', 'metricLabel' => 'Resultados finales', 'footerLabel' => $certificateCount > 0 ? 'Abrir certificado' : 'Seguir avance'],
     ],
-    'quickLinks' => [
-        ['label' => 'Mi curso activo', 'href' => 'mi_curso_activo.php', 'icon' => 'workspace_premium'],
-        ['label' => 'Videos del curso', 'href' => 'curso_videos.php', 'icon' => 'play_circle'],
-        ['label' => 'Capacitacion', 'href' => 'educacion.php', 'icon' => 'public'],
-    ],
+    'quickLinks' => $quickLinks,
     'summaryItems' => [
         ['label' => 'Total de registros', 'value' => (string) count($enrollments)],
         ['label' => 'Cursos activos', 'value' => (string) $activeCount],
         ['label' => 'Aprobados', 'value' => (string) $approvedCount],
+        ['label' => 'Certificados disponibles', 'value' => (string) $certificateCount],
         ['label' => 'Ultima actividad', 'value' => $enrollments !== [] ? record_escolar_format_date((string) ($enrollments[0]['updated_at'] ?? '')) : 'No disponible'],
     ],
     'heroBadges' => [
         count($enrollments) . ' registros',
-        $activeCount . ' activos',
         $approvedCount . ' aprobados',
+        $certificateCount . ' certificados',
     ],
-    'heroActions' => [
-        ['label' => 'Mi curso activo', 'href' => 'mi_curso_activo.php', 'icon' => 'workspace_premium'],
-        ['label' => 'Videos del curso', 'href' => 'curso_videos.php', 'icon' => 'play_circle', 'variant' => 'outline'],
-    ],
+    'heroActions' => $heroActions,
     'bodySectionsHtml' => $bodySectionsHtml,
 ]);

@@ -1112,6 +1112,8 @@ if (!function_exists('atenea_allowed_login_redirects')) {
             'mi_curso_activo.php',
             'curso_videos.php',
             'record_escolar.php',
+            'certificado_curso.php',
+            'certificado_curso_pdf.php',
             'productos.php',
             'carrito.php',
             'checkout_success.php',

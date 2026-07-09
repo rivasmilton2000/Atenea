@@ -26,6 +26,7 @@ module_shell_begin([
             'items' => [
                 ['label' => 'Asignaturas', 'href' => 'sa_asignaturas.php', 'icon' => 'menu_book', 'match' => ['sa_asignaturas.php', 'sa_asignaturas_searchfrm.php', 'sa_asignaturas_edit.php']],
                 ['label' => 'Videos capacitacion', 'href' => 'curso_videos_admin.php', 'icon' => 'smart_display', 'match' => ['curso_videos_admin.php', 'curso_videos_edit.php']],
+                ['label' => 'Certificados capacitacion', 'href' => 'curso_certificados_admin.php', 'icon' => 'workspace_premium', 'match' => ['curso_certificados_admin.php', 'curso_certificados_transac.php', 'certificado_curso_pdf.php']],
                 ['label' => 'Personal', 'href' => 'sa_personal.php', 'icon' => 'groups', 'match' => ['sa_personal.php', 'sa_personal_searchfrm.php', 'sa_personal_edit.php']],
                 ['label' => 'Docentes', 'href' => 'sa_docentes.php', 'icon' => 'co_present', 'match' => ['sa_docentes.php', 'sa_docentes_searchfrm.php', 'sa_docentes_edit.php']],
                 ['label' => 'Labores', 'href' => 'sa_labores.php', 'icon' => 'work', 'match' => ['sa_labores.php', 'sa_labores_searchfrm.php', 'sa_labores_edit.php']],

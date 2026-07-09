@@ -247,6 +247,7 @@ if (!function_exists('atenea_capacitacion_user_nav_sections')) {
                     ['label' => 'Mi curso activo', 'href' => 'mi_curso_activo.php', 'icon' => 'workspace_premium', 'active' => $activePage === 'mi_curso_activo.php', 'loaderText' => 'Cargando tu curso activo...'],
                     ['label' => 'Videos del curso', 'href' => 'curso_videos.php', 'icon' => 'play_circle', 'active' => $activePage === 'curso_videos.php', 'loaderText' => 'Cargando videos del curso...'],
                     ['label' => 'Record escolar', 'href' => 'record_escolar.php', 'icon' => 'school', 'active' => $activePage === 'record_escolar.php', 'loaderText' => 'Cargando record escolar...'],
+                    ['label' => 'Mi certificado', 'href' => 'certificado_curso.php', 'icon' => 'workspace_premium', 'active' => $activePage === 'certificado_curso.php', 'loaderText' => 'Cargando tu certificado...'],
                 ],
             ],
             [
@@ -343,7 +344,7 @@ if (!function_exists('atenea_capacitacion_enrollment_has_video_access')) {
         $courseStatus = atenea_capacitacion_normalize_course_status((string) ($enrollment['estado_curso'] ?? ''));
         $approvalStatus = atenea_capacitacion_normalize_approval_status((string) ($enrollment['estado_aprobacion'] ?? ''));
 
-        return in_array($courseStatus, ['curso_activo', 'activo'], true) || $approvalStatus === 'aprobado';
+        return in_array($courseStatus, ['curso_activo', 'activo', 'finalizado'], true) || $approvalStatus === 'aprobado';
     }
 }
 
@@ -740,6 +741,7 @@ if (!function_exists('atenea_capacitacion_fetch_accessible_videos_for_public_use
                   AND (
                         ce.estado_curso = 'curso_activo'
                         OR ce.estado_curso = 'activo'
+                        OR ce.estado_curso = 'finalizado'
                         OR ce.estado_aprobacion = 'aprobado'
                   )
                   AND (
@@ -883,6 +885,537 @@ if (!function_exists('atenea_capacitacion_video_source_meta')) {
             'label' => 'No disponible',
             'embed_url' => '',
             'link_url' => '',
+        ];
+    }
+}
+
+if (!function_exists('atenea_capacitacion_phase_three_schema_flags')) {
+    function atenea_capacitacion_phase_three_schema_flags(mysqli $db): array
+    {
+        static $cache = [];
+        $cacheKey = spl_object_hash($db);
+
+        if (!isset($cache[$cacheKey])) {
+            $hasEnrollments = atenea_db_has_table($db, 'course_enrollments');
+            $hasVideoProgress = atenea_db_has_table($db, 'course_video_progress');
+
+            $cache[$cacheKey] = [
+                'course_video_progress' => $hasVideoProgress,
+                'course_enrollments_fecha_finalizacion' => $hasEnrollments && atenea_db_has_column($db, 'course_enrollments', 'fecha_finalizacion'),
+                'course_enrollments_fecha_aprobacion' => $hasEnrollments && atenea_db_has_column($db, 'course_enrollments', 'fecha_aprobacion'),
+                'course_enrollments_certificado_disponible' => $hasEnrollments && atenea_db_has_column($db, 'course_enrollments', 'certificado_disponible'),
+                'course_enrollments_certificado_generado_at' => $hasEnrollments && atenea_db_has_column($db, 'course_enrollments', 'certificado_generado_at'),
+                'course_enrollments_certificate_regenerated_count' => $hasEnrollments && atenea_db_has_column($db, 'course_enrollments', 'certificate_regenerated_count'),
+                'course_enrollments_finalizado_por_user_id' => $hasEnrollments && atenea_db_has_column($db, 'course_enrollments', 'finalizado_por_user_id'),
+                'course_enrollments_aprobado_por_user_id' => $hasEnrollments && atenea_db_has_column($db, 'course_enrollments', 'aprobado_por_user_id'),
+                'course_video_progress_completed' => $hasVideoProgress && atenea_db_has_column($db, 'course_video_progress', 'completed'),
+            ];
+        }
+
+        return $cache[$cacheKey];
+    }
+}
+
+if (!function_exists('atenea_capacitacion_phase_three_ready')) {
+    function atenea_capacitacion_phase_three_ready(mysqli $db): bool
+    {
+        $flags = atenea_capacitacion_phase_three_schema_flags($db);
+
+        return atenea_capacitacion_phase_two_ready($db)
+            && !empty($flags['course_video_progress'])
+            && !empty($flags['course_enrollments_fecha_finalizacion'])
+            && !empty($flags['course_enrollments_fecha_aprobacion'])
+            && !empty($flags['course_enrollments_certificado_disponible'])
+            && !empty($flags['course_enrollments_certificado_generado_at'])
+            && !empty($flags['course_enrollments_certificate_regenerated_count'])
+            && !empty($flags['course_enrollments_finalizado_por_user_id'])
+            && !empty($flags['course_enrollments_aprobado_por_user_id'])
+            && !empty($flags['course_video_progress_completed']);
+    }
+}
+
+if (!function_exists('atenea_capacitacion_fetch_enrollment_by_id')) {
+    function atenea_capacitacion_fetch_enrollment_by_id(mysqli $db, int $enrollmentId): ?array
+    {
+        if ($enrollmentId <= 0 || !atenea_db_has_table($db, 'course_enrollments')) {
+            return null;
+        }
+
+        $stmt = $db->prepare(
+            "SELECT ce.*,
+                    pu.FIRST_NAME,
+                    pu.LAST_NAME,
+                    pu.EMAIL,
+                    pu.PHONE_NUMBER,
+                    pe.titulo AS programa_titulo,
+                    pe.descripcion_corta AS programa_descripcion_corta,
+                    pe.descripcion_completa AS programa_descripcion_completa,
+                    pe.imagen AS programa_imagen,
+                    pe.nivel AS programa_nivel,
+                    pe.instructor AS programa_instructor,
+                    " . atenea_capacitacion_select_sql($db, 'pe') . "
+             FROM course_enrollments ce
+             INNER JOIN public_users pu ON pu.PUBLIC_USER_ID = ce.public_user_id
+             INNER JOIN programas_educativos pe ON pe.id = ce.programa_id
+             WHERE ce.id = ?
+             LIMIT 1"
+        );
+
+        if (!$stmt) {
+            return null;
+        }
+
+        $stmt->bind_param('i', $enrollmentId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result instanceof mysqli_result ? $result->fetch_assoc() : null;
+
+        if ($result instanceof mysqli_result) {
+            mysqli_free_result($result);
+        }
+
+        $stmt->close();
+
+        return $row ?: null;
+    }
+}
+
+if (!function_exists('atenea_capacitacion_fetch_admin_enrollments')) {
+    function atenea_capacitacion_fetch_admin_enrollments(mysqli $db, int $programId = 0): array
+    {
+        if (!atenea_db_has_table($db, 'course_enrollments')) {
+            return [];
+        }
+
+        $sql = "SELECT ce.*,
+                       pu.FIRST_NAME,
+                       pu.LAST_NAME,
+                       pu.EMAIL,
+                       pu.PHONE_NUMBER,
+                       pe.titulo AS programa_titulo,
+                       pe.descripcion_corta AS programa_descripcion_corta,
+                       pe.descripcion_completa AS programa_descripcion_completa,
+                       pe.imagen AS programa_imagen,
+                       pe.nivel AS programa_nivel,
+                       pe.instructor AS programa_instructor,
+                       " . atenea_capacitacion_select_sql($db, 'pe') . "
+                FROM course_enrollments ce
+                INNER JOIN public_users pu ON pu.PUBLIC_USER_ID = ce.public_user_id
+                INNER JOIN programas_educativos pe ON pe.id = ce.programa_id
+                WHERE 1 = 1";
+
+        $stmt = null;
+
+        if ($programId > 0) {
+            $sql .= ' AND ce.programa_id = ?';
+            $stmt = $db->prepare($sql . ' ORDER BY ce.updated_at DESC, ce.fecha_inscripcion DESC, ce.id DESC');
+            if (!$stmt) {
+                return [];
+            }
+            $stmt->bind_param('i', $programId);
+        } else {
+            $stmt = $db->prepare($sql . ' ORDER BY ce.updated_at DESC, ce.fecha_inscripcion DESC, ce.id DESC');
+            if (!$stmt) {
+                return [];
+            }
+        }
+
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $rows = [];
+
+        while ($result instanceof mysqli_result && ($row = $result->fetch_assoc())) {
+            $rows[] = $row;
+        }
+
+        if ($result instanceof mysqli_result) {
+            mysqli_free_result($result);
+        }
+
+        $stmt->close();
+
+        return $rows;
+    }
+}
+
+if (!function_exists('atenea_capacitacion_fetch_video_progress_map')) {
+    function atenea_capacitacion_fetch_video_progress_map(mysqli $db, int $enrollmentId): array
+    {
+        if ($enrollmentId <= 0 || !atenea_db_has_table($db, 'course_video_progress')) {
+            return [];
+        }
+
+        $stmt = $db->prepare('SELECT * FROM course_video_progress WHERE enrollment_id = ?');
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('i', $enrollmentId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $map = [];
+
+        while ($result instanceof mysqli_result && ($row = $result->fetch_assoc())) {
+            $map[(int) ($row['course_video_id'] ?? 0)] = $row;
+        }
+
+        if ($result instanceof mysqli_result) {
+            mysqli_free_result($result);
+        }
+
+        $stmt->close();
+
+        return $map;
+    }
+}
+
+if (!function_exists('atenea_capacitacion_fetch_accessible_videos_for_enrollment')) {
+    function atenea_capacitacion_fetch_accessible_videos_for_enrollment(mysqli $db, int $enrollmentId): array
+    {
+        $enrollment = atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
+        if (!$enrollment) {
+            return [];
+        }
+
+        $stmt = $db->prepare(
+            "SELECT cv.*,
+                    pe.titulo AS programa_titulo,
+                    pe.imagen AS programa_imagen,
+                    COALESCE(cva.enabled, 0) AS individual_enabled,
+                    COALESCE(cvp.completed, 0) AS completed,
+                    cva.enabled_at,
+                    cvp.completed_at
+             FROM course_videos cv
+             INNER JOIN programas_educativos pe ON pe.id = cv.programa_id
+             LEFT JOIN course_video_access cva
+                ON cva.course_video_id = cv.id
+               AND cva.enrollment_id = ?
+             LEFT JOIN course_video_progress cvp
+                ON cvp.course_video_id = cv.id
+               AND cvp.enrollment_id = ?
+             WHERE cv.programa_id = ?
+               AND cv.estado = 1
+               AND (
+                    cv.mass_enabled = 1
+                    OR COALESCE(cva.enabled, 0) = 1
+               )
+             ORDER BY cv.orden ASC, cv.id ASC"
+        );
+
+        if (!$stmt) {
+            return [];
+        }
+
+        $programId = (int) ($enrollment['programa_id'] ?? 0);
+        $stmt->bind_param('iii', $enrollmentId, $enrollmentId, $programId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $rows = [];
+
+        while ($result instanceof mysqli_result && ($row = $result->fetch_assoc())) {
+            $rows[] = $row;
+        }
+
+        if ($result instanceof mysqli_result) {
+            mysqli_free_result($result);
+        }
+
+        $stmt->close();
+
+        return $rows;
+    }
+}
+
+if (!function_exists('atenea_capacitacion_enrollment_accessible_video_counts')) {
+    function atenea_capacitacion_enrollment_accessible_video_counts(mysqli $db, int $enrollmentId): array
+    {
+        $videos = atenea_capacitacion_fetch_accessible_videos_for_enrollment($db, $enrollmentId);
+        $total = count($videos);
+        $completed = 0;
+
+        foreach ($videos as $video) {
+            if (!empty($video['completed'])) {
+                $completed++;
+            }
+        }
+
+        return [
+            'total' => $total,
+            'completed' => $completed,
+            'videos' => $videos,
+        ];
+    }
+}
+
+if (!function_exists('atenea_capacitacion_recalculate_enrollment_progress')) {
+    function atenea_capacitacion_recalculate_enrollment_progress(mysqli $db, int $enrollmentId): ?array
+    {
+        $enrollment = atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
+        if (!$enrollment) {
+            return null;
+        }
+
+        $counts = atenea_capacitacion_enrollment_accessible_video_counts($db, $enrollmentId);
+        $totalVideos = (int) ($counts['total'] ?? 0);
+        $completedVideos = (int) ($counts['completed'] ?? 0);
+        $progress = $totalVideos > 0 ? round(($completedVideos / $totalVideos) * 100, 2) : 0.0;
+
+        $approvalStatus = atenea_capacitacion_normalize_approval_status((string) ($enrollment['estado_aprobacion'] ?? 'en_proceso'));
+        $courseStatus = atenea_capacitacion_normalize_course_status((string) ($enrollment['estado_curso'] ?? 'curso_activo'));
+        $manuallyFinalized = (int) ($enrollment['finalizado_por_user_id'] ?? 0) > 0 && trim((string) ($enrollment['fecha_finalizacion'] ?? '')) !== '';
+        $certificadoDisponible = $approvalStatus === 'aprobado' ? 1 : 0;
+        $fechaFinalizacion = trim((string) ($enrollment['fecha_finalizacion'] ?? ''));
+
+        if ($approvalStatus === 'aprobado') {
+            $courseStatus = 'finalizado';
+            $progress = 100.0;
+            if ($fechaFinalizacion === '') {
+                $fechaFinalizacion = date('Y-m-d H:i:s');
+            }
+        } elseif ($totalVideos > 0 && $completedVideos >= $totalVideos) {
+            $courseStatus = 'finalizado';
+            if ($fechaFinalizacion === '') {
+                $fechaFinalizacion = date('Y-m-d H:i:s');
+            }
+        } elseif ($manuallyFinalized) {
+            $courseStatus = 'finalizado';
+            $progress = max($progress, 100.0);
+            if ($fechaFinalizacion === '') {
+                $fechaFinalizacion = date('Y-m-d H:i:s');
+            }
+        } else {
+            $courseStatus = 'curso_activo';
+            $fechaFinalizacion = null;
+        }
+
+        $stmt = $db->prepare(
+            "UPDATE course_enrollments
+             SET progreso = ?,
+                 estado_curso = ?,
+                 fecha_finalizacion = ?,
+                 certificado_disponible = ?
+             WHERE id = ?
+             LIMIT 1"
+        );
+
+        if ($stmt) {
+            $stmt->bind_param(
+                'dssii',
+                $progress,
+                $courseStatus,
+                $fechaFinalizacion,
+                $certificadoDisponible,
+                $enrollmentId
+            );
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        return atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
+    }
+}
+
+if (!function_exists('atenea_capacitacion_set_video_completion')) {
+    function atenea_capacitacion_set_video_completion(mysqli $db, int $enrollmentId, int $videoId, bool $completed, int $updatedByUserId = 0): ?array
+    {
+        if ($enrollmentId <= 0 || $videoId <= 0 || !atenea_db_has_table($db, 'course_video_progress')) {
+            return null;
+        }
+
+        $stmt = $db->prepare(
+            "INSERT INTO course_video_progress (enrollment_id, course_video_id, completed, completed_at, updated_by_user_id)
+             VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+                completed = VALUES(completed),
+                completed_at = VALUES(completed_at),
+                updated_by_user_id = VALUES(updated_by_user_id),
+                updated_at = CURRENT_TIMESTAMP"
+        );
+
+        if (!$stmt) {
+            return null;
+        }
+
+        $completedFlag = $completed ? 1 : 0;
+        $completedAt = $completed ? date('Y-m-d H:i:s') : null;
+        $stmt->bind_param('iiisi', $enrollmentId, $videoId, $completedFlag, $completedAt, $updatedByUserId);
+        $stmt->execute();
+        $stmt->close();
+
+        return atenea_capacitacion_recalculate_enrollment_progress($db, $enrollmentId);
+    }
+}
+
+if (!function_exists('atenea_capacitacion_certificate_eligible')) {
+    function atenea_capacitacion_certificate_eligible(array $enrollment): bool
+    {
+        return atenea_capacitacion_normalize_approval_status((string) ($enrollment['estado_aprobacion'] ?? '')) === 'aprobado'
+            && !empty($enrollment['certificado_disponible']);
+    }
+}
+
+if (!function_exists('atenea_capacitacion_mark_enrollment_finalized')) {
+    function atenea_capacitacion_mark_enrollment_finalized(mysqli $db, int $enrollmentId, int $adminUserId = 0): ?array
+    {
+        $enrollment = atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
+        if (!$enrollment) {
+            return null;
+        }
+
+        $stmt = $db->prepare(
+            "UPDATE course_enrollments
+             SET progreso = 100.00,
+                 estado_curso = 'finalizado',
+                 fecha_finalizacion = COALESCE(fecha_finalizacion, ?),
+                 finalizado_por_user_id = ?
+             WHERE id = ?
+             LIMIT 1"
+        );
+
+        if (!$stmt) {
+            return null;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $stmt->bind_param('sii', $now, $adminUserId, $enrollmentId);
+        $stmt->execute();
+        $stmt->close();
+
+        return atenea_capacitacion_recalculate_enrollment_progress($db, $enrollmentId);
+    }
+}
+
+if (!function_exists('atenea_capacitacion_mark_enrollment_approved')) {
+    function atenea_capacitacion_mark_enrollment_approved(mysqli $db, int $enrollmentId, int $adminUserId = 0): ?array
+    {
+        $enrollment = atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
+        if (!$enrollment) {
+            return null;
+        }
+
+        $stmt = $db->prepare(
+            "UPDATE course_enrollments
+             SET progreso = 100.00,
+                 estado_curso = 'finalizado',
+                 estado_aprobacion = 'aprobado',
+                 fecha_finalizacion = COALESCE(fecha_finalizacion, ?),
+                 fecha_aprobacion = ?,
+                 certificado_disponible = 1,
+                 certificado_generado_at = COALESCE(certificado_generado_at, ?),
+                 finalizado_por_user_id = CASE
+                     WHEN finalizado_por_user_id IS NULL OR finalizado_por_user_id = 0 THEN ?
+                     ELSE finalizado_por_user_id
+                 END,
+                 aprobado_por_user_id = ?
+             WHERE id = ?
+             LIMIT 1"
+        );
+
+        if (!$stmt) {
+            return null;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $stmt->bind_param('sssiii', $now, $now, $now, $adminUserId, $adminUserId, $enrollmentId);
+        $stmt->execute();
+        $stmt->close();
+
+        return atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
+    }
+}
+
+if (!function_exists('atenea_capacitacion_reset_enrollment_approval')) {
+    function atenea_capacitacion_reset_enrollment_approval(mysqli $db, int $enrollmentId): ?array
+    {
+        $stmt = $db->prepare(
+            "UPDATE course_enrollments
+             SET estado_aprobacion = 'en_proceso',
+                 fecha_aprobacion = NULL,
+                 certificado_disponible = 0,
+                 certificado_generado_at = NULL,
+                 aprobado_por_user_id = NULL
+             WHERE id = ?
+             LIMIT 1"
+        );
+
+        if (!$stmt) {
+            return null;
+        }
+
+        $stmt->bind_param('i', $enrollmentId);
+        $stmt->execute();
+        $stmt->close();
+
+        return atenea_capacitacion_recalculate_enrollment_progress($db, $enrollmentId);
+    }
+}
+
+if (!function_exists('atenea_capacitacion_mark_certificate_generated')) {
+    function atenea_capacitacion_mark_certificate_generated(mysqli $db, int $enrollmentId, bool $regenerated = false): bool
+    {
+        if ($enrollmentId <= 0 || !atenea_db_has_table($db, 'course_enrollments')) {
+            return false;
+        }
+
+        $sql = $regenerated
+            ? "UPDATE course_enrollments
+               SET certificado_generado_at = ?,
+                   certificate_regenerated_count = certificate_regenerated_count + 1
+               WHERE id = ?
+               LIMIT 1"
+            : "UPDATE course_enrollments
+               SET certificado_generado_at = COALESCE(certificado_generado_at, ?)
+               WHERE id = ?
+               LIMIT 1";
+
+        $stmt = $db->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $stmt->bind_param('si', $now, $enrollmentId);
+        $success = $stmt->execute();
+        $stmt->close();
+
+        return $success;
+    }
+}
+
+if (!function_exists('atenea_capacitacion_enrollment_full_name')) {
+    function atenea_capacitacion_enrollment_full_name(array $enrollment): string
+    {
+        $fullName = trim((string) ($enrollment['FIRST_NAME'] ?? '') . ' ' . (string) ($enrollment['LAST_NAME'] ?? ''));
+
+        return $fullName !== '' ? $fullName : 'Estudiante Atenea';
+    }
+}
+
+if (!function_exists('atenea_capacitacion_certificate_payload')) {
+    function atenea_capacitacion_certificate_payload(array $enrollment): array
+    {
+        $fullName = atenea_capacitacion_enrollment_full_name($enrollment);
+        $approvedAt = trim((string) ($enrollment['fecha_aprobacion'] ?? ''));
+        if ($approvedAt === '') {
+            $approvedAt = trim((string) ($enrollment['fecha_finalizacion'] ?? ''));
+        }
+
+        $timestamp = strtotime($approvedAt);
+        if ($timestamp === false) {
+            $timestamp = time();
+        }
+
+        $monthNames = array_values(atenea_certificate_months());
+        $month = $monthNames[(int) date('n', $timestamp) - 1] ?? 'enero';
+
+        return [
+            'student_name' => $fullName,
+            'certificate_name' => (string) ($enrollment['programa_titulo'] ?? 'CERTIFICADO ATENEA'),
+            'certificate_subtitle' => (string) (($enrollment['programa_descripcion_corta'] ?? '') !== '' ? $enrollment['programa_descripcion_corta'] : 'Capacitacion completada'),
+            'location' => 'San Salvador',
+            'day' => date('j', $timestamp),
+            'month' => $month,
+            'year' => date('Y', $timestamp),
         ];
     }
 }
