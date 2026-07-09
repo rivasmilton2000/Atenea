@@ -12,6 +12,7 @@ if (!function_exists('atenea_session_page_requires_auth')) {
             'homepage.php',
             'about.php',
             'educacion.php',
+            'programa_detalle.php',
             'galeria.php',
             'noticias.php',
             'noticia_detalle.php',

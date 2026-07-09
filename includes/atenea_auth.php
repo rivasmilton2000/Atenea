@@ -1106,6 +1106,8 @@ if (!function_exists('atenea_allowed_login_redirects')) {
     function atenea_allowed_login_redirects(): array
     {
         return [
+            'educacion.php',
+            'programa_detalle.php',
             'productos.php',
             'carrito.php',
             'checkout_success.php',
@@ -1143,6 +1145,8 @@ if (!function_exists('atenea_login_message_for_code')) {
                 return 'Debes iniciar sesión antes de pagar.';
             case 'login_required':
                 return 'Inicia sesión para continuar con tu compra.';
+            case 'quote_required':
+                return 'Inicia sesión para continuar con la cotización de esta capacitación.';
             default:
                 return '';
         }

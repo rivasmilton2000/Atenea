@@ -2,6 +2,8 @@
 <html lang="es">
 <?php include '../includes/connection.php'; ?>
 <?php
+require_once '../includes/atenea_capacitacion.php';
+
 // Consulta para facilities (servicios)
 $sql_facilities = "SELECT titulo, descripcion FROM facilities WHERE estado = 1 ORDER BY orden";
 $resultado_facilities = mysqli_query($db, $sql_facilities);
@@ -36,8 +38,15 @@ if (!$resultado_about) {
 
 $about = mysqli_fetch_assoc($resultado_about);
 
-// Consulta para programas educativos (primeros 3)
-$sql_programas = "SELECT * FROM programas_educativos WHERE estado = 1 ORDER BY orden LIMIT 3";
+// Consulta para capacitacion destacada (primeros 3)
+$sql_programas = "
+    SELECT pe.*,
+           " . atenea_capacitacion_select_sql($db, 'pe') . "
+    FROM programas_educativos pe
+    WHERE pe.estado = 1
+    ORDER BY pe.orden
+    LIMIT 3
+";
 $resultado_programas = mysqli_query($db, $sql_programas);
 
 if (!$resultado_programas) {
@@ -143,13 +152,24 @@ if (!$resultado_programas) {
       </div>
       <div class="row">
         <?php while ($programa = mysqli_fetch_assoc($resultado_programas)) : ?>
+          <?php
+          $programType = atenea_capacitacion_normalize_type((string) ($programa['tipo_programa'] ?? 'curso'));
+          $programPrice = atenea_capacitacion_price($programa);
+          $programDuration = atenea_capacitacion_text_value($programa['duracion'] ?? '');
+          ?>
           <div class="col-lg-4 mb-5">
             <div class="card border-0 bg-light shadow-sm pb-2 h-100">
-              <img class="card-img-top mb-2" src="../img/<?php echo $programa['imagen']; ?>" alt="<?php echo $programa['titulo']; ?>" style="height: 200px; object-fit: cover;">
+              <img class="card-img-top mb-2" src="../img/<?php echo htmlspecialchars((string) $programa['imagen'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars((string) $programa['titulo'], ENT_QUOTES, 'UTF-8'); ?>" style="height: 200px; object-fit: cover;">
               <div class="card-body text-center d-flex flex-column">
-                <h4 class="card-title"><?php echo $programa['titulo']; ?></h4>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="atenea-offer-badge atenea-offer-badge--<?php echo htmlspecialchars($programType, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo htmlspecialchars(atenea_capacitacion_type_label($programType), ENT_QUOTES, 'UTF-8'); ?>
+                  </span>
+                  <span class="font-weight-bold text-primary">$<?php echo number_format($programPrice, 2); ?></span>
+                </div>
+                <h4 class="card-title"><?php echo htmlspecialchars((string) $programa['titulo'], ENT_QUOTES, 'UTF-8'); ?></h4>
                 <p class="card-text text-justify flex-grow-1">
-                  <?php echo $programa['descripcion_corta']; ?>
+                  <?php echo htmlspecialchars((string) $programa['descripcion_corta'], ENT_QUOTES, 'UTF-8'); ?>
                 </p>
               </div>
               <div class="card-footer bg-transparent py-4 px-5">
@@ -157,21 +177,31 @@ if (!$resultado_programas) {
                   <div class="col-6 py-1 text-right border-right">
                     <strong>Nivel</strong>
                   </div>
-                  <div class="col-6 py-1"><?php echo $programa['nivel']; ?></div>
+                  <div class="col-6 py-1"><?php echo htmlspecialchars((string) $programa['nivel'], ENT_QUOTES, 'UTF-8'); ?></div>
                 </div>
                 <div class="row border-bottom">
                   <div class="col-6 py-1 text-right border-right">
                     <strong>Instructor</strong>
                   </div>
-                  <div class="col-6 py-1"><?php echo $programa['instructor']; ?></div>
+                  <div class="col-6 py-1"><?php echo htmlspecialchars((string) $programa['instructor'], ENT_QUOTES, 'UTF-8'); ?></div>
                 </div>
+                <div class="row border-bottom">
+                  <div class="col-6 py-1 text-right border-right">
+                    <strong>Duración</strong>
+                  </div>
+                  <div class="col-6 py-1"><?php echo htmlspecialchars($programDuration !== '' ? $programDuration : 'Por definir', ENT_QUOTES, 'UTF-8'); ?></div>
+                </div>
+                <a href="<?php echo htmlspecialchars(atenea_capacitacion_detail_url((int) $programa['id']), ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-primary2 btn-block mt-4">
+                  Cotizar ahora
+                </a>
               </div>
             </div>
           </div>
         <?php endwhile; ?>
       </div>
       <div class="text-center mt-4">
-        <a href="educacion.php" class="btn btn-primary2 py-2 px-4">Ver toda la capacitación</a>
+        <a href="educacion.php#capacitacion-catalogo" class="btn btn-primary2 py-2 px-4 mr-2">Cotizar ahora</a>
+        <a href="educacion.php" class="btn btn-outline-primary py-2 px-4">Ver toda la capacitación</a>
       </div>
     </div>
   </div>

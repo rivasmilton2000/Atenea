@@ -16,6 +16,12 @@ module_shell_begin([
             ],
         ],
         [
+            'title' => 'Página principal',
+            'items' => [
+                ['label' => 'Programas de capacitación', 'href' => 'programas_admin.php', 'icon' => 'school', 'match' => ['programas_admin.php', 'programas_edit.php']],
+            ],
+        ],
+        [
             'title' => 'Módulos',
             'items' => [
                 ['label' => 'Asignaturas', 'href' => 'sa_asignaturas.php', 'icon' => 'menu_book', 'match' => ['sa_asignaturas.php', 'sa_asignaturas_searchfrm.php', 'sa_asignaturas_edit.php']],
