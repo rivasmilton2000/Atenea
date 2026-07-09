@@ -4,6 +4,7 @@ confirm_logged_in();
 
 require_once __DIR__ . '/../includes/connection.php';
 require_once __DIR__ . '/../includes/material_dashboard.php';
+require_once __DIR__ . '/../includes/atenea_capacitacion.php';
 
 if (!atenea_session_is_public_user()) {
     header('Location: ' . atenea_dashboard_route_for_session());
@@ -582,7 +583,20 @@ if (atenea_db_has_table($db, 'ordenes') && $email !== '') {
     }
 }
 
-$navSections = [
+$publicUserId = (int) ($_SESSION['PUBLIC_USER_ID'] ?? 0);
+$phaseTwoReady = atenea_capacitacion_phase_two_ready($db);
+$activeEnrollment = $phaseTwoReady ? atenea_capacitacion_fetch_active_enrollment_for_public_user($db, $publicUserId) : null;
+$courseEnrollments = $phaseTwoReady ? atenea_capacitacion_fetch_enrollments_for_public_user($db, $publicUserId) : [];
+$accessibleVideos = ($phaseTwoReady && $activeEnrollment)
+    ? atenea_capacitacion_fetch_accessible_videos_for_public_user($db, $publicUserId, (int) ($activeEnrollment['programa_id'] ?? 0))
+    : [];
+$activeCourseStatusMeta = $activeEnrollment
+    ? atenea_capacitacion_course_status_meta((string) ($activeEnrollment['estado_curso'] ?? ''))
+    : ['label' => 'Sin curso activo', 'class' => 'secondary'];
+$activeCourseTitle = $activeEnrollment ? (string) ($activeEnrollment['programa_titulo'] ?? 'Curso activo') : 'Sin curso activo';
+$activeCourseProgress = $activeEnrollment ? atenea_capacitacion_progress_percentage($activeEnrollment['progreso'] ?? 0) : 0;
+
+$navSections = atenea_capacitacion_user_nav_sections('usuario_vista.php'); /*
     [
         'title' => 'Panel',
         'items' => [
@@ -601,12 +615,32 @@ $navSections = [
     ],
 ];
 
+*/
+$cards = [
+    ['title' => 'Mi curso activo', 'value' => $activeCourseStatusMeta['label'], 'icon' => 'workspace_premium', 'accent' => 'success', 'href' => 'mi_curso_activo.php', 'metricLabel' => $activeCourseTitle, 'footerLabel' => 'Entrar al curso'],
+    ['title' => 'Capacitacion', 'value' => $programCount, 'icon' => 'school', 'accent' => 'primary', 'href' => 'educacion.php', 'metricLabel' => 'Opciones disponibles', 'footerLabel' => 'Explorar oferta'],
+    ['title' => 'Productos', 'value' => $productCount, 'icon' => 'storefront', 'accent' => 'success', 'href' => 'productos.php', 'metricLabel' => 'Items visibles', 'footerLabel' => 'Ir a tienda'],
+    ['title' => 'Pagos confirmados', 'value' => $paidOrdersCount, 'icon' => 'payments', 'accent' => 'warning', 'href' => 'carrito.php', 'metricLabel' => 'Compras finalizadas', 'footerLabel' => 'Revisar carrito'],
+];
+/*
 $cards = [
     ['title' => 'Capacitación', 'value' => $programCount, 'icon' => 'school', 'accent' => 'primary', 'href' => 'educacion.php', 'metricLabel' => 'Opciones disponibles', 'footerLabel' => 'Explorar oferta'],
     ['title' => 'Productos', 'value' => $productCount, 'icon' => 'storefront', 'accent' => 'success', 'href' => 'productos.php', 'metricLabel' => 'Ítems visibles', 'footerLabel' => 'Ir a tienda'],
     ['title' => 'Pagos confirmados', 'value' => $paidOrdersCount, 'icon' => 'payments', 'accent' => 'warning', 'href' => 'carrito.php', 'metricLabel' => 'Compras finalizadas', 'footerLabel' => 'Revisar carrito'],
 ];
 
+*/
+$quickLinks = [
+    ['label' => 'Explorar Atenea', 'href' => 'homepage.php', 'icon' => 'public'],
+    ['label' => 'Mi curso activo', 'href' => 'mi_curso_activo.php', 'icon' => 'workspace_premium'],
+    ['label' => 'Videos del curso', 'href' => 'curso_videos.php', 'icon' => 'play_circle'],
+    ['label' => 'Record escolar', 'href' => 'record_escolar.php', 'icon' => 'school'],
+    ['label' => 'Ver capacitacion', 'href' => 'educacion.php', 'icon' => 'school'],
+    ['label' => 'Comprar productos', 'href' => 'productos.php', 'icon' => 'storefront'],
+    ['label' => 'Abrir carrito', 'href' => 'carrito.php', 'icon' => 'shopping_cart'],
+    ['label' => 'Hablar con Atenea', 'href' => 'contacto.php', 'icon' => 'support_agent'],
+];
+/*
 $quickLinks = [
     ['label' => 'Explorar Atenea', 'href' => 'homepage.php', 'icon' => 'public'],
     ['label' => 'Ver capacitación', 'href' => 'educacion.php', 'icon' => 'school'],
@@ -615,6 +649,20 @@ $quickLinks = [
     ['label' => 'Hablar con Atenea', 'href' => 'contacto.php', 'icon' => 'support_agent'],
 ];
 
+*/
+$summaryItems = [
+    ['label' => 'Nombre', 'value' => usuario_profile_display_value($fullName, 'Pendiente de completar')],
+    ['label' => 'Correo', 'value' => usuario_profile_display_value($email, 'No registrado')],
+    ['label' => 'Cuenta', 'value' => $roleLabel],
+    ['label' => 'Curso activo', 'value' => $activeCourseTitle],
+    ['label' => 'Estado academico', 'value' => $activeCourseStatusMeta['label']],
+    ['label' => 'Videos habilitados', 'value' => (string) count($accessibleVideos)],
+    ['label' => 'Progreso del curso', 'value' => $activeCourseProgress . '%'],
+    ['label' => 'Estado del plan', 'value' => $planStatusLabel],
+    ['label' => 'Google', 'value' => $isGoogleLinked ? 'Conectado' : 'No conectado'],
+    ['label' => 'Miembro desde', 'value' => usuario_profile_format_date($createdAt, 'No disponible')],
+];
+/*
 $summaryItems = [
     ['label' => 'Nombre', 'value' => usuario_profile_display_value($fullName, 'Pendiente de completar')],
     ['label' => 'Correo', 'value' => usuario_profile_display_value($email, 'No registrado')],
@@ -624,6 +672,7 @@ $summaryItems = [
     ['label' => 'Miembro desde', 'value' => usuario_profile_format_date($createdAt, 'No disponible')],
 ];
 
+*/
 $accountMetaItems = [
     ['label' => 'Rol', 'value' => $roleLabel],
     ['label' => 'Estado', 'value' => $accountStatusLabel],
@@ -1280,8 +1329,9 @@ dashboard_render_material_page([
     'stylesheets' => ['../css/usuario_vista.css'],
     'pageTitle' => 'Dashboard usuario',
     'roleLabel' => $roleLabel,
-    'welcomeTitle' => 'Tu acceso inicial a Atenea',
+    'welcomeTitle' => 'Tu panel de acceso a Atenea',
     'welcomeText' => 'Desde aquí puedes explorar la oferta de capacitación, gestionar pagos y mantener tu perfil al día. Cuando tu plan académico esté activo, esta misma cuenta podrá redirigirte al dashboard estudiantil.',
+    'welcomeText' => 'Desde aqui puedes explorar la oferta de capacitacion, gestionar pagos y entrar directamente a tu curso activo, sus videos y tu record escolar.',
     'profileUrl' => 'usuario_vista.php',
     'profileAction' => [
         'type' => 'modal',
@@ -1290,7 +1340,7 @@ dashboard_render_material_page([
     ],
     'logoutUrl' => 'logout.php?redirect=homepage.php',
     'navSections' => $navSections,
-    'cardsColumnClass' => 'col-12 col-md-6 col-xl-4 mb-4',
+    'cardsColumnClass' => 'col-12 col-md-6 col-xl-3 mb-4',
     'cards' => $cards,
     'quickLinks' => $quickLinks,
     'summaryItems' => $summaryItems,
@@ -1302,6 +1352,17 @@ dashboard_render_material_page([
     ],
     'heroActions' => [
         ['label' => 'Ver página principal', 'href' => 'homepage.php', 'icon' => 'home'],
+    ],
+    'heroBadges' => [
+        $activeCourseStatusMeta['label'],
+        $planStatusLabel,
+        count($accessibleVideos) . ' videos habilitados',
+        $paidOrdersCount . ' pagos confirmados',
+    ],
+    'heroActions' => [
+        ['label' => 'Mi curso activo', 'href' => 'mi_curso_activo.php', 'icon' => 'workspace_premium'],
+        ['label' => 'Videos del curso', 'href' => 'curso_videos.php', 'icon' => 'play_circle', 'variant' => 'outline'],
+        ['label' => 'Ver pagina principal', 'href' => 'homepage.php', 'icon' => 'home'],
     ],
     'extraBodyHtml' => $extraBodyHtml,
 ]);

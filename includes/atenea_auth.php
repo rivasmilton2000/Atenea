@@ -1108,6 +1108,10 @@ if (!function_exists('atenea_allowed_login_redirects')) {
         return [
             'educacion.php',
             'programa_detalle.php',
+            'programa_cotizar.php',
+            'mi_curso_activo.php',
+            'curso_videos.php',
+            'record_escolar.php',
             'productos.php',
             'carrito.php',
             'checkout_success.php',
