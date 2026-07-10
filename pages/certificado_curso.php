@@ -77,6 +77,8 @@ $certificateData = [];
 $certificateHtml = '';
 $pdfDownloadUrl = 'certificado_curso_pdf.php';
 $pdfInlineUrl = 'certificado_curso_pdf.php';
+$certificateTemplateVersion = '0';
+$certificatePreviewToken = time();
 $studentFullName = trim((string) ($_SESSION['FIRST_NAME'] ?? '') . ' ' . (string) ($_SESSION['LAST_NAME'] ?? ''));
 $courseStatusMeta = $selectedEnrollment ? atenea_capacitacion_course_status_meta((string) ($selectedEnrollment['estado_curso'] ?? '')) : ['label' => 'Pendiente', 'class' => 'secondary'];
 $approvalStatusMeta = $selectedEnrollment ? atenea_capacitacion_approval_status_meta((string) ($selectedEnrollment['estado_aprobacion'] ?? '')) : ['label' => 'Pendiente', 'class' => 'secondary'];
@@ -84,14 +86,19 @@ $approvalStatusMeta = $selectedEnrollment ? atenea_capacitacion_approval_status_
 if ($selectedEnrollment) {
     atenea_capacitacion_mark_certificate_generated($db, (int) $selectedEnrollment['id'], false);
     $certificateData = atenea_certificate_build_data(atenea_capacitacion_certificate_payload($selectedEnrollment));
-    $certificateHtml = atenea_certificate_html($certificateData, '../img/certificados/certificado_base.jpg');
+    $certificateTemplateVersion = atenea_certificate_template_version($certificateData);
+    $certificateHtml = atenea_certificate_html($certificateData);
     $studentFullName = atenea_capacitacion_enrollment_full_name($selectedEnrollment);
     $pdfDownloadUrl = 'certificado_curso_pdf.php?' . http_build_query([
         'enrollment_id' => (int) $selectedEnrollment['id'],
         'download' => 1,
+        'template_v' => $certificateTemplateVersion,
+        'preview_token' => $certificatePreviewToken,
     ]);
     $pdfInlineUrl = 'certificado_curso_pdf.php?' . http_build_query([
         'enrollment_id' => (int) $selectedEnrollment['id'],
+        'template_v' => $certificateTemplateVersion,
+        'preview_token' => $certificatePreviewToken,
     ]);
 }
 

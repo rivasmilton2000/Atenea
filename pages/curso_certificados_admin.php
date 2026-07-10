@@ -3,6 +3,7 @@ require 'session.php';
 require_once '../includes/connection.php';
 require_once '../includes/material_dashboard.php';
 require_once '../includes/atenea_capacitacion.php';
+require_once '../includes/certificate_renderer.php';
 
 dashboard_require_role(
     $db,
@@ -29,6 +30,7 @@ if (!atenea_capacitacion_phase_three_ready($db)) {
 }
 
 $selectedProgramId = max(0, (int) ($_GET['programa_id'] ?? 0));
+$certificatePreviewToken = time();
 $programas = [];
 $enrollments = atenea_capacitacion_fetch_admin_enrollments($db, $selectedProgramId);
 $pendingApprovalCount = 0;
@@ -153,11 +155,18 @@ foreach ($enrollments as $index => $enrollment) {
                         $progress = atenea_capacitacion_progress_percentage($enrollment['progreso'] ?? 0);
                         $certificateAvailable = atenea_capacitacion_certificate_eligible($enrollment);
                         $studentName = atenea_capacitacion_enrollment_full_name($enrollment);
-                        $pdfInlineUrl = 'certificado_curso_pdf.php?' . http_build_query(['enrollment_id' => (int) $enrollment['id']]);
+                        $templateVersion = atenea_certificate_template_version(atenea_capacitacion_certificate_payload($enrollment));
+                        $pdfInlineUrl = 'certificado_curso_pdf.php?' . http_build_query([
+                            'enrollment_id' => (int) $enrollment['id'],
+                            'template_v' => $templateVersion,
+                            'preview_token' => $certificatePreviewToken,
+                        ]);
                         $pdfRegenerateUrl = 'certificado_curso_pdf.php?' . http_build_query([
                             'enrollment_id' => (int) $enrollment['id'],
                             'download' => 1,
                             'regenerate' => 1,
+                            'template_v' => $templateVersion,
+                            'preview_token' => $certificatePreviewToken,
                         ]);
                         ?>
                         <tr>

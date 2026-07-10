@@ -38,6 +38,9 @@ if (function_exists('ob_get_length') && ob_get_length()) {
 }
 
 header('Content-Type: application/pdf');
+header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 header('Content-Disposition: inline; filename="certificado_' . $fileNameBase . '.pdf"');
 header('Content-Length: ' . strlen($pdfBinary));
 

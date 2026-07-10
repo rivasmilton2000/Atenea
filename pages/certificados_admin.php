@@ -75,7 +75,10 @@ if ($selectedProductId > 0 && $catalogSchema['tipo_oferta']) {
 
 $input = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : $_GET;
 $certificateData = atenea_certificate_build_data(array_merge($productPrefill, is_array($input) ? $input : []));
-$pdfUrl = 'certificado_pdf.php?' . http_build_query(atenea_certificate_query_data($certificateData));
+$pdfQuery = atenea_certificate_query_data($certificateData);
+$pdfQuery['template_v'] = atenea_certificate_template_version($certificateData);
+$pdfQuery['preview_token'] = time();
+$pdfUrl = 'certificado_pdf.php?' . http_build_query($pdfQuery);
 ?>
 
 <style>
@@ -120,6 +123,10 @@ $pdfUrl = 'certificado_pdf.php?' . http_build_query(atenea_certificate_query_dat
             <div class="card">
                 <div class="card-body">
                     <form method="post">
+                        <div class="alert alert-light border mb-4">
+                            La plantilla oficial ya incluye logo, encabezado, firmas, respaldo y textos fijos.
+                            En la vista final solo se renderizan nombre del estudiante, curso, subtitulo y fecha.
+                        </div>
                         <?php if ($offerOptions !== []) : ?>
                             <div class="form-group">
                                 <label><strong>Curso o certificación</strong> (opcional)</label>
@@ -225,7 +232,7 @@ $pdfUrl = 'certificado_pdf.php?' . http_build_query(atenea_certificate_query_dat
                     Plantilla basada directamente en la imagen de referencia: fondo rosado/lila claro, franja ornamental verde/gris, doble marco punteado, logo lateral y cinta superior.
                 </div>
                 <div class="atenea-certificate-preview-wrap">
-                    <?php echo atenea_certificate_html($certificateData, '../img/certificados/certificado_base.jpg'); ?>
+                    <?php echo atenea_certificate_html($certificateData); ?>
                 </div>
             </div>
         </div>

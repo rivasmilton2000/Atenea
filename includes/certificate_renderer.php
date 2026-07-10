@@ -70,20 +70,54 @@ if (!function_exists('atenea_certificate_length')) {
     }
 }
 
+if (!function_exists('atenea_certificate_upper')) {
+    function atenea_certificate_upper(string $value): string
+    {
+        return function_exists('mb_strtoupper')
+            ? mb_strtoupper($value, 'UTF-8')
+            : strtoupper($value);
+    }
+}
+
+if (!function_exists('atenea_certificate_slug')) {
+    function atenea_certificate_slug(string $value): string
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (function_exists('iconv')) {
+            $transliterated = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+            if ($transliterated !== false) {
+                $value = $transliterated;
+            }
+        }
+
+        $value = strtolower($value);
+        $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?? '';
+
+        return trim($value, '-');
+    }
+}
+
 if (!function_exists('atenea_certificate_default_data')) {
     function atenea_certificate_default_data(): array
     {
         $monthNames = array_values(atenea_certificate_months());
 
         return [
-            'student_name' => 'Reynalda Dávila B.',
+            'student_name' => 'Reynalda Davila B.',
             'certificate_name' => 'LIMPIEZA DE OIDOS',
             'certificate_subtitle' => 'Ear Candling - Conoterapia Nivel I',
             'location' => 'San Salvador',
             'day' => (string) date('j'),
             'month' => $monthNames[(int) date('n') - 1] ?? 'julio',
             'year' => (string) date('Y'),
-            'institution_name' => 'Escuela de Naturopatía Holística',
+            'certificate_code' => '',
+            'template_file' => '',
+            'institution_name' => 'Escuela de Naturopatia Holistica',
             'president_name' => 'DLIM Roberto Quinteros',
             'president_role' => 'PRESIDENTE',
             'facilitator_name' => 'DLIM Roberto Quinteros',
@@ -102,8 +136,10 @@ if (!function_exists('atenea_certificate_build_data')) {
         $data = $defaults;
         $data['student_name'] = atenea_certificate_clean_text((string) ($input['student_name'] ?? $defaults['student_name']), 140);
         $data['certificate_name'] = atenea_certificate_clean_text((string) ($input['certificate_name'] ?? $defaults['certificate_name']), 140);
-        $data['certificate_subtitle'] = atenea_certificate_clean_text((string) ($input['certificate_subtitle'] ?? $defaults['certificate_subtitle']), 160);
+        $data['certificate_subtitle'] = atenea_certificate_clean_text((string) ($input['certificate_subtitle'] ?? $defaults['certificate_subtitle']), 180);
         $data['location'] = atenea_certificate_clean_text((string) ($input['location'] ?? $defaults['location']), 80);
+        $data['certificate_code'] = atenea_certificate_clean_text((string) ($input['certificate_code'] ?? $defaults['certificate_code']), 40);
+        $data['template_file'] = basename(atenea_certificate_clean_text((string) ($input['template_file'] ?? $defaults['template_file']), 160));
         $data['institution_name'] = atenea_certificate_clean_text((string) ($input['institution_name'] ?? $defaults['institution_name']), 120);
         $data['president_name'] = atenea_certificate_clean_text((string) ($input['president_name'] ?? $defaults['president_name']), 120);
         $data['president_role'] = atenea_certificate_clean_text((string) ($input['president_role'] ?? $defaults['president_role']), 80);
@@ -151,6 +187,8 @@ if (!function_exists('atenea_certificate_query_data')) {
             'day' => (string) ($data['day'] ?? ''),
             'month' => (string) ($data['month'] ?? ''),
             'year' => (string) ($data['year'] ?? ''),
+            'certificate_code' => (string) ($data['certificate_code'] ?? ''),
+            'template_file' => (string) ($data['template_file'] ?? ''),
             'institution_name' => (string) ($data['institution_name'] ?? ''),
             'president_name' => (string) ($data['president_name'] ?? ''),
             'president_role' => (string) ($data['president_role'] ?? ''),
@@ -161,35 +199,121 @@ if (!function_exists('atenea_certificate_query_data')) {
     }
 }
 
-if (!function_exists('atenea_certificate_upper')) {
-    function atenea_certificate_upper(string $value): string
+if (!function_exists('atenea_certificate_template_catalog')) {
+    function atenea_certificate_template_catalog(): array
     {
-        return function_exists('mb_strtoupper')
-            ? mb_strtoupper($value, 'UTF-8')
-            : strtoupper($value);
+        return [
+            'generic' => [
+                'key' => 'generic',
+                'filename' => 'certificado_generico_20260709.png',
+                'show_course_title' => true,
+                'show_course_subtitle' => true,
+            ],
+            'limpieza-de-oidos' => [
+                'key' => 'limpieza-de-oidos',
+                'filename' => 'certificado_limpieza_oidos_20260709.png',
+                'show_course_title' => false,
+                'show_course_subtitle' => false,
+            ],
+        ];
     }
 }
 
-if (!function_exists('atenea_certificate_background_relative_path')) {
-    function atenea_certificate_background_relative_path(): string
+if (!function_exists('atenea_certificate_template_absolute_path')) {
+    function atenea_certificate_template_absolute_path(string $filename): ?string
     {
-        return '../img/certificados/certificado_base.jpg';
-    }
-}
-
-if (!function_exists('atenea_certificate_background_absolute_path')) {
-    function atenea_certificate_background_absolute_path(): ?string
-    {
-        $path = __DIR__ . '/../img/certificados/certificado_base.jpg';
+        $path = __DIR__ . '/../img/certificados/' . basename($filename);
 
         return is_file($path) ? $path : null;
     }
 }
 
-if (!function_exists('atenea_certificate_ratio')) {
-    function atenea_certificate_ratio(float $value, float $total): string
+if (!function_exists('atenea_certificate_resolve_template')) {
+    function atenea_certificate_resolve_template(array $data = []): array
     {
-        return number_format(($value / $total) * 100, 6, '.', '') . '%';
+        $data = atenea_certificate_build_data($data);
+        $catalog = atenea_certificate_template_catalog();
+
+        $buildTemplate = static function (string $key, string $filename, bool $showCourseTitle, bool $showCourseSubtitle): array {
+            $absolutePath = atenea_certificate_template_absolute_path($filename);
+            $version = $absolutePath !== null ? (string) (@filemtime($absolutePath) ?: 0) : '0';
+
+            return [
+                'key' => $key,
+                'filename' => $filename,
+                'absolute_path' => $absolutePath,
+                'relative_path' => '../img/certificados/' . $filename,
+                'relative_url' => '../img/certificados/' . $filename . '?v=' . rawurlencode($version),
+                'version' => $version,
+                'show_course_title' => $showCourseTitle,
+                'show_course_subtitle' => $showCourseSubtitle,
+            ];
+        };
+
+        $explicitTemplateFile = trim((string) ($data['template_file'] ?? ''));
+        if ($explicitTemplateFile !== '') {
+            foreach ($catalog as $templateMeta) {
+                if ($explicitTemplateFile === (string) $templateMeta['filename']) {
+                    return $buildTemplate(
+                        (string) $templateMeta['key'],
+                        (string) $templateMeta['filename'],
+                        !empty($templateMeta['show_course_title']),
+                        !empty($templateMeta['show_course_subtitle'])
+                    );
+                }
+            }
+
+            if (atenea_certificate_template_absolute_path($explicitTemplateFile) !== null) {
+                return $buildTemplate('custom-explicit', $explicitTemplateFile, false, false);
+            }
+        }
+
+        $courseSlug = atenea_certificate_slug((string) ($data['certificate_name'] ?? ''));
+        if ($courseSlug !== '' && isset($catalog[$courseSlug])) {
+            $templateMeta = $catalog[$courseSlug];
+
+            return $buildTemplate(
+                (string) $templateMeta['key'],
+                (string) $templateMeta['filename'],
+                !empty($templateMeta['show_course_title']),
+                !empty($templateMeta['show_course_subtitle'])
+            );
+        }
+
+        if ($courseSlug !== '') {
+            $customCandidates = [
+                'certificado_' . str_replace('-', '_', $courseSlug) . '.png',
+                'certificado_' . str_replace('-', '_', $courseSlug) . '.jpg',
+                'certificado_' . str_replace('-', '_', $courseSlug) . '.jpeg',
+                'plantilla_' . str_replace('-', '_', $courseSlug) . '.png',
+                'plantilla_' . str_replace('-', '_', $courseSlug) . '.jpg',
+                'plantilla_' . str_replace('-', '_', $courseSlug) . '.jpeg',
+            ];
+
+            foreach ($customCandidates as $candidate) {
+                if (atenea_certificate_template_absolute_path($candidate) !== null) {
+                    return $buildTemplate('custom-course', $candidate, false, false);
+                }
+            }
+        }
+
+        $generic = $catalog['generic'];
+
+        return $buildTemplate(
+            (string) $generic['key'],
+            (string) $generic['filename'],
+            !empty($generic['show_course_title']),
+            !empty($generic['show_course_subtitle'])
+        );
+    }
+}
+
+if (!function_exists('atenea_certificate_template_version')) {
+    function atenea_certificate_template_version(array $data = []): string
+    {
+        $template = atenea_certificate_resolve_template($data);
+
+        return (string) ($template['version'] ?? '0');
     }
 }
 
@@ -199,18 +323,18 @@ if (!function_exists('atenea_certificate_html_student_size')) {
         $length = atenea_certificate_length($studentName);
 
         if ($length <= 18) {
-            return '5.6rem';
+            return '5.5rem';
         }
 
-        if ($length <= 26) {
-            return '5rem';
+        if ($length <= 28) {
+            return '4.8rem';
         }
 
-        if ($length <= 34) {
-            return '4.35rem';
+        if ($length <= 38) {
+            return '4rem';
         }
 
-        return '3.7rem';
+        return '3.35rem';
     }
 }
 
@@ -220,18 +344,18 @@ if (!function_exists('atenea_certificate_html_title_size')) {
         $length = atenea_certificate_length($title);
 
         if ($length <= 20) {
-            return '3.55rem';
+            return '3.45rem';
         }
 
-        if ($length <= 28) {
-            return '3.15rem';
+        if ($length <= 30) {
+            return '3rem';
         }
 
-        if ($length <= 36) {
-            return '2.75rem';
+        if ($length <= 42) {
+            return '2.45rem';
         }
 
-        return '2.35rem';
+        return '2.05rem';
     }
 }
 
@@ -241,18 +365,18 @@ if (!function_exists('atenea_certificate_pdf_student_size')) {
         $length = atenea_certificate_length($studentName);
 
         if ($length <= 18) {
-            return 33.0;
+            return 28.0;
         }
 
-        if ($length <= 26) {
-            return 29.0;
+        if ($length <= 28) {
+            return 24.5;
         }
 
-        if ($length <= 34) {
-            return 25.0;
+        if ($length <= 38) {
+            return 21.5;
         }
 
-        return 21.5;
+        return 18.5;
     }
 }
 
@@ -262,30 +386,35 @@ if (!function_exists('atenea_certificate_pdf_title_size')) {
         $length = atenea_certificate_length($title);
 
         if ($length <= 20) {
-            return 22.0;
+            return 19.0;
         }
 
-        if ($length <= 28) {
-            return 19.2;
+        if ($length <= 30) {
+            return 16.5;
         }
 
-        if ($length <= 36) {
-            return 16.8;
+        if ($length <= 42) {
+            return 14.4;
         }
 
-        return 14.5;
+        return 12.4;
     }
 }
 
 if (!function_exists('atenea_certificate_windows_font')) {
     function atenea_certificate_windows_font(array $candidates): ?string
     {
-        $windowsDir = getenv('WINDIR') ?: 'C:\\Windows';
+        $fontDirs = [
+            getenv('WINDIR') . DIRECTORY_SEPARATOR . 'Fonts',
+            'C:\\Windows\\Fonts',
+        ];
 
-        foreach ($candidates as $candidate) {
-            $path = $windowsDir . DIRECTORY_SEPARATOR . 'Fonts' . DIRECTORY_SEPARATOR . $candidate;
-            if (is_file($path)) {
-                return $path;
+        foreach ($fontDirs as $fontDir) {
+            foreach ($candidates as $candidate) {
+                $path = $fontDir . DIRECTORY_SEPARATOR . $candidate;
+                if (is_file($path)) {
+                    return $path;
+                }
             }
         }
 
@@ -330,7 +459,6 @@ if (!function_exists('atenea_certificate_pdf_fonts')) {
         }
 
         $fonts = [
-            'school' => atenea_certificate_register_tcpdf_font(['OLDENGL.TTF'], 'times'),
             'student' => atenea_certificate_register_tcpdf_font(['MTCORSVA.TTF', 'FRSCRIPT.TTF', 'SCRIPTBL.TTF'], 'times'),
             'body' => atenea_certificate_register_tcpdf_font(['GARA.TTF', 'pala.ttf'], 'dejavuserif'),
             'body_bold' => atenea_certificate_register_tcpdf_font(['GARABD.TTF', 'palab.ttf'], 'dejavuserif'),
@@ -364,33 +492,11 @@ if (!function_exists('atenea_certificate_preview_css')) {
   box-shadow: 0 22px 55px rgba(44, 58, 49, 0.18);
 }
 
-.atenea-certificate__item {
+.atenea-certificate__field {
   position: absolute;
-  text-align: center;
   z-index: 2;
-}
-
-.atenea-certificate__school {
-  left: 21.701389%;
-  top: 11.111111%;
-  width: 68.576389%;
-  color: #cf8a8d;
-  font-family: "Old English Text MT", "Goudy Text MT", "Book Antiqua", serif;
-  font-size: 3.55rem;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
-}
-
-.atenea-certificate__label {
-  left: 44.010417%;
-  top: 21.180556%;
-  width: 18.923611%;
-  color: #c17f77;
-  font-family: Garamond, "Palatino Linotype", "Book Antiqua", serif;
-  font-size: 1.85rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .atenea-certificate__student {
@@ -400,127 +506,77 @@ if (!function_exists('atenea_certificate_preview_css')) {
   color: #4e4d70;
   font-family: "Monotype Corsiva", "French Script MT", "Brush Script MT", cursive;
   line-height: 1;
-  white-space: nowrap;
+  padding: 0 0.75rem;
 }
 
-.atenea-certificate__body {
-  left: 9.548611%;
-  top: 41.087963%;
-  width: 80.295139%;
-  color: #322c35;
-  font-family: Garamond, "Palatino Linotype", "Book Antiqua", serif;
-  font-size: 1.85rem;
-  font-weight: 600;
-  line-height: 1.15;
-}
-
-.atenea-certificate__body strong {
-  font-weight: 700;
-}
-
-.atenea-certificate__title {
+.atenea-certificate__course-title {
   left: 21.267361%;
   top: 47.222222%;
   width: 57.638889%;
-  color: #d78195;
+  color: #d63f47;
   font-family: Garamond, "Palatino Linotype", "Book Antiqua", serif;
   font-weight: 700;
-  letter-spacing: 0.18em;
-  line-height: 1;
+  letter-spacing: 0.14em;
+  line-height: 1.05;
   text-transform: uppercase;
-  white-space: nowrap;
+  padding: 0 0.5rem;
 }
 
-.atenea-certificate__subtitle {
+.atenea-certificate__course-subtitle {
   left: 22.135417%;
-  top: 55.902778%;
+  top: 57.037037%;
   width: 55.989583%;
-  color: #3a3542;
+  color: #342f40;
   font-family: Garamond, "Palatino Linotype", "Book Antiqua", serif;
-  font-size: 2.35rem;
-  line-height: 1.05;
-  letter-spacing: 0.02em;
-}
-
-.atenea-certificate__signature {
-  color: #2e2834;
-  font-family: Garamond, "Palatino Linotype", "Book Antiqua", serif;
-  font-size: 1.55rem;
-  line-height: 1.05;
-}
-
-.atenea-certificate__signature strong {
-  display: block;
-  font-size: 1.65rem;
-  font-weight: 700;
-}
-
-.atenea-certificate__signature--left {
-  left: 21.180556%;
-  top: 67.245370%;
-  width: 24.305556%;
-}
-
-.atenea-certificate__signature--right {
-  left: 50.260417%;
-  top: 67.245370%;
-  width: 24.826389%;
-}
-
-.atenea-certificate__support {
-  left: 11.631944%;
-  top: 79.513889%;
-  width: 47.743056%;
-  color: #403744;
-  font-family: Garamond, "Palatino Linotype", "Book Antiqua", serif;
-  font-size: 1.28rem;
-  line-height: 1.05;
-  white-space: nowrap;
+  font-size: 2.1rem;
+  line-height: 1.08;
+  letter-spacing: 0.03em;
+  padding: 0 0.5rem;
 }
 
 .atenea-certificate__date {
-  left: 24.131944%;
-  top: 84.259259%;
-  width: 53.819444%;
-  color: #403744;
+  color: #3f3744;
   font-family: Garamond, "Palatino Linotype", "Book Antiqua", serif;
-  font-size: 1.6rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  line-height: 1.05;
+  line-height: 1;
   white-space: nowrap;
 }
 
+.atenea-certificate__date--day {
+  left: 39.613526%;
+  top: 86.648250%;
+  width: 5.175983%;
+}
+
+.atenea-certificate__date--month {
+  left: 57.901311%;
+  top: 86.648250%;
+  width: 16.563147%;
+}
+
+.atenea-certificate__date--year {
+  left: 74.464458%;
+  top: 86.648250%;
+  width: 7.660455%;
+}
+
+.atenea-certificate__code {
+  right: 5.5%;
+  bottom: 5.2%;
+  color: #5b5962;
+  font-family: Garamond, "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+}
+
 @media (max-width: 1199.98px) {
-  .atenea-certificate__school {
-    font-size: 3rem;
-  }
-
-  .atenea-certificate__label {
-    font-size: 1.45rem;
-  }
-
-  .atenea-certificate__body {
-    font-size: 1.45rem;
-  }
-
-  .atenea-certificate__subtitle {
-    font-size: 1.9rem;
-  }
-
-  .atenea-certificate__signature {
-    font-size: 1.18rem;
-  }
-
-  .atenea-certificate__signature strong {
-    font-size: 1.28rem;
-  }
-
-  .atenea-certificate__support {
-    font-size: 1rem;
+  .atenea-certificate__course-subtitle {
+    font-size: 1.7rem;
   }
 
   .atenea-certificate__date {
-    font-size: 1.22rem;
+    font-size: 1.08rem;
   }
 }
 
@@ -529,36 +585,16 @@ if (!function_exists('atenea_certificate_preview_css')) {
     padding: 0.75rem;
   }
 
-  .atenea-certificate__school {
-    font-size: 1.75rem;
-  }
-
-  .atenea-certificate__label {
-    font-size: 0.95rem;
-  }
-
-  .atenea-certificate__body {
-    font-size: 0.96rem;
-  }
-
-  .atenea-certificate__subtitle {
-    font-size: 1.15rem;
-  }
-
-  .atenea-certificate__signature {
-    font-size: 0.78rem;
-  }
-
-  .atenea-certificate__signature strong {
-    font-size: 0.85rem;
-  }
-
-  .atenea-certificate__support {
-    font-size: 0.66rem;
+  .atenea-certificate__course-subtitle {
+    font-size: 1.05rem;
   }
 
   .atenea-certificate__date {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
+  }
+
+  .atenea-certificate__code {
+    font-size: 0.62rem;
   }
 }
 CSS;
@@ -566,53 +602,43 @@ CSS;
 }
 
 if (!function_exists('atenea_certificate_html')) {
-    function atenea_certificate_html(array $data, string $backgroundUrl = '../img/certificados/certificado_base.jpg'): string
+    function atenea_certificate_html(array $data): string
     {
         $data = atenea_certificate_build_data($data);
+        $template = atenea_certificate_resolve_template($data);
         $studentName = htmlspecialchars((string) $data['student_name'], ENT_QUOTES, 'UTF-8');
         $certificateName = htmlspecialchars(atenea_certificate_upper((string) $data['certificate_name']), ENT_QUOTES, 'UTF-8');
         $subtitle = htmlspecialchars((string) $data['certificate_subtitle'], ENT_QUOTES, 'UTF-8');
-        $location = htmlspecialchars((string) $data['location'], ENT_QUOTES, 'UTF-8');
         $day = htmlspecialchars((string) $data['day'], ENT_QUOTES, 'UTF-8');
         $month = htmlspecialchars((string) $data['month'], ENT_QUOTES, 'UTF-8');
         $year = htmlspecialchars((string) $data['year'], ENT_QUOTES, 'UTF-8');
-        $institution = htmlspecialchars((string) $data['institution_name'], ENT_QUOTES, 'UTF-8');
-        $presidentName = htmlspecialchars((string) $data['president_name'], ENT_QUOTES, 'UTF-8');
-        $presidentRole = htmlspecialchars((string) $data['president_role'], ENT_QUOTES, 'UTF-8');
-        $facilitatorName = htmlspecialchars((string) $data['facilitator_name'], ENT_QUOTES, 'UTF-8');
-        $facilitatorRole = htmlspecialchars((string) $data['facilitator_role'], ENT_QUOTES, 'UTF-8');
-        $supportText = htmlspecialchars((string) $data['cooperative_text'], ENT_QUOTES, 'UTF-8');
-        $backgroundStyle = "background-image:url('" . htmlspecialchars($backgroundUrl, ENT_QUOTES, 'UTF-8') . "');";
+        $certificateCode = htmlspecialchars((string) $data['certificate_code'], ENT_QUOTES, 'UTF-8');
         $studentSize = atenea_certificate_html_student_size((string) $data['student_name']);
         $titleSize = atenea_certificate_html_title_size((string) $data['certificate_name']);
+        $backgroundStyle = "background-image:url('" . htmlspecialchars((string) ($template['relative_url'] ?? ''), ENT_QUOTES, 'UTF-8') . "');";
 
         ob_start();
         ?>
         <div class="atenea-certificate" style="<?php echo $backgroundStyle; ?>">
-          <div class="atenea-certificate__item atenea-certificate__school"><?php echo $institution; ?></div>
-          <div class="atenea-certificate__item atenea-certificate__label">CERTIFICA A:</div>
-          <div class="atenea-certificate__item atenea-certificate__student" style="font-size: <?php echo htmlspecialchars($studentSize, ENT_QUOTES, 'UTF-8'); ?>;">
+          <div class="atenea-certificate__field atenea-certificate__student" style="font-size: <?php echo htmlspecialchars($studentSize, ENT_QUOTES, 'UTF-8'); ?>;">
             <?php echo $studentName; ?>
           </div>
-          <div class="atenea-certificate__item atenea-certificate__body">
-            Estudiante que cumplió los requisitos exigidos para el <strong>CERTIFICADO</strong> de
-          </div>
-          <div class="atenea-certificate__item atenea-certificate__title" style="font-size: <?php echo htmlspecialchars($titleSize, ENT_QUOTES, 'UTF-8'); ?>;">
-            <?php echo $certificateName; ?>
-          </div>
-          <div class="atenea-certificate__item atenea-certificate__subtitle"><?php echo $subtitle; ?></div>
-          <div class="atenea-certificate__item atenea-certificate__signature atenea-certificate__signature--left">
-            <strong><?php echo $presidentName; ?></strong>
-            <?php echo $presidentRole; ?>
-          </div>
-          <div class="atenea-certificate__item atenea-certificate__signature atenea-certificate__signature--right">
-            <strong><?php echo $facilitatorName; ?></strong>
-            <?php echo $facilitatorRole; ?>
-          </div>
-          <div class="atenea-certificate__item atenea-certificate__support"><?php echo $supportText; ?></div>
-          <div class="atenea-certificate__item atenea-certificate__date">
-            <?php echo $location; ?> a los <?php echo $day; ?> días del mes de <?php echo $month; ?> de <?php echo $year; ?>
-          </div>
+          <?php if (!empty($template['show_course_title'])) : ?>
+            <div class="atenea-certificate__field atenea-certificate__course-title" style="font-size: <?php echo htmlspecialchars($titleSize, ENT_QUOTES, 'UTF-8'); ?>;">
+              <?php echo $certificateName; ?>
+            </div>
+          <?php endif; ?>
+          <?php if (!empty($template['show_course_subtitle']) && trim((string) $data['certificate_subtitle']) !== '') : ?>
+            <div class="atenea-certificate__field atenea-certificate__course-subtitle">
+              <?php echo $subtitle; ?>
+            </div>
+          <?php endif; ?>
+          <div class="atenea-certificate__field atenea-certificate__date atenea-certificate__date--day"><?php echo $day; ?></div>
+          <div class="atenea-certificate__field atenea-certificate__date atenea-certificate__date--month"><?php echo $month; ?></div>
+          <div class="atenea-certificate__field atenea-certificate__date atenea-certificate__date--year"><?php echo $year; ?></div>
+          <?php if ($certificateCode !== '') : ?>
+            <div class="atenea-certificate__field atenea-certificate__code"><?php echo $certificateCode; ?></div>
+          <?php endif; ?>
         </div>
         <?php
 
@@ -656,8 +682,9 @@ if (!function_exists('atenea_certificate_pdf_binary')) {
         atenea_certificate_bootstrap();
 
         $data = atenea_certificate_build_data($data);
+        $template = atenea_certificate_resolve_template($data);
         $fonts = atenea_certificate_pdf_fonts();
-        $backgroundPath = atenea_certificate_background_absolute_path();
+        $backgroundPath = $template['absolute_path'] ?? null;
 
         $pdf = new TCPDF('L', 'mm', [216, 288], true, 'UTF-8', false);
         $pdf->SetCreator('Atenea');
@@ -669,7 +696,7 @@ if (!function_exists('atenea_certificate_pdf_binary')) {
         $pdf->SetAutoPageBreak(false, 0);
         $pdf->AddPage();
 
-        if ($backgroundPath !== null) {
+        if (is_string($backgroundPath) && $backgroundPath !== '' && is_file($backgroundPath)) {
             $pdf->Image($backgroundPath, 0, 0, 288, 216, '', '', '', false, 300, '', false, false, 0, false, false, false);
         } else {
             $pdf->SetFillColor(247, 238, 244);
@@ -678,161 +705,102 @@ if (!function_exists('atenea_certificate_pdf_binary')) {
 
         atenea_certificate_pdf_text(
             $pdf,
-            $fonts['school'],
-            23.5,
-            [207, 138, 141],
-            250,
-            100,
-            790,
-            68,
-            (string) $data['institution_name'],
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body_bold'],
-            11.2,
-            [193, 127, 119],
-            508,
-            182,
-            178,
-            32,
-            'CERTIFICA A:',
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
             $fonts['student'],
             atenea_certificate_pdf_student_size((string) $data['student_name']),
             [78, 77, 112],
-            300,
-            218,
-            670,
-            78,
+            372,
+            278,
+            844,
+            88,
             (string) $data['student_name'],
             'C'
         );
 
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body_bold'],
-            11.3,
-            [50, 44, 53],
-            110,
-            355,
-            925,
-            34,
-            'Estudiante que cumplió los requisitos exigidos para el CERTIFICADO de',
-            'C'
-        );
+        if (!empty($template['show_course_title'])) {
+            atenea_certificate_pdf_text(
+                $pdf,
+                $fonts['title'],
+                atenea_certificate_pdf_title_size((string) $data['certificate_name']),
+                [214, 63, 71],
+                308,
+                518,
+                834,
+                88,
+                atenea_certificate_upper((string) $data['certificate_name']),
+                'C',
+                0.95
+            );
+        }
 
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['title'],
-            atenea_certificate_pdf_title_size((string) $data['certificate_name']),
-            [215, 129, 149],
-            245,
-            408,
-            662,
-            58,
-            atenea_certificate_upper((string) $data['certificate_name']),
-            'C',
-            1.25
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body'],
-            14.0,
-            [59, 53, 66],
-            255,
-            492,
-            650,
-            36,
-            (string) $data['certificate_subtitle'],
-            'C',
-            0.2
-        );
+        if (!empty($template['show_course_subtitle']) && trim((string) $data['certificate_subtitle']) !== '') {
+            atenea_certificate_pdf_text(
+                $pdf,
+                $fonts['body'],
+                14.0,
+                [52, 47, 64],
+                320,
+                631,
+                812,
+                44,
+                (string) $data['certificate_subtitle'],
+                'C',
+                0.15
+            );
+        }
 
         atenea_certificate_pdf_text(
             $pdf,
             $fonts['body_bold'],
-            10.9,
-            [47, 40, 52],
-            242,
-            578,
-            275,
-            30,
-            (string) $data['president_name'],
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body'],
-            10.5,
-            [47, 40, 52],
-            260,
-            614,
-            240,
-            26,
-            (string) $data['president_role'],
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body_bold'],
-            10.9,
-            [47, 40, 52],
-            575,
-            578,
-            285,
-            30,
-            (string) $data['facilitator_name'],
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body'],
-            10.5,
-            [47, 40, 52],
-            610,
-            614,
-            216,
-            26,
-            (string) $data['facilitator_role'],
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body'],
-            9.2,
+            11.0,
             [63, 55, 68],
-            135,
-            661,
-            545,
-            24,
-            (string) $data['cooperative_text'],
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body_bold'],
-            10.9,
-            [63, 55, 68],
-            282,
-            706,
-            620,
+            574,
+            942,
+            76,
             28,
-            (string) $data['location'] . ' a los ' . (string) $data['day'] . ' días del mes de ' . (string) $data['month'] . ' de ' . (string) $data['year'],
+            (string) $data['day'],
             'C'
         );
+
+        atenea_certificate_pdf_text(
+            $pdf,
+            $fonts['body_bold'],
+            11.0,
+            [63, 55, 68],
+            839,
+            942,
+            240,
+            28,
+            (string) $data['month'],
+            'C'
+        );
+
+        atenea_certificate_pdf_text(
+            $pdf,
+            $fonts['body_bold'],
+            11.0,
+            [63, 55, 68],
+            1078,
+            942,
+            110,
+            28,
+            (string) $data['year'],
+            'C'
+        );
+
+        if (trim((string) $data['certificate_code']) !== '') {
+            atenea_certificate_pdf_text(
+                $pdf,
+                $fonts['body'],
+                7.8,
+                [91, 89, 98],
+                1120,
+                1012,
+                180,
+                18,
+                (string) $data['certificate_code'],
+                'R'
+            );
+        }
 
         return (string) $pdf->Output('', 'S');
     }
