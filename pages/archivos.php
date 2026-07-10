@@ -39,6 +39,8 @@ if (isset($_GET["eliminar"]) && is_numeric($_GET["eliminar"])) {
 </head>
 <body>
 
+
+
 <div class="container mt-5">
     <form action="backend_upload.php" method="post" enctype="multipart/form-data">
         <div class="form-group">
