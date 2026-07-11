@@ -503,6 +503,59 @@ if (!function_exists('atenea_user_display_name')) {
     }
 }
 
+if (!function_exists('atenea_role_catalog')) {
+    function atenea_role_catalog(): array
+    {
+        return [
+            1 => ['type' => 'Admin', 'label' => 'Admin'],
+            2 => ['type' => 'Personal', 'label' => 'Personal'],
+            3 => ['type' => 'Estudiante', 'label' => 'Estudiante / Usuario'],
+            4 => ['type' => 'Docente', 'label' => 'Docente / Facilitador'],
+            5 => ['type' => 'SuperAdmin', 'label' => 'SuperAdmin'],
+        ];
+    }
+}
+
+if (!function_exists('atenea_employee_role_catalog')) {
+    function atenea_employee_role_catalog(): array
+    {
+        $roles = atenea_role_catalog();
+
+        return [
+            1 => $roles[1],
+            2 => $roles[2],
+            4 => $roles[4],
+        ];
+    }
+}
+
+if (!function_exists('atenea_role_label')) {
+    function atenea_role_label(string $type): string
+    {
+        foreach (atenea_role_catalog() as $role) {
+            if ((string) ($role['type'] ?? '') === $type) {
+                return (string) ($role['label'] ?? $type);
+            }
+        }
+
+        return $type;
+    }
+}
+
+if (!function_exists('atenea_is_valid_employee_role_id')) {
+    function atenea_is_valid_employee_role_id(int $roleId): bool
+    {
+        return isset(atenea_employee_role_catalog()[$roleId]);
+    }
+}
+
+if (!function_exists('atenea_is_valid_student_role_id')) {
+    function atenea_is_valid_student_role_id(int $roleId): bool
+    {
+        return $roleId === 3;
+    }
+}
+
 if (!function_exists('atenea_dashboard_route_for_type')) {
     function atenea_dashboard_route_for_type(string $type): string
     {
@@ -573,6 +626,225 @@ if (!function_exists('atenea_dashboard_label_for_session')) {
             default:
                 return 'Mi panel';
         }
+    }
+}
+
+if (!function_exists('atenea_simple_pattern_match')) {
+    function atenea_simple_pattern_match(string $value, string $pattern): bool
+    {
+        $escaped = preg_quote($pattern, '/');
+        $regex = '/^' . str_replace('\*', '.*', $escaped) . '$/i';
+
+        return (bool) preg_match($regex, $value);
+    }
+}
+
+if (!function_exists('atenea_legacy_route_groups')) {
+    function atenea_legacy_route_groups(): array
+    {
+        return [
+            'catalogo_formativo' => [
+                'patterns' => [
+                    'asignaturas*.php',
+                    'sa_asignaturas*.php',
+                    'doc_asignaturas*.php',
+                    'sa_doc_asignaturas*.php',
+                    'dis_asignaturas*.php',
+                    'sa_dis_asignaturas*.php',
+                    'documentacion*.php',
+                    'sa_documentacion*.php',
+                    'con_evaluacion*.php',
+                    'sa_con_evaluacion*.php',
+                    'evaluaciones*.php',
+                    'sa_evaluaciones*.php',
+                    'sa_eva_entregadas*.php',
+                    'sa_not_estudiantes*.php',
+                    'calendario*.php',
+                    'sa_calendario*.php',
+                    'docentes_vista_asignaturas*.php',
+                    'docentes_vista_contenidos*.php',
+                    'docentes_vista_evaluaciones*.php',
+                    'docentes_vista_promedios*.php',
+                    'docentes_vista_notas*.php',
+                    'docentes_vista_entregas*.php',
+                    'docentes_vista_estudiantes*.php',
+                    'docentes_vista_documentacion*.php',
+                    'docentes_vista_calendario*.php',
+                    'docentes_vista_descargar*.php',
+                    'estudiantes_vista_asignaturas*.php',
+                    'estudiantes_vista_contenidos*.php',
+                    'estudiantes_vista_evaluaciones*.php',
+                    'estudiantes_vista_entrega*.php',
+                    'estudiantes_vista_promedio*.php',
+                    'estudiantes_vista_promedios*.php',
+                    'estudiantes_vista_calendario*.php',
+                    'empleados_vista_documentacion*.php',
+                    'empleados_vista_calendario*.php',
+                ],
+                'redirects' => [
+                    'Admin' => 'programas_admin.php',
+                    'SuperAdmin' => 'programas_admin.php',
+                ],
+                'message' => 'Este modulo academico heredado fue retirado. Usa Cursos / Capacitacion, Inscripciones, Videos, Record escolar o Certificados.',
+            ],
+            'videos_legacy' => [
+                'patterns' => [
+                    'videos_admin.php',
+                    'videos_edit.php',
+                    'videos_transac.php',
+                    'videos_delete.php',
+                    'videos_update.php',
+                ],
+                'redirects' => [
+                    'Admin' => 'curso_videos_admin.php',
+                    'SuperAdmin' => 'curso_videos_admin.php',
+                ],
+                'message' => 'El administrador de videos anterior fue reemplazado por Videos del curso.',
+            ],
+            'inventario_legacy' => [
+                'patterns' => [
+                    'inventario*.php',
+                    'sa_inventario*.php',
+                    'supplier.php',
+                    'sup_*.php',
+                    'transaction.php',
+                    'trans_view.php',
+                    'reports.php',
+                    'export_excel_inventario.php',
+                    'export_excel_vehicles.php',
+                ],
+                'redirects' => [
+                    'Admin' => 'productos_admin.php',
+                    'SuperAdmin' => 'productos_admin.php',
+                ],
+                'message' => 'El inventario heredado fue ocultado. Gestiona el catalogo real desde Productos / Tienda.',
+            ],
+            'grados_legacy' => [
+                'patterns' => [
+                    'grados*.php',
+                    'sa_grados*.php',
+                ],
+                'redirects' => [
+                    'Admin' => 'estudiantes.php',
+                    'SuperAdmin' => 'sa_estudiantes.php',
+                ],
+                'message' => 'El modulo de grados no forma parte del flujo actual de Atenea.',
+            ],
+            'operativo_legacy' => [
+                'patterns' => [
+                    'vehiculos*.php',
+                    'sa_vehiculos*.php',
+                    'labores*.php',
+                    'sa_labores*.php',
+                    'empleados_vista_labores*.php',
+                    'empleados_vista_vehiculos*.php',
+                    'sa_respaldo_bd*.php',
+                ],
+                'redirects' => [],
+                'message' => 'Este modulo heredado fue desactivado durante la limpieza de Atenea.',
+            ],
+            'pagos_legacy' => [
+                'patterns' => [
+                    'pagos_academicos*.php',
+                    'sa_pagos_academicos*.php',
+                    'academic_payment_*.php',
+                    'estudiante_pagos.php',
+                ],
+                'redirects' => [
+                    'Admin' => 'dte_documents.php',
+                    'SuperAdmin' => 'sa_dte_documents.php',
+                    'Estudiante' => 'usuario_vista.php',
+                ],
+                'message' => 'Los pagos academicos heredados quedaron fuera de uso. Atenea opera pagos y compras desde la tienda y la facturacion actual.',
+            ],
+            'archivos_legacy' => [
+                'patterns' => [
+                    'archivos.php',
+                ],
+                'redirects' => [
+                    'Admin' => 'dashboard_admin.php',
+                    'SuperAdmin' => 'sa_vista.php',
+                ],
+                'message' => 'El gestor de archivos heredado fue retirado porque estaba conectado a una base de datos externa ajena a Atenea.',
+            ],
+        ];
+    }
+}
+
+if (!function_exists('atenea_legacy_route_info')) {
+    function atenea_legacy_route_info(string $currentPage): ?array
+    {
+        foreach (atenea_legacy_route_groups() as $groupKey => $group) {
+            foreach ((array) ($group['patterns'] ?? []) as $pattern) {
+                if (atenea_simple_pattern_match($currentPage, (string) $pattern)) {
+                    $group['group'] = $groupKey;
+
+                    return $group;
+                }
+            }
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('atenea_legacy_route_redirect')) {
+    function atenea_legacy_route_redirect(string $currentPage): string
+    {
+        $info = atenea_legacy_route_info($currentPage);
+        if ($info === null) {
+            return atenea_dashboard_route_for_session();
+        }
+
+        $role = atenea_session_is_public_user() ? 'PublicUser' : (string) ($_SESSION['TYPE'] ?? '');
+        $redirects = (array) ($info['redirects'] ?? []);
+
+        if (isset($redirects[$role]) && trim((string) $redirects[$role]) !== '') {
+            return (string) $redirects[$role];
+        }
+
+        if (isset($redirects['default']) && trim((string) $redirects['default']) !== '') {
+            return (string) $redirects['default'];
+        }
+
+        return atenea_dashboard_route_for_session();
+    }
+}
+
+if (!function_exists('atenea_redirect_disabled_module')) {
+    function atenea_redirect_disabled_module(string $title, string $message, string $redirectUrl = ''): void
+    {
+        $redirectUrl = trim($redirectUrl) !== '' ? $redirectUrl : atenea_dashboard_route_for_session();
+
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'GET') {
+            header('Location: ' . $redirectUrl);
+            exit;
+        }
+
+        atenea_render_auth_alert('info', $title, $message, $redirectUrl);
+    }
+}
+
+if (!function_exists('atenea_handle_legacy_module_request')) {
+    function atenea_handle_legacy_module_request(): void
+    {
+        $currentPage = basename((string) ($_SERVER['PHP_SELF'] ?? ''));
+        if ($currentPage === '') {
+            return;
+        }
+
+        $info = atenea_legacy_route_info($currentPage);
+        if ($info === null) {
+            return;
+        }
+
+        $redirectUrl = atenea_legacy_route_redirect($currentPage);
+        $message = trim((string) ($info['message'] ?? ''));
+        if ($message === '') {
+            $message = 'Este modulo heredado fue desactivado durante la limpieza de Atenea.';
+        }
+
+        atenea_redirect_disabled_module('Modulo desactivado', $message, $redirectUrl);
     }
 }
 

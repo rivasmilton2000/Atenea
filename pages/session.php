@@ -53,5 +53,7 @@ function confirm_logged_in()
         header('Location: login.php');
         exit;
     }
+
+    atenea_handle_legacy_module_request();
 }
 ?>

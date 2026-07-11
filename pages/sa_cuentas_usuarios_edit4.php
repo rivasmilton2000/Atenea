@@ -1,88 +1,124 @@
 <?php
-include('../includes/connection.php');
+require_once __DIR__ . '/session.php';
+require_once __DIR__ . '/../includes/connection.php';
 
-// Validar y sanitizar las entradas
-$zz = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
-$estid = filter_input(INPUT_POST, 'estid', FILTER_SANITIZE_STRING);
-$username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
-$password = filter_input(INPUT_POST, 'password', FILTER_UNSAFE_RAW);
-$confirm_password = filter_input(INPUT_POST, 'confirm_password', FILTER_UNSAFE_RAW);
-$type = filter_input(INPUT_POST, 'type', FILTER_SANITIZE_NUMBER_INT);
-$estado = filter_input(INPUT_POST, 'estado', FILTER_SANITIZE_NUMBER_INT);
+header('Content-Type: application/json; charset=UTF-8');
 
-// Verificar si las contraseñas coinciden
-if (!empty($password) && $password !== $confirm_password) {
-    echo json_encode(['status' => 'error', 'message' => 'Las contraseñas no coinciden.']);
-    exit();
-}
-
-// Validar si el nombre de usuario ya existe
-$query = "SELECT ID FROM users WHERE USERNAME = ? AND ID != ?";
-$stmt = mysqli_prepare($db, $query);
-mysqli_stmt_bind_param($stmt, "si", $username, $zz);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-if (mysqli_num_rows($result) > 0) {
-    echo json_encode(['status' => 'error', 'message' => 'El nombre de usuario ya existe.']);
-    exit();
-}
-
-// Verificar si no se han realizado cambios
-$query = "SELECT * FROM users WHERE ID = ?";
-$stmt = mysqli_prepare($db, $query);
-mysqli_stmt_bind_param($stmt, "i", $zz);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$current_data = mysqli_fetch_assoc($result);
-
-$no_changes = true;
-if ($current_data['ESTUDIANTE_ID'] != $estid || $current_data['USERNAME'] != $username || 
-    (!empty($password) && sha1($password) != $current_data['PASSWORD']) ||
-    $current_data['TYPE_ID'] != $type || $current_data['U_ESTADO'] != $estado) {
-    $no_changes = false;
-}
-
-if ($no_changes) {
-    echo json_encode(['status' => 'warning', 'message' => 'No se han realizado cambios.']);
-    exit();
-}
-
-// Verificar si la nueva contraseña ya está en uso por otra cuenta
-if (!empty($password)) {
-    $password_hash = sha1($password);
-    $query = "SELECT ID FROM users WHERE PASSWORD = ? AND ID != ?";
-    $stmt = mysqli_prepare($db, $query);
-    mysqli_stmt_bind_param($stmt, "si", $password_hash, $zz);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    if (mysqli_num_rows($result) > 0) {
-        echo json_encode(['status' => 'error', 'message' => 'La nueva contraseña ya está en uso por otra cuenta.']);
-        exit();
+if (!function_exists('sa_users_json_response')) {
+    function sa_users_json_response(string $status, string $message, int $httpStatus = 200): void
+    {
+        http_response_code($httpStatus);
+        echo json_encode(
+            ['status' => $status, 'message' => $message],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+        exit;
     }
 }
 
-// Actualizar el usuario
-$query = "UPDATE users SET ESTUDIANTE_ID = ?, USERNAME = ?, TYPE_ID = ?, U_ESTADO = ?";
-$params = [$estid, $username, $type, $estado];
-$types = "ssii";
+confirm_logged_in();
 
-if (!empty($password)) {
-    $query .= ", PASSWORD = SHA1(?)";
+if ((string) ($_SESSION['TYPE'] ?? '') !== 'SuperAdmin') {
+    sa_users_json_response('error', 'Solo SuperAdmin puede actualizar cuentas de estudiantes.', 403);
+}
+
+$userId = (int) filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
+$studentId = (int) filter_input(INPUT_POST, 'estid', FILTER_SANITIZE_NUMBER_INT);
+$username = trim((string) filter_input(INPUT_POST, 'username', FILTER_UNSAFE_RAW));
+$password = (string) ($_POST['password'] ?? '');
+$confirmPassword = (string) ($_POST['confirm_password'] ?? '');
+$roleId = (int) filter_input(INPUT_POST, 'type', FILTER_SANITIZE_NUMBER_INT);
+$status = (int) filter_input(INPUT_POST, 'estado', FILTER_SANITIZE_NUMBER_INT);
+
+if ($userId <= 0 || $studentId <= 0) {
+    sa_users_json_response('error', 'La cuenta de estudiante indicada no es valida.');
+}
+
+if ($username === '' || strlen($username) < 5 || strlen($username) > 70) {
+    sa_users_json_response('error', 'El usuario debe tener entre 5 y 70 caracteres.');
+}
+
+if (!atenea_is_valid_student_role_id($roleId)) {
+    sa_users_json_response('error', 'El rol seleccionado no es valido para una cuenta de estudiante.');
+}
+
+if (!in_array($status, [0, 1], true)) {
+    sa_users_json_response('error', 'El estado seleccionado no es valido.');
+}
+
+if ($password !== '' || $confirmPassword !== '') {
+    if ($password !== $confirmPassword) {
+        sa_users_json_response('error', 'Las contrasenas no coinciden.');
+    }
+
+    if (strlen($password) < 8 || strlen($password) > 80) {
+        sa_users_json_response('error', 'La contrasena debe tener entre 8 y 80 caracteres.');
+    }
+}
+
+$stmtCurrent = $db->prepare(
+    'SELECT ID, ESTUDIANTE_ID, USERNAME, TYPE_ID, U_ESTADO
+     FROM users
+     WHERE ID = ? AND ESTUDIANTE_ID = ? AND TYPE_ID = 3
+     LIMIT 1'
+);
+
+if (!$stmtCurrent) {
+    sa_users_json_response('error', 'No fue posible cargar la cuenta del estudiante.');
+}
+
+$stmtCurrent->bind_param('ii', $userId, $studentId);
+$stmtCurrent->execute();
+$resultCurrent = $stmtCurrent->get_result();
+$currentUser = $resultCurrent instanceof mysqli_result ? $resultCurrent->fetch_assoc() : null;
+if ($resultCurrent instanceof mysqli_result) {
+    mysqli_free_result($resultCurrent);
+}
+$stmtCurrent->close();
+
+if (!$currentUser) {
+    sa_users_json_response('error', 'La cuenta del estudiante ya no existe o no puede editarse desde este formulario.');
+}
+
+if (atenea_username_exists($db, $username, $userId)) {
+    sa_users_json_response('error', 'El nombre de usuario ya existe.');
+}
+
+$passwordChanged = $password !== '';
+$noChanges = (string) ($currentUser['USERNAME'] ?? '') === $username
+    && (int) ($currentUser['TYPE_ID'] ?? 0) === $roleId
+    && (int) ($currentUser['U_ESTADO'] ?? 0) === $status
+    && !$passwordChanged;
+
+if ($noChanges) {
+    sa_users_json_response('warning', 'No se detectaron cambios para guardar.');
+}
+
+$sql = 'UPDATE users SET USERNAME = ?, TYPE_ID = ?, U_ESTADO = ?';
+$types = 'sii';
+$params = [$username, $roleId, $status];
+
+if ($passwordChanged) {
+    $sql .= ', PASSWORD = SHA1(?)';
+    $types .= 's';
     $params[] = $password;
-    $types .= "s";
 }
 
-$query .= " WHERE ID = ?";
-$params[] = $zz;
-$types .= "i";
+$sql .= ' WHERE ID = ? LIMIT 1';
+$types .= 'i';
+$params[] = $userId;
 
-$stmt = mysqli_prepare($db, $query);
-mysqli_stmt_bind_param($stmt, $types, ...$params);
-$result = mysqli_stmt_execute($stmt);
-
-if ($result) {
-    echo json_encode(['status' => 'success', 'message' => 'Has actualizado la cuenta de estudiante correctamente.']);
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Error al actualizar la cuenta de estudiante: ' . mysqli_error($db)]);
+$stmtUpdate = $db->prepare($sql);
+if (!$stmtUpdate) {
+    sa_users_json_response('error', 'No fue posible preparar la actualizacion de la cuenta.');
 }
-?>
+
+$stmtUpdate->bind_param($types, ...$params);
+$success = $stmtUpdate->execute();
+$stmtUpdate->close();
+
+if (!$success) {
+    sa_users_json_response('error', 'Error al actualizar la cuenta del estudiante: ' . mysqli_error($db));
+}
+
+sa_users_json_response('success', 'La cuenta del estudiante fue actualizada correctamente.');

@@ -2,171 +2,141 @@
 include '../includes/connection.php';
 include '../includes/sidebar_superadmin.php';
 
-// Sección de verificación de permisos de usuario
-$query = 'SELECT ID, t.TYPE FROM users u JOIN type t ON t.TYPE_ID=u.TYPE_ID WHERE ID = '.$_SESSION['MEMBER_ID'].'';
-$result = mysqli_query($db, $query) or die(mysqli_error($db));
-while ($row = mysqli_fetch_assoc($result)) {
-    $Aa = $row['TYPE'];
-    if ($Aa == 'Personal' || $Aa == 'Estudiante' || $Aa == 'Docente' || $Aa == 'Admin') {
-        if ($Aa == 'Personal') {
-            $redirectUrl = "empleados_vista.php";
-        } elseif ($Aa == 'Estudiante') {
-            $redirectUrl = "estudiante_vista.php";
-        } elseif ($Aa == 'Docente') {
-            $redirectUrl = "docentes_vista.php";
-        } elseif ($Aa == 'Admin') {
-            $redirectUrl = "index.php";
-        }
-        ?>
-        <script type="text/javascript">
-        //then it will be redirected
-        alert("Página restringida! Será redirigido.");
-        window.location = "<?php echo $redirectUrl; ?>";
-        </script>
-        <?php
-        exit(); // Terminar la ejecución del script después de la redirección
+if ((string) ($_SESSION['TYPE'] ?? '') !== 'SuperAdmin') {
+    atenea_render_auth_alert(
+        'warning',
+        'Acceso restringido',
+        'Solo SuperAdmin puede consultar detalles de cuentas de estudiantes.',
+        atenea_dashboard_route_for_session()
+    );
+}
+
+if (!function_exists('sa_student_detail_h')) {
+    function sa_student_detail_h($value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
     }
 }
-?>
 
-<?php
-$query2 = 'SELECT u.ID, e.nombres_estudiante, e.apellidos_estudiante, e.genero_estudiante, u.USERNAME, u.PASSWORD, e.correo_estudiante, e.direccion_estudiante, g.G_NAME, e.fecha_nac_estudiante, e.edad_estudiante, e.foto_estudiante, e.carnet_estudiante, e.numero_lista_estudiante, t.TYPE, u.U_ESTADO
-FROM users u
-JOIN estudiantes e ON u.ESTUDIANTE_ID = e.ESTUDIANTE_ID
-JOIN grados g ON e.grado_id_estudiante = g.G_ID
-JOIN type t ON u.TYPE_ID = t.TYPE_ID
-WHERE u.ID = '.$_GET['id'];
-
-$result2 = mysqli_query($db, $query2) or die(mysqli_error($db));
-while ($row = mysqli_fetch_array($result2)) {   
-$zz = $row['ID'];
-$a = $row['nombres_estudiante'];
-$b = $row['apellidos_estudiante'];
-$c = $row['genero_estudiante'];
-$d = $row['USERNAME'];
-$e = $row['PASSWORD'];
-$f = $row['correo_estudiante'];
-$g = $row['direccion_estudiante'];
-$h = $row['G_NAME'];
-$i = $row['fecha_nac_estudiante'];
-$j = $row['edad_estudiante'];
-$k = $row['foto_estudiante'];
-$l = $row['TYPE'];
-$m = $row['U_ESTADO'];
-$n = $row['carnet_estudiante'];
-$o = $row['numero_lista_estudiante'];
+$userId = (int) ($_GET['id'] ?? 0);
+if ($userId <= 0) {
+    atenea_render_auth_alert(
+        'warning',
+        'Cuenta no encontrada',
+        'No se recibio un identificador valido para la cuenta del estudiante.',
+        'sa_cuentas_usuarios.php'
+    );
 }
-$id = $_GET['id'];
+
+$stmt = $db->prepare(
+    'SELECT u.ID, u.USERNAME, u.U_ESTADO, t.TYPE,
+            e.nombres_estudiante, e.apellidos_estudiante, e.correo_estudiante,
+            e.direccion_estudiante, e.foto_estudiante, e.carnet_estudiante
+     FROM users u
+     INNER JOIN estudiantes e ON e.ESTUDIANTE_ID = u.ESTUDIANTE_ID
+     INNER JOIN type t ON t.TYPE_ID = u.TYPE_ID
+     WHERE u.ID = ? AND u.TYPE_ID = 3
+     LIMIT 1'
+);
+
+if (!$stmt) {
+    atenea_render_auth_alert(
+        'error',
+        'Detalle no disponible',
+        'No fue posible preparar la consulta de la cuenta del estudiante.',
+        'sa_cuentas_usuarios.php'
+    );
+}
+
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result instanceof mysqli_result ? $result->fetch_assoc() : null;
+if ($result instanceof mysqli_result) {
+    mysqli_free_result($result);
+}
+$stmt->close();
+
+if (!$user) {
+    atenea_render_auth_alert(
+        'warning',
+        'Cuenta no encontrada',
+        'La cuenta del estudiante solicitada no existe o ya no puede consultarse.',
+        'sa_cuentas_usuarios.php'
+    );
+}
+
+$photoFile = trim((string) ($user['foto_estudiante'] ?? ''));
+$photoPath = $photoFile !== '' ? 'imagenes_estudiantes/' . $photoFile : '';
+$photoExists = $photoPath !== '' && is_file(__DIR__ . '/' . $photoPath);
 ?>
+
 <center>
-<div class="card shadow mb-4 col-xs-12 col-md-8 border-bottom-primary">
-<div class="card-header py-3">
-<h4 class="m-2 font-weight-bold text-primary">Detalles de la cuenta de estudiante</h4>
-</div>
-<a href="sa_cuentas_usuarios.php" type="button" class="btn btn-primary bg-gradient-primary"><i class="fas fa-flip-horizontal fa-fw fa-share"></i> Regresar</a>
-<div class="card-body">
-<!-- Información de la cuenta -->
-<h5 class="font-weight-bold text-primary mb-3">Información de la cuenta</h5>
-<hr>
-<div class="form-group row text-left">
- <div class="col-sm-3 text-primary">
-     <h5>Usuario<br></h5>
- </div>
- <div class="col-sm-9">
-     <h5>: <?php echo $d; ?> <br></h5>
- </div>
-</div>
-<div class="form-group row text-left">
- <div class="col-sm-3 text-primary">
-     <h5>Tipo de cuenta<br></h5>
- </div>
- <div class="col-sm-9">
-     <h5>: <?php echo $l; ?> <br></h5>
- </div>
-</div>
-<br>
-<!-- Información del usuario -->
-<h5 class="font-weight-bold text-primary mb-3">Información del estudiante</h5>
-<hr>
-<div class="form-group row text-left">
-    <div class="col-sm-3 text-primary">
-        <h5>Foto del estudiante:<br></h5>
+  <div class="card shadow mb-4 col-xs-12 col-md-8 border-bottom-primary">
+    <div class="card-header py-3">
+      <h4 class="m-2 font-weight-bold text-primary">Detalle de cuenta de estudiante / usuario</h4>
     </div>
-    <div class="col-sm-9">
-        <?php
-        $foto_path = "imagenes_estudiantes/" . $k;
-        if (file_exists($foto_path) && !empty($k)) {
-            echo '<img src="' . $foto_path . '" alt="Foto del estudiante" style="max-width: 200px; height: auto;">';
-        } else {
-            echo '<p>Estudiante sin foto</p>';
-        }
-        ?>
+    <a href="sa_cuentas_usuarios.php" type="button" class="btn btn-primary bg-gradient-primary">
+      <i class="fas fa-flip-horizontal fa-fw fa-share"></i> Regresar
+    </a>
+    <div class="card-body">
+      <h5 class="font-weight-bold text-primary mb-3">Cuenta</h5>
+      <hr>
+      <div class="form-group row text-left">
+        <div class="col-sm-3 text-primary"><h5>Usuario</h5></div>
+        <div class="col-sm-9"><h5>: <?php echo sa_student_detail_h($user['USERNAME'] ?? ''); ?></h5></div>
+      </div>
+      <div class="form-group row text-left">
+        <div class="col-sm-3 text-primary"><h5>Rol</h5></div>
+        <div class="col-sm-9"><h5>: <?php echo sa_student_detail_h(atenea_role_label((string) ($user['TYPE'] ?? ''))); ?></h5></div>
+      </div>
+
+      <h5 class="font-weight-bold text-primary mb-3 mt-4">Estudiante asociado</h5>
+      <hr>
+      <div class="form-group row text-left">
+        <div class="col-sm-3 text-primary"><h5>Foto</h5></div>
+        <div class="col-sm-9">
+          <?php if ($photoExists): ?>
+            <img src="<?php echo sa_student_detail_h($photoPath); ?>" alt="Foto del estudiante" style="max-width: 200px; height: auto;">
+          <?php else: ?>
+            <p class="mb-0">Estudiante sin foto.</p>
+          <?php endif; ?>
+        </div>
+      </div>
+      <div class="form-group row text-left">
+        <div class="col-sm-3 text-primary"><h5>Carnet</h5></div>
+        <div class="col-sm-9"><h5>: <?php echo sa_student_detail_h($user['carnet_estudiante'] ?? 'No disponible'); ?></h5></div>
+      </div>
+      <div class="form-group row text-left">
+        <div class="col-sm-3 text-primary"><h5>Nombre completo</h5></div>
+        <div class="col-sm-9"><h5>: <?php echo sa_student_detail_h(trim((string) $user['nombres_estudiante'] . ' ' . (string) $user['apellidos_estudiante'])); ?></h5></div>
+      </div>
+      <div class="form-group row text-left">
+        <div class="col-sm-3 text-primary"><h5>Correo</h5></div>
+        <div class="col-sm-9"><h5>: <?php echo sa_student_detail_h($user['correo_estudiante'] ?? 'No disponible'); ?></h5></div>
+      </div>
+      <div class="form-group row text-left">
+        <div class="col-sm-3 text-primary"><h5>Direccion</h5></div>
+        <div class="col-sm-9"><h5>: <?php echo sa_student_detail_h($user['direccion_estudiante'] ?? 'No disponible'); ?></h5></div>
+      </div>
+
+      <h5 class="font-weight-bold text-primary mb-3 mt-4">Estado</h5>
+      <hr>
+      <div class="form-group row text-left">
+        <div class="col-sm-3 text-primary"><h5>Estado</h5></div>
+        <div class="col-sm-9">
+          <h5>:
+            <?php if ((int) ($user['U_ESTADO'] ?? 0) === 1): ?>
+              <span class="badge badge-success">Activo</span>
+            <?php else: ?>
+              <span class="badge badge-danger">Inactivo</span>
+            <?php endif; ?>
+          </h5>
+        </div>
+      </div>
     </div>
-</div>
-<div class="form-group row text-left">
- <div class="col-sm-3 text-primary">
-     <h5>Carnet del estudiante<br></h5>
- </div>
- <div class="col-sm-9">
-     <h5>: <?php echo $n; ?> <br></h5>
- </div>
-</div>
-<div class="form-group row text-left">
- <div class="col-sm-3 text-primary">
-     <h5>Nombre completo<br></h5>
- </div>
- <div class="col-sm-9">
-     <h5>: <?php echo $a; ?> <?php echo $b; ?> <br></h5>
- </div>
-</div>
-<div class="form-group row text-left">
- <div class="col-sm-3 text-primary">
-     <h5>Correo electrónico<br></h5>
- </div>
- <div class="col-sm-9">
-     <h5>: <?php echo $f; ?> <br></h5>
- </div>
-</div>
-<div class="form-group row text-left">
- <div class="col-sm-3 text-primary">
-     <h5>Grado<br></h5>
- </div>
- <div class="col-sm-9">
-     <h5>: <?php echo $h; ?> <br></h5>
- </div>
-</div>
-<div class="form-group row text-left">
- <div class="col-sm-3 text-primary">
-     <h5>Número de lista<br></h5>
- </div>
- <div class="col-sm-9">
-     <h5>: <?php echo $o; ?> <br></h5>
- </div>
-</div>
-<br>
-<!-- Estado del registro -->
-<h5 class="font-weight-bold text-primary mb-3">Estado de la cuenta</h5>
-<hr>
-<div class="form-group row text-left">
- <div class="col-sm-3 text-primary">
-     <h5>Estado<br></h5>
- </div>
- <div class="col-sm-9">
-     <h5>: 
-     <?php 
-     if($m == 1) {
-         echo '<span class="badge badge-success">Activo</span>';
-     } else {
-         echo '<span class="badge badge-danger">Inactivo</span>';
-     }
-     ?>
-     <br></h5>
- </div>
-</div>
-</div>
-</div>
+  </div>
 </center>
 
 <?php
 include '../includes/footer_superadmin.php';
-?>
