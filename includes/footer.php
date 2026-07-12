@@ -3,17 +3,17 @@
     <div class="row gy-4">
       <div class="col-lg-4 col-md-6 footer-about">
         <a href="<?= atenea_url('index.php') ?>" class="logo footer-logo d-flex align-items-center">
-          <img src="<?= atenea_url('img/atenea-logo.png') ?>" alt="Atenea Escuela de Naturopatía Holística">
+          <img src="<?= rutaImagenContenido($configuracionSitio['logo'] ?? 'img/atenea-logo.png', 'img/atenea-logo.png') ?>" alt="<?= atenea_e($configuracionSitio['nombre_sitio'] ?? 'Atenea Escuela de Naturopatía Holística') ?>">
         </a>
         <div class="footer-contact pt-3">
-          <p>El Salvador</p>
-          <p class="mt-3"><strong>Atención:</strong> <span>Información sobre capacitaciones y certificaciones</span></p>
-          <p><strong>Correo:</strong> <span>info@atenea.edu.sv</span></p>
+          <p><?= atenea_e($configuracionSitio['direccion'] ?? 'El Salvador') ?></p>
+          <?php if (!empty($configuracionSitio['telefono'])): ?><p class="mt-3"><strong>Teléfono:</strong> <span><?= atenea_e($configuracionSitio['telefono']) ?></span></p><?php endif; ?>
+          <p><strong>Correo:</strong> <span><?= atenea_e($configuracionSitio['correo'] ?? 'info@atenea.edu.sv') ?></span></p>
         </div>
         <div class="social-links d-flex mt-4" aria-label="Redes sociales">
-          <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-          <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-          <a href="#" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+          <?php if (!empty($configuracionSitio['facebook'])): ?><a href="<?= atenea_e(urlContenidoSegura($configuracionSitio['facebook'])) ?>" aria-label="Facebook"><i class="bi bi-facebook"></i></a><?php endif; ?>
+          <?php if (!empty($configuracionSitio['instagram'])): ?><a href="<?= atenea_e(urlContenidoSegura($configuracionSitio['instagram'])) ?>" aria-label="Instagram"><i class="bi bi-instagram"></i></a><?php endif; ?>
+          <?php if (!empty($configuracionSitio['whatsapp'])): ?><a href="<?= atenea_e(urlContenidoSegura($configuracionSitio['whatsapp'])) ?>" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a><?php endif; ?>
         </div>
       </div>
 
@@ -51,7 +51,7 @@
   </div>
 
   <div class="container copyright text-center mt-4">
-    <p>© <span><?= date('Y') ?></span> <strong class="px-1 sitename">Atenea</strong> <span>Todos los derechos reservados</span></p>
+    <p>© <span><?= date('Y') ?></span> <strong class="px-1 sitename"><?= atenea_e($configuracionSitio['nombre_sitio'] ?? 'Atenea') ?></strong> <span>Todos los derechos reservados</span></p>
     <div class="credits">Plantilla base por <a href="https://bootstrapmade.com/">BootstrapMade</a>, distribuida por <a href="https://themewagon.com/">ThemeWagon</a> y adaptada para Atenea.</div>
   </div>
 </footer>

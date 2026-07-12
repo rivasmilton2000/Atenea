@@ -1,10 +1,13 @@
 <?php
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/contenido.php';
 
 $pageTitle = $pageTitle ?? 'Atenea Escuela de Naturopatía Holística';
 $pageDescription = $pageDescription ?? 'Capacitaciones y certificaciones en naturopatía y bienestar holístico.';
 $pageClass = $pageClass ?? 'index-page';
 $activePage = $activePage ?? 'inicio';
+$configuracionSitio = obtenerConfiguracionSitio();
+$faviconSitio = $configuracionSitio['favicon'] ?? 'img/atenea-logo.png';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -15,8 +18,8 @@ $activePage = $activePage ?? 'inicio';
   <meta name="description" content="<?= atenea_e($pageDescription) ?>">
   <meta name="keywords" content="naturopatía, bienestar holístico, capacitaciones, certificaciones, Atenea">
 
-  <link rel="icon" type="image/png" href="<?= atenea_url('img/atenea-logo.png') ?>">
-  <link rel="apple-touch-icon" href="<?= atenea_url('img/atenea-logo.png') ?>">
+  <link rel="icon" type="image/png" href="<?= rutaImagenContenido($faviconSitio, 'img/atenea-logo.png') ?>">
+  <link rel="apple-touch-icon" href="<?= rutaImagenContenido($faviconSitio, 'img/atenea-logo.png') ?>">
 
   <link href="https://fonts.googleapis.com" rel="preconnect">
   <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>

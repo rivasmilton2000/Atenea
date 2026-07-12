@@ -228,6 +228,13 @@
                 <span class="menu-title">Dashboard</span>
               </a>
             </li>
+            <li class="nav-item nav-category">Atenea</li>
+            <li class="nav-item">
+              <a class="nav-link" href="<?= atenea_url('src/admin_auth/cms/secciones/index.php') ?>">
+                <i class="mdi mdi-web menu-icon"></i>
+                <span class="menu-title">Gestión del sitio web</span>
+              </a>
+            </li>
             <li class="nav-item nav-category">UI Elements</li>
             <li class="nav-item">
               <a class="nav-link" data-bs-toggle="collapse" href="#ui-basic" aria-expanded="false" aria-controls="ui-basic">

@@ -1,27 +1,22 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/contenido.php';
 $usuarioNavbar = obtenerUsuarioActual();
-$navItems = [
-    'inicio' => ['Inicio', 'index.php'],
-    'nosotros' => ['Nosotros', 'src/website/about.php'],
-    'capacitaciones' => ['Capacitaciones', 'src/website/courses.php'],
-    'docentes' => ['Docentes', 'src/website/trainers.php'],
-    'eventos' => ['Eventos', 'src/website/events.php'],
-    'productos' => ['Productos', 'src/website/pricing.php'],
-    'noticias' => ['Noticias', 'index.php#noticias'],
-    'contacto' => ['Contacto', 'src/website/contact.php'],
-];
+$navItems = obtenerMenuSitio();
+$configuracionNavbar = $configuracionSitio ?? obtenerConfiguracionSitio();
+$logoNavbar = $configuracionNavbar['logo'] ?? 'img/atenea-logo.png';
 ?>
 <header id="header" class="header d-flex align-items-center sticky-top">
   <div class="container-fluid container-xl position-relative d-flex align-items-center">
     <a href="<?= atenea_url('index.php') ?>" class="logo atenea-brand d-flex align-items-center me-auto" aria-label="Ir al inicio de Atenea">
-      <img src="<?= atenea_url('img/atenea-logo.png') ?>" alt="Atenea Escuela de Naturopatía Holística">
+      <img src="<?= rutaImagenContenido($logoNavbar, 'img/atenea-logo.png') ?>" alt="<?= atenea_e($configuracionNavbar['nombre_sitio'] ?? 'Atenea Escuela de Naturopatía Holística') ?>">
     </a>
 
     <nav id="navmenu" class="navmenu" aria-label="Navegación principal">
       <ul>
-        <?php foreach ($navItems as $key => [$label, $path]): ?>
-          <li><a href="<?= atenea_url($path) ?>"<?= $activePage === $key ? ' class="active" aria-current="page"' : '' ?>><?= atenea_e($label) ?></a></li>
+        <?php foreach ($navItems as $item): ?>
+          <?php $esActivo = ($activePage === 'inicio' && $item['url'] === 'index.php'); ?>
+          <li><a href="<?= atenea_e(urlContenidoSegura($item['url'])) ?>"<?= $esActivo ? ' class="active" aria-current="page"' : '' ?><?= $item['nueva_pestana'] ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?= atenea_e($item['texto']) ?></a></li>
         <?php endforeach; ?>
       </ul>
       <i class="mobile-nav-toggle d-xl-none bi bi-list" role="button" tabindex="0" aria-label="Abrir menú" aria-expanded="false"></i>
