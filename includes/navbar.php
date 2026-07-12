@@ -23,7 +23,7 @@ $logoNavbar = $configuracionNavbar['logo'] ?? 'img/atenea-logo.png';
     </nav>
 
     <?php if ($usuarioNavbar === null): ?>
-      <a class="btn-getstarted" href="<?= atenea_url('src/login/login.php') ?>">Iniciar sesión</a>
+      <a class="btn-getstarted" href="<?= atenea_url('src/login/sign-in.php') ?>">Iniciar sesión</a>
     <?php else: ?>
       <div class="dropdown atenea-user-menu">
         <button class="btn atenea-user-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">

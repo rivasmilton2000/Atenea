@@ -1,0 +1,5 @@
+/config/google.local.php
+/vendor/
+/.env
+/uploads/portal-estudiante/**
+!/uploads/portal-estudiante/**/index.html

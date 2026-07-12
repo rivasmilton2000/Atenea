@@ -1,5 +1,5 @@
 <?php
-require_once dirname(__DIR__) . '/_bootstrap.php';
+require_once dirname(__DIR__) . '/includes/cms.php';
 if($_SERVER['REQUEST_METHOD']!=='POST'||!validarTokenCsrf($_POST['csrf_token']??null)){cmsFlash('error','Solicitud o token CSRF inválido.');header('Location: index.php');exit;}
 $id=cmsId($_POST['id']??0);$accion=(string)($_POST['accion']??'');if(!$id){cmsFlash('error','ID inválido.');header('Location: index.php');exit;}
 $pdo=obtenerConexion();
