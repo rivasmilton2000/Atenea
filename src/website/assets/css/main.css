@@ -19,10 +19,15 @@
 
 /* Global Colors - The following color variables are used throughout the website. Updating them here will change the color scheme of the entire website */
 :root { 
+  --atenea-dorado: #c49a3a;
+  --atenea-dorado-oscuro: #8f6b20;
+  --atenea-negro: #171717;
+  --atenea-blanco: #ffffff;
+  --atenea-gris: #5f6368;
   --background-color: #ffffff; /* Background color for the entire website, including individual sections */
-  --default-color: #444444; /* Default color used for the majority of the text content across the entire website */
-  --heading-color: #37423b; /* Color for headings, subheadings and title throughout the website */
-  --accent-color: #5fcf80; /* Accent color that represents your brand on the website. It's used for buttons, links, and other elements that need to stand out */
+  --default-color: var(--atenea-gris); /* Main text color */
+  --heading-color: var(--atenea-negro); /* Heading color */
+  --accent-color: var(--atenea-dorado); /* Atenea brand accent */
   --surface-color: #ffffff; /* The surface color is used as a background of boxed elements within sections, such as cards, icon boxes, or other elements that require a visual separation from the global background. */
   --contrast-color: #ffffff; /* Contrast color for text, ensuring readability against backgrounds of accent, heading, or default colors. */
 }
@@ -30,11 +35,11 @@
 /* Nav Menu Colors - The following color variables are used specifically for the navigation menu. They are separate from the global colors to allow for more customization options */
 :root {
   --nav-color: #272828;  /* The default color of the main navmenu links */
-  --nav-hover-color: #5fcf80; /* Applied to main navmenu links when they are hovered over or active */
+  --nav-hover-color: var(--atenea-dorado); /* Applied to main navmenu links when they are hovered over or active */
   --nav-mobile-background-color: #ffffff; /* Used as the background color for mobile navigation menu */
   --nav-dropdown-background-color: #ffffff; /* Used as the background color for dropdown items that appear when hovering over primary navigation items */
   --nav-dropdown-color: #272828; /* Used for navigation links of the dropdown items in the navigation menu. */
-  --nav-dropdown-hover-color: #5fcf80; /* Similar to --nav-hover-color, this color is applied to dropdown navigation links when they are hovered over. */
+  --nav-dropdown-hover-color: var(--atenea-dorado); /* Similar to --nav-hover-color, this color is applied to dropdown navigation links when they are hovered over. */
 }
 
 /* Color Presets - These classes override global colors when applied to any section or element, providing reuse of the sam color scheme. */
@@ -87,6 +92,133 @@ h6 {
   font-family: var(--heading-font);
 }
 
+/* Atenea identity and responsive brand treatment */
+.header {
+  min-height: 74px;
+}
+
+.header .atenea-brand {
+  flex: 0 0 auto;
+  padding: 5px 0;
+}
+
+.header .atenea-brand img {
+  width: clamp(120px, 10vw, 165px);
+  height: 58px;
+  max-height: 58px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.footer-logo img {
+  width: 170px;
+  height: 75px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.btn-atenea {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 28px;
+  border-radius: 50px;
+  color: var(--atenea-blanco);
+  background: var(--atenea-dorado);
+  font-weight: 600;
+}
+
+.btn-atenea:hover {
+  color: var(--atenea-blanco);
+  background: var(--atenea-dorado-oscuro);
+}
+
+.hero h1 {
+  max-width: 900px;
+  font-size: clamp(2rem, 4.2vw, 4rem);
+  line-height: 1.12;
+}
+
+.hero p {
+  max-width: 760px;
+  font-size: clamp(1rem, 1.6vw, 1.35rem);
+}
+
+.features .features-item > i {
+  color: var(--atenea-dorado);
+}
+
+.news-card {
+  display: flex;
+  gap: 20px;
+  height: 100%;
+  padding: 30px;
+  border: 1px solid color-mix(in srgb, var(--atenea-dorado), transparent 65%);
+  border-radius: 12px;
+  background: var(--atenea-blanco);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--atenea-negro), transparent 93%);
+}
+
+.news-card > i {
+  color: var(--atenea-dorado);
+  font-size: 2rem;
+}
+
+@media (max-width: 1199px) {
+  .header .container-xl {
+    gap: 12px;
+  }
+
+  .header .btn-getstarted {
+    margin: 0 42px 0 0;
+  }
+}
+
+@media (max-width: 575px) {
+  .header {
+    min-height: 66px;
+  }
+
+  .header .atenea-brand img {
+    width: 112px;
+    height: 50px;
+  }
+
+  .header .btn-getstarted {
+    padding: 8px 12px;
+    margin-right: 38px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .hero .container {
+    padding-inline: 20px;
+  }
+
+  .features .features-item {
+    padding: 15px 10px;
+  }
+
+  .features .features-item h3 {
+    font-size: 14px;
+  }
+
+  .news-card {
+    padding: 22px;
+  }
+}
+
+@media (max-width: 390px) {
+  .header .atenea-brand img {
+    width: 96px;
+  }
+
+  .header .btn-getstarted {
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+}
+
 /* PHP Email Form Messages
 ------------------------------*/
 .php-email-form .error-message {
@@ -102,7 +234,7 @@ h6 {
 .php-email-form .sent-message {
   display: none;
   color: #ffffff;
-  background: #059652;
+  background: var(--atenea-dorado-oscuro);
   text-align: center;
   padding: 15px;
   margin-bottom: 24px;
