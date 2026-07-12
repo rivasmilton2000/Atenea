@@ -8,7 +8,7 @@ var merge = require('merge-stream');
 
 /* inject partials like sidebar and navbar */
 gulp.task('injectPartial', function () {
-    return gulp.src(["./pages/**/*.html", "./index.html"], {
+    return gulp.src(["./pages/**/*.php", "./index.php"], {
             base: "./"
         })
         .pipe(injectPartials())
@@ -17,7 +17,7 @@ gulp.task('injectPartial', function () {
 
 /* inject Js and CCS assets into HTML */
 gulp.task('injectAssets', function () {
-    return gulp.src(["./**/*.html"])
+    return gulp.src(["./**/*.php"])
         .pipe(inject(gulp.src([
            './assets/vendors/feather/feather.css',
             './assets/vendors/mdi/css/materialdesignicons.min.css',
@@ -53,25 +53,25 @@ gulp.task('injectAssets', function () {
 
 /*replace image path and linking after injection*/
 gulp.task('replacePath', function () {
-    var replacePath1 = gulp.src('./pages/**/*.html', {
+    var replacePath1 = gulp.src('./pages/**/*.php', {
             base: "./"
         })
         .pipe(replace('="../assets/', '="../../assets/'))
         .pipe(replace('href="../pages/', 'href="../../pages/'))
         .pipe(replace('="../docs/', '="../../docs/'))
-        .pipe(replace('href="../index.html"', 'href="../../index.html"'))
+        .pipe(replace('href="../index.php"', 'href="../../index.php"'))
         .pipe(gulp.dest('.'));
-    var replacePath2 = gulp.src('./index.html', {base: "./"})
+    var replacePath2 = gulp.src('./index.php', {base: "./"})
         .pipe(replace('="../assets/', '="assets/'))
         .pipe(replace('="../docs/', '="docs/'))
         .pipe(replace('="../pages/', '="pages/'))
-        .pipe(replace('="../index.html"', '="index.html"'))
+        .pipe(replace('="../index.php"', '="index.php"'))
         .pipe(gulp.dest('.'));
     return merge(replacePath1, replacePath2);
 });
 
 gulp.task('html-beautify', function () {
-    return gulp.src(['./**/*.html', '!node_modules/**/*.html'])
+    return gulp.src(['./**/*.php', '!node_modules/**/*.php'])
         .pipe(prettify({
             unformatted: ['pre', 'code', 'textarea']
         }))
