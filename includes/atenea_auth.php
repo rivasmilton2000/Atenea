@@ -219,7 +219,8 @@ if (!function_exists('atenea_ensure_public_user_schema')) {
                 'PROFILE_PHOTO' => 'VARCHAR(255) DEFAULT NULL AFTER `BIRTHDATE`',
                 'GOOGLE_ID' => 'VARCHAR(191) DEFAULT NULL AFTER `PROFILE_PHOTO`',
                 'GOOGLE_EMAIL' => 'VARCHAR(150) DEFAULT NULL AFTER `GOOGLE_ID`',
-                'BILLING_NAME' => 'VARCHAR(150) DEFAULT NULL AFTER `GOOGLE_EMAIL`',
+                'REGISTRATION_SOURCE' => "VARCHAR(20) NOT NULL DEFAULT 'normal' AFTER `GOOGLE_EMAIL`",
+                'BILLING_NAME' => 'VARCHAR(150) DEFAULT NULL AFTER `REGISTRATION_SOURCE`',
                 'BILLING_EMAIL' => 'VARCHAR(150) DEFAULT NULL AFTER `BILLING_NAME`',
                 'TIPO_DOCUMENTO' => 'VARCHAR(10) DEFAULT NULL AFTER `BILLING_EMAIL`',
                 'NUMERO_DOCUMENTO' => 'VARCHAR(25) DEFAULT NULL AFTER `TIPO_DOCUMENTO`',
@@ -247,6 +248,31 @@ if (!function_exists('atenea_ensure_public_user_schema')) {
         }
 
         return true;
+    }
+}
+
+if (!function_exists('atenea_sync_public_student_accounts')) {
+    function atenea_sync_public_student_accounts(mysqli $db): void
+    {
+        static $synced = false;
+
+        if ($synced) {
+            return;
+        }
+
+        if (!atenea_ensure_public_user_schema($db) || !atenea_db_has_table($db, 'users') || !atenea_db_has_table($db, 'public_users')) {
+            return;
+        }
+
+        $sql = "UPDATE users u
+                INNER JOIN public_users pu ON pu.USER_ID = u.ID
+                SET u.TYPE_ID = 3
+                WHERE (u.TYPE_ID IS NULL OR u.TYPE_ID = 0)
+                  AND (u.EMPLOYEE_ID IS NULL OR u.EMPLOYEE_ID = 0)
+                  AND (u.ESTUDIANTE_ID IS NULL OR u.ESTUDIANTE_ID = 0)";
+
+        mysqli_query($db, $sql);
+        $synced = true;
     }
 }
 
@@ -680,6 +706,14 @@ if (!function_exists('atenea_legacy_route_groups')) {
                     'estudiantes_vista_calendario*.php',
                     'empleados_vista_documentacion*.php',
                     'empleados_vista_calendario*.php',
+                    'estudiantes_searchfrm*.php',
+                    'estudiantes_edit*.php',
+                    'estudiantes_transac*.php',
+                    'estudiantes_procesar_carga_masiva.php',
+                    'sa_estudiantes_searchfrm*.php',
+                    'sa_estudiantes_edit*.php',
+                    'sa_estudiantes_transac*.php',
+                    'sa_estudiantes_procesar_carga_masiva.php',
                 ],
                 'redirects' => [
                     'Admin' => 'programas_admin.php',
@@ -710,6 +744,8 @@ if (!function_exists('atenea_legacy_route_groups')) {
                     'transaction.php',
                     'trans_view.php',
                     'reports.php',
+                    'product.php',
+                    'pro_*.php',
                     'export_excel_inventario.php',
                     'export_excel_vehicles.php',
                 ],
@@ -726,7 +762,7 @@ if (!function_exists('atenea_legacy_route_groups')) {
                 ],
                 'redirects' => [
                     'Admin' => 'estudiantes.php',
-                    'SuperAdmin' => 'sa_estudiantes.php',
+                    'SuperAdmin' => 'estudiantes.php',
                 ],
                 'message' => 'El modulo de grados no forma parte del flujo actual de Atenea.',
             ],
@@ -756,6 +792,20 @@ if (!function_exists('atenea_legacy_route_groups')) {
                     'Estudiante' => 'usuario_vista.php',
                 ],
                 'message' => 'Los pagos academicos heredados quedaron fuera de uso. Atenea opera pagos y compras desde la tienda y la facturacion actual.',
+            ],
+            'cuentas_legacy' => [
+                'patterns' => [
+                    'sa_cuentas_usuarios*.php',
+                    'user.php',
+                    'us_*.php',
+                    'settings.php',
+                    'settings_edit.php',
+                ],
+                'redirects' => [
+                    'Admin' => 'usuarios_admin.php',
+                    'SuperAdmin' => 'usuarios_admin.php',
+                ],
+                'message' => 'La gestion heredada de cuentas y configuraciones fue reemplazada por los modulos de Usuarios, Roles y Configuracion del sitio.',
             ],
             'archivos_legacy' => [
                 'patterns' => [
@@ -1326,6 +1376,37 @@ if (!function_exists('atenea_sync_public_google_identity')) {
         $types .= 'i';
         $values[] = $userId;
         $stmt->bind_param($types, ...$values);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+if (!function_exists('atenea_set_public_registration_source')) {
+    function atenea_set_public_registration_source(mysqli $db, int $userId, string $source): void
+    {
+        atenea_ensure_public_user_schema($db);
+
+        if ($userId <= 0 || !atenea_db_has_column($db, 'public_users', 'REGISTRATION_SOURCE')) {
+            return;
+        }
+
+        $normalizedSource = strtolower(trim($source));
+        if (!in_array($normalizedSource, ['normal', 'google', 'admin'], true)) {
+            $normalizedSource = 'normal';
+        }
+
+        $stmt = $db->prepare(
+            'UPDATE public_users
+             SET REGISTRATION_SOURCE = ?
+             WHERE USER_ID = ?
+             LIMIT 1'
+        );
+
+        if (!$stmt) {
+            return;
+        }
+
+        $stmt->bind_param('si', $normalizedSource, $userId);
         $stmt->execute();
         $stmt->close();
     }

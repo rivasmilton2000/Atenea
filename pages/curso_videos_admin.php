@@ -73,8 +73,7 @@ if ($phaseTwoReady) {
     <div class="card-body">
         <?php if (!$phaseTwoReady) : ?>
             <div class="alert alert-warning">
-                Aplica la migracion <code>Database/migrations/2026_07_09_capacitacion_acceso_videos.sql</code> para habilitar inscripciones,
-                videos del curso y activaciones individuales o masivas.
+                El modulo de videos no esta disponible. Revisa la configuracion del entorno.
             </div>
         <?php endif; ?>
 

@@ -43,7 +43,7 @@ if (!atenea_capacitacion_phase_two_ready($db)) {
     atenea_render_auth_alert(
         'warning',
         'Migracion pendiente',
-        'Debes aplicar Database/migrations/2026_07_09_capacitacion_acceso_videos.sql para habilitar los videos del curso.',
+        'El contenido del curso no esta disponible temporalmente.',
         'usuario_vista.php'
     );
 }
@@ -182,8 +182,7 @@ ob_start();
 
 <?php if ($enrollment && !$phaseThreeReady) : ?>
   <div class="alert alert-warning mb-4">
-    Aplica la migracion <code>Database/migrations/2026_07_09_capacitacion_finalizacion_certificados.sql</code> para habilitar el avance por video,
-    la finalizacion automatica del curso y el certificado dinamico.
+    El seguimiento de avance no esta disponible temporalmente. Intenta nuevamente mas tarde.
   </div>
 <?php endif; ?>
 

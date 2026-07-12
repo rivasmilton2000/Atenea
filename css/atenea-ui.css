@@ -584,6 +584,78 @@ body.atenea-loading {
   overflow: hidden;
 }
 
+/* Correcciones finales de perfil; se mantienen al final para prevalecer sobre estilos legados. */
+#usuarioProfileModal { z-index:10050; }
+#usuarioProfileModal .modal-dialog { width:min(1100px,calc(100vw - 32px)); max-width:min(1100px,calc(100vw - 32px)); margin:16px auto; }
+#usuarioProfileModal .modal-content { max-height:calc(100vh - 32px); overflow:hidden; background:#fff; color:var(--atenea-ink); border-color:var(--atenea-border); }
+#usuarioProfileModal .atenea-profile-modal__body { overflow:auto; }
+#usuarioProfileModal .atenea-profile-badges .badge { white-space:nowrap; word-break:keep-all; overflow-wrap:normal; }
+#usuarioProfileModal .atenea-profile-side-card__content,
+#usuarioProfileModal .atenea-profile-info-card__body { min-width:0; }
+#usuarioProfileModal .atenea-profile-side-card__content strong,
+#usuarioProfileModal .atenea-profile-info-card__body strong { word-break:normal!important; overflow-wrap:normal!important; }
+#usuarioProfileModal .atenea-profile-side-card:last-child strong,
+#usuarioProfileModal .profile-info-item:nth-last-child(-n+2) strong { white-space:nowrap; }
+@media(max-width:576px){
+  #usuarioProfileModal .modal-dialog{width:calc(100vw - 16px);max-width:calc(100vw - 16px);margin:8px auto}
+  #usuarioProfileModal .modal-content{max-height:calc(100vh - 16px)}
+  #usuarioProfileModal .atenea-profile-hero{grid-template-columns:1fr!important}
+  #usuarioProfileModal .profile-info-grid{grid-template-columns:1fr!important}
+}
+
+
+.atenea-quote-page { background:#f6f8f7; color:var(--atenea-ink); }
+.atenea-quote-card { background:#fff; border:1px solid var(--atenea-border)!important; border-radius:24px; color:var(--atenea-ink); }
+.atenea-quote-image { object-fit:cover; min-height:360px; max-height:540px; }
+.atenea-quote-title { color:var(--atenea-ink)!important; line-height:1.18; }
+.atenea-quote-content p, .atenea-quote-content strong { color:inherit; }
+@media(max-width:991.98px){.atenea-quote-image{min-height:220px;max-height:300px}}
+.atenea-certificate-pdf-frame { display:block; width:100%; height:clamp(420px,70vw,820px); border:0; background:#fff; }
+
+.atenea-certificate--clean { background:#faf8f1 !important; border:12px solid #046845; outline:3px solid #c8a133; outline-offset:-20px; color:#0d2438; }
+.atenea-certificate--clean .atenea-certificate__brand { position:absolute; top:9%; width:100%; text-align:center; color:#046845; font:800 clamp(1rem,3vw,2.4rem) Georgia,serif; letter-spacing:.25em; }
+.atenea-certificate--clean .atenea-certificate__heading { position:absolute; top:20%; width:100%; text-align:center; font:700 clamp(.85rem,2.2vw,1.8rem) Georgia,serif; letter-spacing:.12em; }
+.atenea-certificate--clean .atenea-certificate__intro { position:absolute; top:31%; width:100%; text-align:center; font-size:clamp(.65rem,1.4vw,1.1rem); }
+.atenea-certificate--clean .atenea-certificate__student { left:10%; top:37%; width:80%; color:#046845; }
+.atenea-certificate--clean .atenea-certificate__achievement { position:absolute; top:52%; width:100%; text-align:center; font-size:clamp(.6rem,1.2vw,1rem); }
+.atenea-certificate--clean .atenea-certificate__course-title { left:10%; top:59%; width:80%; color:#a07d23; letter-spacing:.08em; }
+.atenea-certificate--clean .atenea-certificate__course-subtitle { left:15%; top:70%; width:70%; }
+.atenea-certificate--clean .atenea-certificate__date-line { position:absolute; top:82%; width:100%; text-align:center; font-size:clamp(.55rem,1vw,.9rem); }
+.atenea-certificate--clean .atenea-certificate__signature { position:absolute; left:37%; top:89%; width:26%; text-align:center; font-size:clamp(.5rem,.9vw,.8rem); }
+.atenea-certificate--clean .atenea-certificate__signature span { display:block; border-top:1px solid #0d2438; }
+.atenea-certificate--clean .atenea-certificate__code { right:4%; bottom:3%; top:auto; left:auto; }
+
+.atenea-profile-info-card, .atenea-profile-info-card__body { min-width:0; }
+.atenea-profile-info-card__body strong { display:block; word-break:normal; overflow-wrap:normal; white-space:normal; }
+.atenea-profile-info-card__body strong:has(time), .profile-summary-value { white-space:nowrap; }
+@media (max-width:575.98px) { .atenea-profile-info-card { flex:1 1 100%; } .atenea-user-menu-trigger-copy { min-width:0; } }
+
+/* Menu de cuenta: fuera del flujo recortado de Material Dashboard. */
+.cecsb-dashboard-topbar, .cecsb-dashboard-topbar__inner, .cecsb-dashboard-topbar__actions,
+.cecsb-dashboard-topbar__nav, .atenea-user-menu { overflow:visible!important; }
+.atenea-user-menu { max-width:320px; }
+.atenea-user-menu-trigger { width:min(280px,calc(100vw - 32px)); max-width:100%; background:#fff; color:var(--atenea-ink); border-color:var(--atenea-border); }
+.atenea-user-menu-trigger-badge { width:auto; max-width:100%; word-break:keep-all; overflow-wrap:normal; white-space:nowrap; }
+.atenea-user-menu-trigger-name, .atenea-user-menu-trigger-meta { word-break:normal; overflow-wrap:normal; white-space:nowrap; }
+.atenea-user-dropdown { position:fixed; top:84px; right:24px; width:min(360px,calc(100vw - 32px)); max-width:calc(100vw - 32px); min-width:0; box-sizing:border-box; overflow:hidden; z-index:9999; background:#fff; border-color:var(--atenea-border); }
+.atenea-user-dropdown-copy strong, .atenea-user-dropdown-copy span { color:var(--atenea-ink); word-break:normal; overflow-wrap:normal; }
+.atenea-user-dropdown-item { width:100%; box-sizing:border-box; color:var(--atenea-ink); }
+.cecsb-dashboard-account__meta { grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.cecsb-dashboard-account__meta-item { min-width:0; padding:.8rem; border:1px solid var(--atenea-border); border-radius:14px; background:var(--atenea-green-soft); }
+.cecsb-dashboard-account__meta-item .cecsb-meta-label,
+.cecsb-dashboard-account__meta-item .cecsb-meta-value { display:block; word-break:normal; overflow-wrap:normal; line-height:1.3; }
+.cecsb-dashboard-account__meta-item .cecsb-meta-value { color:var(--atenea-ink); }
+.cecsb-dashboard-account__meta-item:last-child .cecsb-meta-value { white-space:nowrap; }
+@media(max-width:767.98px){
+  .cecsb-dashboard-topbar__actions.collapse { display:block!important; }
+  .cecsb-dashboard-topbar__nav { flex-direction:row; flex-wrap:wrap; gap:.5rem; justify-content:flex-end!important; }
+  .atenea-user-menu-trigger { min-height:52px; }
+  .atenea-user-menu-trigger-meta { display:none; }
+  .atenea-user-dropdown { top:72px; left:16px; right:16px; width:auto; max-width:none; }
+  .cecsb-dashboard-account__meta { grid-template-columns:1fr; }
+}
+@media(max-width:420px){.atenea-user-menu-trigger{width:auto}.atenea-user-menu-trigger-copy{max-width:120px}.atenea-user-menu-trigger-icon{display:none}}
+
 #usuarioProfileModal.profile-modal-overlay.show {
   display: flex !important;
 }
@@ -2318,3 +2390,23 @@ body.atenea-loading {
     border-radius: 24px;
   }
 }
+
+/* Perfil y menu: overrides finales sobre las reglas historicas del archivo. */
+.cecsb-dashboard-topbar,.cecsb-dashboard-topbar__inner,.cecsb-dashboard-topbar__actions,.cecsb-dashboard-topbar__nav,.atenea-user-menu{overflow:visible!important}
+.atenea-user-dropdown{position:fixed!important;top:84px!important;right:24px!important;left:auto!important;width:min(360px,calc(100vw - 32px))!important;max-width:calc(100vw - 32px)!important;min-width:0!important;box-sizing:border-box;overflow:hidden!important;z-index:9999!important;background:#fff!important;border-color:var(--atenea-border)!important}
+.atenea-user-menu-trigger-badge,.atenea-user-menu-trigger-name,.atenea-user-menu-trigger-meta{word-break:keep-all!important;overflow-wrap:normal!important;white-space:nowrap!important}
+.atenea-user-dropdown-item{width:100%;box-sizing:border-box}
+.cecsb-dashboard-account__meta{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px}
+.cecsb-dashboard-account__meta-item{min-width:0;padding:.8rem;border:1px solid var(--atenea-border);border-radius:14px;background:var(--atenea-green-soft)}
+.cecsb-dashboard-account__meta-item .cecsb-meta-value{color:var(--atenea-ink);word-break:normal;overflow-wrap:normal}
+.cecsb-dashboard-account__meta-item:last-child .cecsb-meta-value{white-space:nowrap}
+#usuarioProfileModal{z-index:10050}
+#usuarioProfileModal .modal-dialog{width:min(1100px,calc(100vw - 32px));max-width:min(1100px,calc(100vw - 32px));margin:16px auto}
+#usuarioProfileModal .modal-content{max-height:calc(100vh - 32px);overflow:hidden;background:#fff;color:var(--atenea-ink);border-color:var(--atenea-border)}
+#usuarioProfileModal .atenea-profile-modal__body{overflow:auto}
+#usuarioProfileModal .atenea-profile-badges .badge{white-space:nowrap;word-break:keep-all;overflow-wrap:normal}
+#usuarioProfileModal .atenea-profile-side-card__content,#usuarioProfileModal .atenea-profile-info-card__body{min-width:0}
+#usuarioProfileModal .atenea-profile-side-card__content strong,#usuarioProfileModal .atenea-profile-info-card__body strong{word-break:normal!important;overflow-wrap:normal!important}
+#usuarioProfileModal .atenea-profile-side-card:last-child strong,#usuarioProfileModal .profile-info-item:nth-last-child(-n+2) strong{white-space:nowrap}
+@media(max-width:767.98px){.cecsb-dashboard-topbar__actions.collapse{display:block!important}.cecsb-dashboard-topbar__nav{flex-direction:row;flex-wrap:wrap;gap:.5rem}.atenea-user-dropdown{top:72px!important;left:16px!important;right:16px!important;width:auto!important;max-width:none!important}.cecsb-dashboard-account__meta{grid-template-columns:1fr!important}}
+@media(max-width:576px){#usuarioProfileModal .modal-dialog{width:calc(100vw - 16px);max-width:calc(100vw - 16px);margin:8px auto}#usuarioProfileModal .modal-content{max-height:calc(100vh - 16px)}#usuarioProfileModal .atenea-profile-hero,#usuarioProfileModal .profile-info-grid{grid-template-columns:1fr!important}}

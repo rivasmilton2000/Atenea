@@ -28,12 +28,13 @@ if (!atenea_session_is_public_user()) {
     );
 }
 
-$phaseTwoReady = atenea_capacitacion_phase_two_ready($db);
+$phaseTwoReady = atenea_capacitacion_phase_two_ready($db) && atenea_capacitacion_payment_ready($db);
 $publicUserId = (int) ($_SESSION['PUBLIC_USER_ID'] ?? 0);
 $memberId = (int) ($_SESSION['MEMBER_ID'] ?? 0);
 $currentEnrollment = $phaseTwoReady
     ? atenea_capacitacion_fetch_active_enrollment_for_public_user($db, $publicUserId, (int) $programa['id'])
     : null;
+$paymentRequest = $phaseTwoReady ? atenea_capacitacion_fetch_payment_request($db, $publicUserId, (int) $programa['id']) : null;
 
 $_SESSION['ATENEA_PENDING_PROGRAM_QUOTE'] = [
     'program_id' => (int) $programa['id'],
@@ -43,56 +44,27 @@ $_SESSION['ATENEA_PENDING_PROGRAM_QUOTE'] = [
     'requested_at' => date('c'),
 ];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string) ($_POST['course_action'] ?? '') === 'confirm_enrollment') {
-    if (!$phaseTwoReady) {
-        atenea_render_auth_alert(
-            'warning',
-            'Migracion pendiente',
-            'Antes de continuar debes aplicar la migracion Database/migrations/2026_07_09_capacitacion_acceso_videos.sql.',
-            atenea_capacitacion_detail_url((int) $programa['id'])
-        );
-    }
-
-    $enrollment = atenea_capacitacion_activate_enrollment($db, $publicUserId, $memberId, (int) $programa['id']);
-    if (!$enrollment) {
-        atenea_render_auth_alert(
-            'error',
-            'No pudimos activar tu curso',
-            'Ocurrio un problema al registrar la inscripcion. Intenta nuevamente en unos minutos.',
-            atenea_capacitacion_detail_url((int) $programa['id'])
-        );
-    }
-
-    $_SESSION['ATENEA_ACTIVE_PROGRAM_ID'] = (int) $programa['id'];
-    $_SESSION['ATENEA_ACTIVE_COURSE_STATUS'] = 'curso_activo';
-
-    atenea_render_auth_alert(
-        'success',
-        'Inscripcion confirmada',
-        'Tu perfil ya refleja un curso activo y el acceso base al curso quedo preparado.',
-        'mi_curso_activo.php?programa=' . (int) $programa['id']
-    );
-}
-
 $programPrice = atenea_capacitacion_price($programa);
 $programTypeLabel = atenea_capacitacion_type_label((string) ($programa['tipo_programa'] ?? 'curso'));
 $programDuration = atenea_capacitacion_text_value($programa['duracion'] ?? '');
 $programMode = atenea_capacitacion_text_value($programa['modalidad'] ?? '');
+$programBenefits = atenea_capacitacion_text_items($programa['beneficios'] ?? '');
+$paymentResult = trim((string) ($_GET['payment'] ?? ''));
 $courseStatusMeta = $currentEnrollment ? atenea_capacitacion_course_status_meta((string) $currentEnrollment['estado_curso']) : null;
 $approvalStatusMeta = $currentEnrollment ? atenea_capacitacion_approval_status_meta((string) $currentEnrollment['estado_aprobacion']) : null;
 ?>
 
 <?php include '../includes/head_home.php'; ?>
 
-<body>
+<body class="atenea-quote-page">
   <?php include '../includes/navbar_home.php'; ?>
 
   <section class="container-fluid atenea-producto-detalle-hero">
     <div class="atenea-producto-detalle-hero-inner">
       <p class="atenea-producto-detalle-kicker">Atenea Escuela de Naturopat&iacute;a Hol&iacute;stica</p>
-      <h1 class="atenea-producto-detalle-title">Confirmar inscripci&oacute;n</h1>
+      <h1 class="atenea-producto-detalle-title">Pagar capacitaci&oacute;n</h1>
       <p class="atenea-producto-detalle-summary">
-        Revisa los datos del programa y confirma tu acceso para dejar activo el curso dentro de tu cuenta.
+        Completa el pago seguro y tu acceso se habilitara automaticamente cuando Stripe confirme la transaccion.
       </p>
     </div>
   </section>
@@ -101,24 +73,20 @@ $approvalStatusMeta = $currentEnrollment ? atenea_capacitacion_approval_status_m
     <div class="row justify-content-center">
       <div class="col-lg-10">
         <?php if (!$phaseTwoReady) : ?>
-          <div class="alert alert-warning mb-4">
-            Para completar la inscripci&oacute;n debes aplicar primero la migraci&oacute;n
-            <code>Database/migrations/2026_07_09_capacitacion_acceso_videos.sql</code>.
-          </div>
+          <div class="alert alert-warning mb-4">El servicio de pagos no esta disponible temporalmente. Intenta nuevamente mas tarde.</div>
         <?php endif; ?>
 
-        <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="card border-0 shadow-sm overflow-hidden atenea-quote-card">
           <div class="row no-gutters">
-            <div class="col-lg-5">
+            <div class="col-lg-5 p-3 p-lg-4">
               <img
                 src="../img/<?php echo htmlspecialchars((string) $programa['imagen'], ENT_QUOTES, 'UTF-8'); ?>"
-                class="img-fluid h-100 w-100"
-                style="object-fit: cover; min-height: 320px;"
+                class="img-fluid h-100 w-100 atenea-quote-image"
                 alt="<?php echo htmlspecialchars((string) $programa['titulo'], ENT_QUOTES, 'UTF-8'); ?>"
               >
             </div>
             <div class="col-lg-7">
-              <div class="card-body p-4 p-lg-5">
+              <div class="card-body p-4 p-lg-5 atenea-quote-content">
                 <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 0.5rem;">
                   <span class="badge badge-success px-3 py-2"><?php echo htmlspecialchars($programTypeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                   <span class="badge badge-light border px-3 py-2">Precio inicial: $<?php echo number_format($programPrice, 2); ?></span>
@@ -129,7 +97,7 @@ $approvalStatusMeta = $currentEnrollment ? atenea_capacitacion_approval_status_m
                   <?php endif; ?>
                 </div>
 
-                <h2 class="mb-3"><?php echo htmlspecialchars((string) $programa['titulo'], ENT_QUOTES, 'UTF-8'); ?></h2>
+                <h2 class="mb-3 atenea-quote-title"><?php echo htmlspecialchars((string) $programa['titulo'], ENT_QUOTES, 'UTF-8'); ?></h2>
                 <p class="text-muted mb-4">
                   <?php echo nl2br(htmlspecialchars((string) ($programa['descripcion_completa'] ?: $programa['descripcion_corta']), ENT_QUOTES, 'UTF-8')); ?>
                 </p>
@@ -142,7 +110,6 @@ $approvalStatusMeta = $currentEnrollment ? atenea_capacitacion_approval_status_m
                   </div>
                   <div class="col-md-6 mb-3">
                     <p class="mb-2"><strong>Modalidad:</strong> <?php echo htmlspecialchars($programMode !== '' ? $programMode : 'Por definir', ENT_QUOTES, 'UTF-8'); ?></p>
-                    <p class="mb-2"><strong>Estado del flujo:</strong> Preparado para inscripci&oacute;n base</p>
                     <?php if ($approvalStatusMeta !== null) : ?>
                       <p class="mb-0">
                         <strong>Aprobaci&oacute;n actual:</strong>
@@ -154,32 +121,34 @@ $approvalStatusMeta = $currentEnrollment ? atenea_capacitacion_approval_status_m
                   </div>
                 </div>
 
+                <?php if ($programBenefits !== []) : ?>
+                  <div class="atenea-quote-includes mb-4"><h5>Que incluye</h5><ul class="mb-0"><?php foreach ($programBenefits as $benefit) : ?><li><?php echo htmlspecialchars($benefit, ENT_QUOTES, 'UTF-8'); ?></li><?php endforeach; ?></ul></div>
+                <?php endif; ?>
+
                 <?php if ($currentEnrollment) : ?>
                   <div class="alert alert-success mt-4 mb-4">
-                    Ya tienes una inscripci&oacute;n vinculada a este programa. Puedes entrar directamente a tu curso, revisar videos o consultar tu r&eacute;cord escolar.
+                    Tu inscripci&oacute;n est&aacute; activa.
                   </div>
 
                   <div class="d-flex flex-wrap" style="gap: 0.75rem;">
-                    <a href="mi_curso_activo.php?programa=<?php echo (int) $programa['id']; ?>" class="btn btn-primary2">Ir a mi curso activo</a>
+                    <a href="mi_curso_activo.php?programa=<?php echo (int) $programa['id']; ?>" class="btn btn-primary2">Entrar al curso</a>
                     <a href="curso_videos.php?programa=<?php echo (int) $programa['id']; ?>" class="btn btn-outline-success">Ver videos</a>
                     <a href="record_escolar.php" class="btn btn-outline-dark">Ver r&eacute;cord escolar</a>
                   </div>
                 <?php else : ?>
-                  <div class="alert alert-info mt-4 mb-4">
-                    Al confirmar esta inscripci&oacute;n, tu cuenta quedar&aacute; vinculada al programa con estado <strong>Curso activo</strong> y se habilitar&aacute; la base para videos y r&eacute;cord escolar.
-                  </div>
+                  <?php if ($paymentResult === 'failed' || (string)($paymentRequest['status'] ?? '') === 'fallido') : ?><div class="alert alert-danger mt-4 mb-3">No pudimos confirmar el pago. Intenta nuevamente.</div><?php endif; ?>
+                  <?php if ($paymentResult === 'cancelled' || (string)($paymentRequest['status'] ?? '') === 'cancelado') : ?><div class="alert alert-warning mt-4 mb-3">El pago fue cancelado. Puedes intentarlo nuevamente.</div><?php endif; ?>
+                  <?php if ($paymentResult === 'unavailable') : ?><div class="alert alert-warning mt-4 mb-3">El pago no esta disponible temporalmente. Intenta nuevamente mas tarde.</div><?php endif; ?>
+                  <div class="alert alert-info mt-4 mb-4">El acceso al curso se habilitar&aacute; autom&aacute;ticamente despu&eacute;s de completar el pago.</div>
 
-                  <form method="post">
-                    <input type="hidden" name="course_action" value="confirm_enrollment">
+                  <form method="post" action="programa_pago.php">
+                    <input type="hidden" name="programa_id" value="<?php echo (int)$programa['id']; ?>">
                     <div class="d-flex flex-wrap" style="gap: 0.75rem;">
                       <button type="submit" class="btn btn-primary2" <?php echo !$phaseTwoReady ? 'disabled' : ''; ?>>
-                        Confirmar inscripci&oacute;n y continuar
+                        <?php echo ($paymentResult === 'failed' || (string)($paymentRequest['status'] ?? '') === 'fallido') ? 'Intentar pagar nuevamente' : 'Pagar ahora'; ?>
                       </button>
                       <a href="<?php echo htmlspecialchars(atenea_capacitacion_detail_url((int) $programa['id']), ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-dark">
-                        Volver al detalle
-                      </a>
-                      <a href="educacion.php" class="btn btn-outline-secondary">
-                        Seguir explorando capacitaci&oacute;n
+                        Volver
                       </a>
                     </div>
                   </form>

@@ -27,7 +27,7 @@ if (!atenea_capacitacion_phase_two_ready($db)) {
     atenea_render_auth_alert(
         'warning',
         'Migracion pendiente',
-        'Debes aplicar Database/migrations/2026_07_09_capacitacion_acceso_videos.sql para habilitar el curso activo.',
+        'El acceso al curso no esta disponible temporalmente.',
         'usuario_vista.php'
     );
 }
@@ -141,8 +141,7 @@ ob_start();
 <?php if ($enrollment) : ?>
   <?php if (!$phaseThreeReady) : ?>
     <div class="alert alert-warning mb-4">
-      Aplica la migracion <code>Database/migrations/2026_07_09_capacitacion_finalizacion_certificados.sql</code> para habilitar
-      finalizacion del curso, aprobacion y certificado dinamico.
+      El seguimiento de finalizacion y aprobacion no esta disponible temporalmente.
     </div>
   <?php endif; ?>
 
@@ -224,7 +223,7 @@ ob_start();
       <div class="atenea-empty-course">
         <h4 class="mb-3">Aun no tienes un curso activo</h4>
         <p class="text-muted mb-4">
-          Cuando confirmes la inscripcion de una capacitacion, aqui veras el curso vinculado a tu perfil, su avance y el acceso al certificado cuando corresponda.
+          Cuando completes el pago, tu inscripcion se activara automaticamente y aqui veras el curso, su avance y el acceso al certificado cuando corresponda.
         </p>
         <a href="educacion.php" class="btn btn-primary">Ver capacitacion disponible</a>
       </div>

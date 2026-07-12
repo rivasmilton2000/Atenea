@@ -5,6 +5,7 @@ include '../includes/connection.php';
 include '../includes/stripe_config.php';
 include '../includes/invoice_mailer.php';
 require_once '../includes/atenea_auth.php';
+require_once '../includes/atenea_capacitacion.php';
 require_once '../includes/dte/bootstrap.php';
 
 if (!function_exists('atenea_checkout_load_order_basic')) {
@@ -65,7 +66,7 @@ if (!function_exists('atenea_checkout_load_order_items')) {
     function atenea_checkout_load_order_items(mysqli $db, int $orderId): array
     {
         $stmt = $db->prepare("
-            SELECT producto_id, producto_nombre, cantidad, precio_unitario, subtotal
+            SELECT producto_id, programa_id, producto_nombre, cantidad, precio_unitario, subtotal
             FROM orden_detalles
             WHERE orden_id = ?
             ORDER BY id ASC
@@ -87,6 +88,16 @@ if (!function_exists('atenea_checkout_load_order_items')) {
         $stmt->close();
 
         return $items;
+    }
+}
+
+if (!function_exists('atenea_checkout_order_program_id')) {
+    function atenea_checkout_order_program_id(mysqli $db, int $orderId): int
+    {
+        if ($orderId <= 0 || !atenea_db_has_column($db,'orden_detalles','programa_id')) return 0;
+        $stmt=$db->prepare('SELECT programa_id FROM orden_detalles WHERE orden_id=? AND programa_id IS NOT NULL AND programa_id>0 LIMIT 1');
+        if(!$stmt)return 0; $stmt->bind_param('i',$orderId);$stmt->execute();$row=$stmt->get_result()->fetch_assoc();$stmt->close();
+        return (int)($row['programa_id']??0);
     }
 }
 
@@ -237,14 +248,20 @@ if ($httpStatus < 200 || $httpStatus >= 300 || empty($sessionData['id'])) {
     exit();
 }
 
-if (($sessionData['payment_status'] ?? '') !== 'paid') {
-    header('Location: carrito.php?checkout_error=' . urlencode('El pago aun no esta confirmado.'));
-    exit();
-}
-
 $orderId = (int) ($sessionData['metadata']['order_id'] ?? 0);
 if ($orderId <= 0) {
     header('Location: carrito.php?checkout_error=' . urlencode('No se encontro la orden asociada al pago.'));
+    exit();
+}
+
+if (($sessionData['payment_status'] ?? '') !== 'paid') {
+    $programId=atenea_checkout_order_program_id($db,$orderId);
+    if($programId>0){
+        $stmt=$db->prepare("UPDATE ordenes SET estado='failed' WHERE id=? AND estado='pending_payment'");$stmt->bind_param('i',$orderId);$stmt->execute();$stmt->close();
+        $stmt=$db->prepare("UPDATE course_payment_requests SET status='fallido' WHERE order_id=? AND programa_id=? AND status<>'pagado'");$stmt->bind_param('ii',$orderId,$programId);$stmt->execute();$stmt->close();
+        header('Location: programa_cotizar.php?id='.$programId.'&payment=failed');exit();
+    }
+    header('Location: carrito.php?checkout_error=' . urlencode('El pago no fue confirmado.'));
     exit();
 }
 
@@ -285,7 +302,7 @@ mysqli_begin_transaction($db);
 try {
     if (($order['estado'] ?? '') !== 'paid') {
         $stmtItems = $db->prepare("
-            SELECT producto_id, cantidad
+            SELECT producto_id, programa_id, cantidad
             FROM orden_detalles
             WHERE orden_id = ?
         ");
@@ -296,6 +313,10 @@ try {
         while ($item = $itemsResult->fetch_assoc()) {
             $productoId = (int) $item['producto_id'];
             $cantidad = (int) $item['cantidad'];
+
+            if ((int) ($item['programa_id'] ?? 0) > 0) {
+                continue;
+            }
 
             $stmtStock = $db->prepare("
                 UPDATE productos
@@ -325,6 +346,20 @@ try {
         $stmtPaid->execute();
         $stmtPaid->close();
 
+        $stmtCourses = $db->prepare('SELECT DISTINCT programa_id FROM orden_detalles WHERE orden_id=? AND programa_id IS NOT NULL AND programa_id>0');
+        $stmtCourses->bind_param('i',$orderId); $stmtCourses->execute(); $courseResult=$stmtCourses->get_result();
+        while($courseRow=$courseResult->fetch_assoc()){
+            $programId=(int)$courseRow['programa_id'];
+            $stmtPayment=$db->prepare("UPDATE course_payment_requests SET status='pagado',paid_at=NOW(),payment_method='stripe' WHERE order_id=? AND programa_id=?");
+            $stmtPayment->bind_param('ii',$orderId,$programId); $stmtPayment->execute(); $stmtPayment->close();
+            $stmtRequest=$db->prepare('SELECT public_user_id,user_id FROM course_payment_requests WHERE order_id=? AND programa_id=? AND status=\'pagado\' LIMIT 1');
+            $stmtRequest->bind_param('ii',$orderId,$programId); $stmtRequest->execute(); $paymentRow=$stmtRequest->get_result()->fetch_assoc(); $stmtRequest->close();
+            if(!$paymentRow || !atenea_capacitacion_activate_enrollment($db,(int)$paymentRow['public_user_id'],(int)$paymentRow['user_id'],$programId)){
+                throw new RuntimeException('No fue posible activar el curso pagado.');
+            }
+        }
+        $stmtCourses->close();
+
         $stmtClear = $db->prepare("DELETE FROM carrito WHERE session_id = ?");
         $stmtClear->bind_param('s', $order['session_id']);
         $stmtClear->execute();
@@ -334,7 +369,9 @@ try {
     mysqli_commit($db);
 } catch (Throwable $exception) {
     mysqli_rollback($db);
-    header('Location: carrito.php?checkout_error=' . urlencode($exception->getMessage()));
+    error_log('Atenea checkout post-payment: '.$exception->getMessage());
+    $programId=atenea_checkout_order_program_id($db,$orderId);
+    header('Location: ' . ($programId>0 ? 'programa_cotizar.php?id='.$programId.'&payment=failed' : 'carrito.php?checkout_error='.urlencode('No pudimos completar la compra. Intenta nuevamente.')));
     exit();
 }
 

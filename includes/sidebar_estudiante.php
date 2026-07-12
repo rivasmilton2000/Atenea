@@ -7,7 +7,7 @@ $memberId = (int) ($_SESSION['MEMBER_ID'] ?? 0);
 module_shell_begin([
     'roleLabel' => 'Estudiante',
     'profileUrl' => 'estudiante_vista_perfil.php?action=edit&id=' . $memberId,
-    'headerText' => 'Tus vistas académicas ahora siguen el mismo diseño del dashboard nuevo sin tocar entregas, notas ni contenidos.',
+    'headerText' => 'Este panel legado se mantuvo solo para compatibilidad. El flujo principal de Atenea para estudiantes registrados ahora vive en el panel de usuario con cursos, videos, record escolar y certificados.',
     'navSections' => [
         [
             'title' => 'Panel',
@@ -16,13 +16,10 @@ module_shell_begin([
             ],
         ],
         [
-            'title' => 'Módulos',
+            'title' => 'Sistema',
             'items' => [
-                ['label' => 'Asignaturas', 'href' => 'estudiantes_vista_asignaturas.php', 'icon' => 'menu_book', 'match' => ['estudiantes_vista_asignaturas.php', 'estudiantes_vista_contenidos.php', 'estudiantes_vista_evaluaciones.php', 'estudiantes_vista_entrega.php']],
-                ['label' => 'Promedios', 'href' => 'estudiantes_vista_promedios.php', 'icon' => 'analytics', 'match' => ['estudiantes_vista_promedios.php', 'estudiantes_vista_promedio1.php']],
-                ['label' => 'Pagos', 'href' => 'estudiante_pagos.php', 'icon' => 'payments', 'match' => ['estudiante_pagos.php']],
-                ['label' => 'Cal. actividades', 'href' => 'estudiantes_vista_calendario.php', 'icon' => 'calendar_month', 'match' => ['estudiantes_vista_calendario.php']],
-                ['label' => 'Mensajes', 'href' => 'mensajes_estudiante_lista.php', 'icon' => 'menu_book', 'match' => ['mensajes_estudiante_lista.php', 'mensajes_estudiante.php']],
+                ['label' => 'Perfil', 'href' => 'estudiante_vista_perfil.php?action=edit&id=' . $memberId, 'icon' => 'person', 'match' => ['estudiante_vista_perfil.php']],
+                ['label' => 'Cerrar sesion', 'href' => 'logout.php?redirect=homepage.php', 'icon' => 'logout', 'match' => ['logout.php']],
             ],
         ],
     ],

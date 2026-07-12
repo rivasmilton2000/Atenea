@@ -7,7 +7,7 @@ $memberId = (int) ($_SESSION['MEMBER_ID'] ?? 0);
 module_shell_begin([
     'roleLabel' => 'Personal',
     'profileUrl' => 'empleados_vista_perfil.php?action=edit&id=' . $memberId,
-    'headerText' => 'El panel operativo del personal ahora comparte la misma interfaz moderna del dashboard sin alterar procesos internos.',
+    'headerText' => 'El rol de Personal permanece en modo reducido mientras se valida si seguira activo dentro de Atenea. Se retiraron labores, vehiculos, documentos y calendarios del sistema anterior.',
     'navSections' => [
         [
             'title' => 'Panel',
@@ -16,12 +16,10 @@ module_shell_begin([
             ],
         ],
         [
-            'title' => 'Módulos',
+            'title' => 'Sistema',
             'items' => [
-                ['label' => 'Labores asignadas', 'href' => 'empleados_vista_labores.php', 'icon' => 'work', 'match' => ['empleados_vista_labores.php']],
-                ['label' => 'Vehículos asignados', 'href' => 'empleados_vista_vehiculos.php', 'icon' => 'directions_car', 'match' => ['empleados_vista_vehiculos.php']],
-                ['label' => 'Documentación', 'href' => 'empleados_vista_documentacion.php', 'icon' => 'description', 'match' => ['empleados_vista_documentacion.php']],
-                ['label' => 'Cal. actividades', 'href' => 'empleados_vista_calendario.php', 'icon' => 'calendar_month', 'match' => ['empleados_vista_calendario.php']],
+                ['label' => 'Perfil', 'href' => 'empleados_vista_perfil.php?action=edit&id=' . $memberId, 'icon' => 'person', 'match' => ['empleados_vista_perfil.php']],
+                ['label' => 'Cerrar sesion', 'href' => 'logout.php?redirect=homepage.php', 'icon' => 'logout', 'match' => ['logout.php']],
             ],
         ],
     ],

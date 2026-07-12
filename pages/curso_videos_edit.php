@@ -23,7 +23,7 @@ if (!atenea_capacitacion_phase_two_ready($db)) {
     atenea_render_auth_alert(
         'warning',
         'Migracion pendiente',
-        'Aplica Database/migrations/2026_07_09_capacitacion_acceso_videos.sql para habilitar este modulo.',
+        'El modulo de videos no esta disponible. Revisa la configuracion del entorno.',
         'curso_videos_admin.php'
     );
 }

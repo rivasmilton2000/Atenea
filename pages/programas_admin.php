@@ -46,9 +46,7 @@ $resultadoProgramas = mysqli_query($db, $queryProgramas) or die(mysqli_error($db
     <div class="card-body">
         <?php if ($missingFields !== []) : ?>
             <div class="alert alert-warning">
-                Faltan columnas de detalle para la capacitacion en <code>programas_educativos</code>.
-                Aplica la migracion <code>Database/migrations/2026_07_09_capacitacion_flujo_publico.sql</code> para habilitar precio,
-                modalidad, detalles, beneficios y requisitos.
+                Los detalles avanzados de capacitacion no estan disponibles. Revisa la configuracion del entorno.
             </div>
         <?php endif; ?>
 

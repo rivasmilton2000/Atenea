@@ -7,15 +7,13 @@ $query = 'SELECT ID, t.TYPE FROM users u JOIN type t ON t.TYPE_ID=u.TYPE_ID WHER
 $result = mysqli_query($db, $query) or die (mysqli_error($db));
 while ($row = mysqli_fetch_assoc($result)) {
     $Aa = $row['TYPE'];
-    if ($Aa=='Personal' || $Aa=='Estudiante' || $Aa=='Docente' || $Aa=='SuperAdmin'){
+    if ($Aa=='Personal' || $Aa=='Estudiante' || $Aa=='Docente'){
         if ($Aa=='Personal') {
             $redirectUrl = "empleados_vista.php";
         } elseif ($Aa=='Estudiante') {
             $redirectUrl = "estudiante_vista.php";
         } elseif ($Aa=='Docente') {
             $redirectUrl = "docentes_vista.php";
-        } elseif ($Aa=='SuperAdmin') {
-            $redirectUrl = "sa_vista.php";
         }
         ?>
         <script type="text/javascript">

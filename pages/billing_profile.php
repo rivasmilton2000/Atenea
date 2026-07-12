@@ -37,6 +37,7 @@ $formValues = [
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (trim((string) ($_POST['profile_action'] ?? '')) === 'skip') {
+        unset($_SESSION['ATENEA_LOGIN_REDIRECT']);
         header('Location: ' . $continueUrl);
         exit;
     }
@@ -83,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         }
 
+        unset($_SESSION['ATENEA_LOGIN_REDIRECT']);
         header('Location: ' . $continueUrl);
         exit;
     }

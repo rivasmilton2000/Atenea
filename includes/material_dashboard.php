@@ -22,14 +22,20 @@ if (!function_exists('dashboard_count')) {
 if (!function_exists('dashboard_require_role')) {
     function dashboard_require_role(mysqli $db, array $allowedRoles, array $redirectMap): void
     {
-        $memberId = (int) ($_SESSION['MEMBER_ID'] ?? 0);
-        $query = 'SELECT t.TYPE
-                  FROM users u
-                  JOIN type t ON t.TYPE_ID = u.TYPE_ID
-                  WHERE u.ID = ' . $memberId;
-        $result = mysqli_query($db, $query) or die(mysqli_error($db));
-        $row = mysqli_fetch_assoc($result);
-        $currentRole = $row['TYPE'] ?? '';
+        $currentRole = '';
+
+        if (atenea_session_is_public_user()) {
+            $currentRole = 'PublicUser';
+        } else {
+            $memberId = (int) ($_SESSION['MEMBER_ID'] ?? 0);
+            $query = 'SELECT t.TYPE
+                      FROM users u
+                      LEFT JOIN type t ON t.TYPE_ID = u.TYPE_ID
+                      WHERE u.ID = ' . $memberId;
+            $result = mysqli_query($db, $query) or die(mysqli_error($db));
+            $row = mysqli_fetch_assoc($result);
+            $currentRole = $row['TYPE'] ?? '';
+        }
 
         if (!in_array($currentRole, $allowedRoles, true)) {
             $redirectUrl = $redirectMap[$currentRole] ?? atenea_dashboard_route_for_session();
@@ -260,6 +266,7 @@ if (!function_exists('dashboard_render_user_menu')) {
               <span class="material-symbols-rounded atenea-user-dropdown-item-icon" aria-hidden="true">person</span>
               <span><?php echo dashboard_h($profileLabel); ?></span>
             </a>
+
 
             <a
               class="atenea-user-dropdown-item atenea-user-dropdown-logout"

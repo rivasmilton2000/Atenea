@@ -24,7 +24,7 @@ if (!atenea_capacitacion_phase_three_ready($db)) {
     atenea_render_auth_alert(
         'warning',
         'Migracion pendiente',
-        'Aplica Database/migrations/2026_07_09_capacitacion_finalizacion_certificados.sql antes de usar este modulo.',
+        'El modulo de certificados no esta disponible. Revisa la configuracion del entorno.',
         'dashboard_admin.php'
     );
 }

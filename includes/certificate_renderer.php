@@ -311,7 +311,6 @@ if (!function_exists('atenea_certificate_resolve_template')) {
 if (!function_exists('atenea_certificate_template_version')) {
     function atenea_certificate_template_version(array $data = []): string
     {
-        $template = atenea_certificate_resolve_template($data);
 
         return (string) ($template['version'] ?? '0');
     }
@@ -615,27 +614,27 @@ if (!function_exists('atenea_certificate_html')) {
         $certificateCode = htmlspecialchars((string) $data['certificate_code'], ENT_QUOTES, 'UTF-8');
         $studentSize = atenea_certificate_html_student_size((string) $data['student_name']);
         $titleSize = atenea_certificate_html_title_size((string) $data['certificate_name']);
-        $backgroundStyle = "background-image:url('" . htmlspecialchars((string) ($template['relative_url'] ?? ''), ENT_QUOTES, 'UTF-8') . "');";
 
         ob_start();
         ?>
-        <div class="atenea-certificate" style="<?php echo $backgroundStyle; ?>">
+        <div class="atenea-certificate atenea-certificate--clean">
+          <div class="atenea-certificate__brand">ATENEA</div>
+          <div class="atenea-certificate__heading">CERTIFICADO DE APROBACION</div>
+          <div class="atenea-certificate__intro">Se otorga el presente certificado a</div>
           <div class="atenea-certificate__field atenea-certificate__student" style="font-size: <?php echo htmlspecialchars($studentSize, ENT_QUOTES, 'UTF-8'); ?>;">
             <?php echo $studentName; ?>
           </div>
-          <?php if (!empty($template['show_course_title'])) : ?>
             <div class="atenea-certificate__field atenea-certificate__course-title" style="font-size: <?php echo htmlspecialchars($titleSize, ENT_QUOTES, 'UTF-8'); ?>;">
               <?php echo $certificateName; ?>
             </div>
-          <?php endif; ?>
-          <?php if (!empty($template['show_course_subtitle']) && trim((string) $data['certificate_subtitle']) !== '') : ?>
+          <div class="atenea-certificate__achievement">por haber completado y aprobado satisfactoriamente el curso</div>
+          <?php if (trim((string) $data['certificate_subtitle']) !== '') : ?>
             <div class="atenea-certificate__field atenea-certificate__course-subtitle">
               <?php echo $subtitle; ?>
             </div>
           <?php endif; ?>
-          <div class="atenea-certificate__field atenea-certificate__date atenea-certificate__date--day"><?php echo $day; ?></div>
-          <div class="atenea-certificate__field atenea-certificate__date atenea-certificate__date--month"><?php echo $month; ?></div>
-          <div class="atenea-certificate__field atenea-certificate__date atenea-certificate__date--year"><?php echo $year; ?></div>
+          <div class="atenea-certificate__date-line">Emitido el <?php echo $day; ?> de <?php echo $month; ?> de <?php echo $year; ?></div>
+          <div class="atenea-certificate__signature"><span></span><strong>Direccion Academica</strong></div>
           <?php if ($certificateCode !== '') : ?>
             <div class="atenea-certificate__field atenea-certificate__code"><?php echo $certificateCode; ?></div>
           <?php endif; ?>
@@ -682,9 +681,7 @@ if (!function_exists('atenea_certificate_pdf_binary')) {
         atenea_certificate_bootstrap();
 
         $data = atenea_certificate_build_data($data);
-        $template = atenea_certificate_resolve_template($data);
         $fonts = atenea_certificate_pdf_fonts();
-        $backgroundPath = $template['absolute_path'] ?? null;
 
         $pdf = new TCPDF('L', 'mm', [216, 288], true, 'UTF-8', false);
         $pdf->SetCreator('Atenea');
@@ -696,96 +693,18 @@ if (!function_exists('atenea_certificate_pdf_binary')) {
         $pdf->SetAutoPageBreak(false, 0);
         $pdf->AddPage();
 
-        if (is_string($backgroundPath) && $backgroundPath !== '' && is_file($backgroundPath)) {
-            $pdf->Image($backgroundPath, 0, 0, 288, 216, '', '', '', false, 300, '', false, false, 0, false, false, false);
-        } else {
-            $pdf->SetFillColor(247, 238, 244);
-            $pdf->Rect(0, 0, 288, 216, 'F');
-        }
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['student'],
-            atenea_certificate_pdf_student_size((string) $data['student_name']),
-            [78, 77, 112],
-            372,
-            278,
-            844,
-            88,
-            (string) $data['student_name'],
-            'C'
-        );
-
-        if (!empty($template['show_course_title'])) {
-            atenea_certificate_pdf_text(
-                $pdf,
-                $fonts['title'],
-                atenea_certificate_pdf_title_size((string) $data['certificate_name']),
-                [214, 63, 71],
-                308,
-                518,
-                834,
-                88,
-                atenea_certificate_upper((string) $data['certificate_name']),
-                'C',
-                0.95
-            );
-        }
-
-        if (!empty($template['show_course_subtitle']) && trim((string) $data['certificate_subtitle']) !== '') {
-            atenea_certificate_pdf_text(
-                $pdf,
-                $fonts['body'],
-                14.0,
-                [52, 47, 64],
-                320,
-                631,
-                812,
-                44,
-                (string) $data['certificate_subtitle'],
-                'C',
-                0.15
-            );
-        }
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body_bold'],
-            11.0,
-            [63, 55, 68],
-            574,
-            942,
-            76,
-            28,
-            (string) $data['day'],
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body_bold'],
-            11.0,
-            [63, 55, 68],
-            839,
-            942,
-            240,
-            28,
-            (string) $data['month'],
-            'C'
-        );
-
-        atenea_certificate_pdf_text(
-            $pdf,
-            $fonts['body_bold'],
-            11.0,
-            [63, 55, 68],
-            1078,
-            942,
-            110,
-            28,
-            (string) $data['year'],
-            'C'
-        );
+        $pdf->SetFillColor(250,248,241); $pdf->Rect(0,0,288,216,'F');
+        $pdf->SetDrawColor(4,104,69); $pdf->SetLineWidth(2); $pdf->Rect(8,8,272,200);
+        $pdf->SetDrawColor(200,161,51); $pdf->SetLineWidth(.7); $pdf->Rect(12,12,264,192);
+        $pdf->SetTextColor(4,104,69); $pdf->SetFont($fonts['title'],'',24); $pdf->SetXY(20,24); $pdf->Cell(248,12,'ATENEA',0,1,'C');
+        $pdf->SetTextColor(13,36,56); $pdf->SetFont($fonts['title'],'',17); $pdf->SetXY(20,43); $pdf->Cell(248,10,'CERTIFICADO DE APROBACION',0,1,'C');
+        $pdf->SetFont($fonts['body'],'',11); $pdf->SetXY(20,62); $pdf->Cell(248,8,'Se otorga el presente certificado a',0,1,'C');
+        $pdf->SetTextColor(4,104,69); $pdf->SetFont($fonts['student'],'',atenea_certificate_pdf_student_size((string)$data['student_name'])); $pdf->SetXY(28,75); $pdf->MultiCell(232,18,(string)$data['student_name'],0,'C');
+        $pdf->SetTextColor(13,36,56); $pdf->SetFont($fonts['body'],'',10); $pdf->SetXY(25,101); $pdf->Cell(238,7,'por haber completado y aprobado satisfactoriamente el curso',0,1,'C');
+        $pdf->SetTextColor(160,125,35); $pdf->SetFont($fonts['title'],'',atenea_certificate_pdf_title_size((string)$data['certificate_name'])); $pdf->SetXY(28,112); $pdf->MultiCell(232,16,atenea_certificate_upper((string)$data['certificate_name']),0,'C');
+        if (trim((string)$data['certificate_subtitle']) !== '') { $pdf->SetTextColor(70,80,76); $pdf->SetFont($fonts['body'],'',9); $pdf->SetXY(35,137); $pdf->MultiCell(218,10,(string)$data['certificate_subtitle'],0,'C'); }
+        $pdf->SetTextColor(13,36,56); $pdf->SetFont($fonts['body'],'',9); $pdf->SetXY(25,163); $pdf->Cell(238,7,'Emitido el '.$data['day'].' de '.$data['month'].' de '.$data['year'],0,1,'C');
+        $pdf->Line(104,184,184,184); $pdf->SetFont($fonts['body_bold'],'',9); $pdf->SetXY(94,185); $pdf->Cell(100,6,'Direccion Academica',0,1,'C');
 
         if (trim((string) $data['certificate_code']) !== '') {
             atenea_certificate_pdf_text(

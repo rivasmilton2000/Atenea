@@ -1,10 +1,53 @@
--- Limpieza logica y auditoria segura de Atenea - fase 2
+-- Limpieza logica y auditoria segura de Atenea
 -- Fecha: 2026-07-10
--- Esta migracion NO elimina tablas ni datos.
--- Documenta las estructuras activas de Atenea y las tablas heredadas
--- que quedan fuera de uso mientras se valida una segunda fase destructiva.
+-- Esta migracion NO elimina tablas ni datos legacy.
+-- Normaliza el origen de registro y el rol de estudiantes reales,
+-- y deja auditadas las estructuras activas / obsoletas del proyecto.
 
 START TRANSACTION;
+
+-- Asegurar soporte para el origen de registro del usuario publico.
+SET @has_public_users := (
+    SELECT COUNT(*)
+    FROM information_schema.tables
+    WHERE table_schema = DATABASE()
+      AND table_name = 'public_users'
+);
+
+SET @has_registration_source := (
+    SELECT COUNT(*)
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = 'public_users'
+      AND column_name = 'REGISTRATION_SOURCE'
+);
+
+SET @alter_public_users_sql := IF(
+    @has_public_users = 1 AND @has_registration_source = 0,
+    "ALTER TABLE public_users ADD COLUMN REGISTRATION_SOURCE VARCHAR(20) NOT NULL DEFAULT 'normal' AFTER GOOGLE_EMAIL",
+    "SELECT 1"
+);
+PREPARE stmt_public_users FROM @alter_public_users_sql;
+EXECUTE stmt_public_users;
+DEALLOCATE PREPARE stmt_public_users;
+
+-- Backfill del origen de registro usando la identidad Google si existe.
+UPDATE public_users
+SET REGISTRATION_SOURCE = CASE
+    WHEN COALESCE(NULLIF(TRIM(REGISTRATION_SOURCE), ''), '') <> '' THEN REGISTRATION_SOURCE
+    WHEN COALESCE(GOOGLE_ID, '') <> '' OR COALESCE(GOOGLE_EMAIL, '') <> '' THEN 'google'
+    ELSE 'normal'
+END
+WHERE COALESCE(NULLIF(TRIM(REGISTRATION_SOURCE), ''), '') = '';
+
+-- Forzar rol estudiante para usuarios publicos reales que quedaron sin TYPE_ID
+-- al venir de flujos heredados o de un registro anterior.
+UPDATE users u
+INNER JOIN public_users pu ON pu.USER_ID = u.ID
+SET u.TYPE_ID = 3
+WHERE (u.TYPE_ID IS NULL OR u.TYPE_ID = 0)
+  AND (u.EMPLOYEE_ID IS NULL OR u.EMPLOYEE_ID = 0)
+  AND (u.ESTUDIANTE_ID IS NULL OR u.ESTUDIANTE_ID = 0);
 
 -- Roles activos y cuentas enlazadas
 SELECT
@@ -82,5 +125,17 @@ ORDER BY table_name;
 -- DROP TABLE inventario;
 -- DROP TABLE academic_charges;
 -- DROP TABLE academic_cycles;
+
+-- Resumen rapido del saneamiento de estudiantes reales
+SELECT
+    u.ID,
+    u.TYPE_ID,
+    t.TYPE,
+    pu.EMAIL,
+    pu.REGISTRATION_SOURCE
+FROM users u
+INNER JOIN public_users pu ON pu.USER_ID = u.ID
+LEFT JOIN type t ON t.TYPE_ID = u.TYPE_ID
+ORDER BY u.ID DESC;
 
 COMMIT;

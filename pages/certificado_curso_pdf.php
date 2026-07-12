@@ -13,7 +13,7 @@ if (!atenea_capacitacion_phase_three_ready($db)) {
     atenea_render_auth_alert(
         'warning',
         'Migracion pendiente',
-        'Debes aplicar Database/migrations/2026_07_09_capacitacion_finalizacion_certificados.sql para generar el PDF del certificado.',
+        'El servicio de certificados no esta disponible temporalmente.',
         'record_escolar.php'
     );
 }

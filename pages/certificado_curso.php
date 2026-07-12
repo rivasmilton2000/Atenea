@@ -28,7 +28,7 @@ if (!atenea_capacitacion_phase_three_ready($db)) {
     atenea_render_auth_alert(
         'warning',
         'Migracion pendiente',
-        'Debes aplicar Database/migrations/2026_07_09_capacitacion_finalizacion_certificados.sql para habilitar el certificado del curso.',
+        'El servicio de certificados no esta disponible temporalmente.',
         'record_escolar.php'
     );
 }
@@ -154,7 +154,7 @@ ob_start();
   </div>
 
   <div class="atenea-certificate-shell">
-    <?php echo $certificateHtml; ?>
+    <iframe class="atenea-certificate-pdf-frame" src="<?php echo dashboard_h($pdfInlineUrl); ?>" title="Vista previa del certificado"></iframe>
   </div>
 <?php else : ?>
   <div class="atenea-certificate-empty">

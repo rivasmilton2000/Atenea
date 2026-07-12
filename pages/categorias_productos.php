@@ -7,8 +7,8 @@ $query = 'SELECT ID, t.TYPE FROM users u JOIN type t ON t.TYPE_ID=u.TYPE_ID WHER
 $result = mysqli_query($db, $query) or die (mysqli_error($db));
 while ($row = mysqli_fetch_assoc($result)) {
     $Aa = $row['TYPE'];
-    if ($Aa=='Personal' || $Aa=='Estudiante' || $Aa=='Docente' || $Aa=='SuperAdmin'){
-        $redirectUrl = ($Aa=='Personal') ? "empleados_vista.php" : (($Aa=='Estudiante') ? "estudiante_vista.php" : (($Aa=='Docente') ? "docentes_vista.php" : "sa_vista.php"));
+    if ($Aa=='Personal' || $Aa=='Estudiante' || $Aa=='Docente'){
+        $redirectUrl = ($Aa=='Personal') ? "empleados_vista.php" : (($Aa=='Estudiante') ? "estudiante_vista.php" : "docentes_vista.php");
         echo "<script>alert('Página restringida! Será redirigido.'); window.location = '$redirectUrl';</script>";
         exit();
     }

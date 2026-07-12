@@ -344,7 +344,46 @@ if (!function_exists('atenea_capacitacion_enrollment_has_video_access')) {
         $courseStatus = atenea_capacitacion_normalize_course_status((string) ($enrollment['estado_curso'] ?? ''));
         $approvalStatus = atenea_capacitacion_normalize_approval_status((string) ($enrollment['estado_aprobacion'] ?? ''));
 
-        return in_array($courseStatus, ['curso_activo', 'activo', 'finalizado'], true) || $approvalStatus === 'aprobado';
+        $paymentStatus = strtolower(trim((string) ($enrollment['pago_estado'] ?? '')));
+
+        return $paymentStatus === 'pagado'
+            && (in_array($courseStatus, ['curso_activo', 'activo', 'finalizado'], true) || $approvalStatus === 'aprobado');
+    }
+}
+
+if (!function_exists('atenea_capacitacion_payment_ready')) {
+    function atenea_capacitacion_payment_ready(mysqli $db): bool
+    {
+        return atenea_db_has_table($db, 'course_payment_requests');
+    }
+}
+
+if (!function_exists('atenea_capacitacion_payment_status_meta')) {
+    function atenea_capacitacion_payment_status_meta(?string $status): array
+    {
+        $map = [
+            'pendiente' => ['label' => 'Pago pendiente', 'class' => 'warning'],
+            'pagado' => ['label' => 'Pago confirmado', 'class' => 'success'],
+            'fallido' => ['label' => 'Pago no confirmado', 'class' => 'danger'],
+            'cancelado' => ['label' => 'Pago cancelado', 'class' => 'secondary'],
+        ];
+        $status = strtolower(trim((string) $status));
+        return $map[$status] ?? ['label' => 'Sin pago', 'class' => 'secondary'];
+    }
+}
+
+if (!function_exists('atenea_capacitacion_fetch_payment_request')) {
+    function atenea_capacitacion_fetch_payment_request(mysqli $db, int $publicUserId, int $programId): ?array
+    {
+        if ($publicUserId <= 0 || $programId <= 0 || !atenea_capacitacion_payment_ready($db)) return null;
+        $stmt = $db->prepare('SELECT * FROM course_payment_requests WHERE public_user_id = ? AND programa_id = ? LIMIT 1');
+        if (!$stmt) return null;
+        $stmt->bind_param('ii', $publicUserId, $programId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result instanceof mysqli_result ? $result->fetch_assoc() : null;
+        $stmt->close();
+        return $row ?: null;
     }
 }
 
@@ -362,8 +401,10 @@ if (!function_exists('atenea_capacitacion_fetch_enrollments_for_public_user')) {
                        pe.imagen AS programa_imagen,
                        pe.nivel AS programa_nivel,
                        pe.instructor AS programa_instructor,
+                       cpr.status AS pago_estado,
                        " . atenea_capacitacion_select_sql($db, 'pe') . "
                 FROM course_enrollments ce
+                INNER JOIN course_payment_requests cpr ON cpr.public_user_id = ce.public_user_id AND cpr.programa_id = ce.programa_id AND cpr.status = 'pagado'
                 INNER JOIN programas_educativos pe ON pe.id = ce.programa_id
                 WHERE ce.public_user_id = ?";
 
@@ -440,6 +481,11 @@ if (!function_exists('atenea_capacitacion_activate_enrollment')) {
             return null;
         }
 
+        $payment = atenea_capacitacion_fetch_payment_request($db, $publicUserId, $programId);
+        if (!$payment || (string) ($payment['status'] ?? '') !== 'pagado') {
+            return null;
+        }
+
         $existing = null;
         $stmtExisting = $db->prepare('SELECT id, estado_aprobacion FROM course_enrollments WHERE public_user_id = ? AND programa_id = ? LIMIT 1');
         if ($stmtExisting) {
@@ -498,6 +544,24 @@ if (!function_exists('atenea_capacitacion_activate_enrollment')) {
         }
 
         return atenea_capacitacion_fetch_active_enrollment_for_public_user($db, $publicUserId, $programId);
+    }
+}
+
+if (!function_exists('atenea_capacitacion_fetch_admin_payments')) {
+    function atenea_capacitacion_fetch_admin_payments(mysqli $db): array
+    {
+        if (!atenea_capacitacion_payment_ready($db)) return [];
+        $sql = "SELECT cpr.*, pe.titulo AS programa_titulo, pu.FIRST_NAME, pu.LAST_NAME, pu.EMAIL,
+                       ce.id AS enrollment_id, ce.estado_curso, ce.estado_aprobacion
+                FROM course_payment_requests cpr
+                INNER JOIN programas_educativos pe ON pe.id=cpr.programa_id
+                INNER JOIN public_users pu ON pu.PUBLIC_USER_ID=cpr.public_user_id
+                LEFT JOIN course_enrollments ce ON ce.public_user_id=cpr.public_user_id AND ce.programa_id=cpr.programa_id
+                ORDER BY FIELD(cpr.status,'pendiente','fallido','cancelado','pagado'), cpr.updated_at DESC";
+        $result = $db->query($sql);
+        $rows = [];
+        while ($result instanceof mysqli_result && ($row = $result->fetch_assoc())) $rows[] = $row;
+        return $rows;
     }
 }
 
@@ -953,10 +1017,12 @@ if (!function_exists('atenea_capacitacion_fetch_enrollment_by_id')) {
                     pe.imagen AS programa_imagen,
                     pe.nivel AS programa_nivel,
                     pe.instructor AS programa_instructor,
+                    cpr.status AS pago_estado,
                     " . atenea_capacitacion_select_sql($db, 'pe') . "
              FROM course_enrollments ce
              INNER JOIN public_users pu ON pu.PUBLIC_USER_ID = ce.public_user_id
              INNER JOIN programas_educativos pe ON pe.id = ce.programa_id
+             LEFT JOIN course_payment_requests cpr ON cpr.public_user_id=ce.public_user_id AND cpr.programa_id=ce.programa_id
              WHERE ce.id = ?
              LIMIT 1"
         );
@@ -998,6 +1064,7 @@ if (!function_exists('atenea_capacitacion_fetch_admin_enrollments')) {
                        pe.imagen AS programa_imagen,
                        pe.nivel AS programa_nivel,
                        pe.instructor AS programa_instructor,
+                       cpr.status AS pago_estado,
                        " . atenea_capacitacion_select_sql($db, 'pe') . "
                 FROM course_enrollments ce
                 INNER JOIN public_users pu ON pu.PUBLIC_USER_ID = ce.public_user_id
@@ -1073,7 +1140,7 @@ if (!function_exists('atenea_capacitacion_fetch_accessible_videos_for_enrollment
     function atenea_capacitacion_fetch_accessible_videos_for_enrollment(mysqli $db, int $enrollmentId): array
     {
         $enrollment = atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
-        if (!$enrollment) {
+        if (!$enrollment || !atenea_capacitacion_enrollment_has_video_access($enrollment)) {
             return [];
         }
 
@@ -1151,7 +1218,7 @@ if (!function_exists('atenea_capacitacion_recalculate_enrollment_progress')) {
     function atenea_capacitacion_recalculate_enrollment_progress(mysqli $db, int $enrollmentId): ?array
     {
         $enrollment = atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
-        if (!$enrollment) {
+        if (!$enrollment || strtolower((string)($enrollment['pago_estado'] ?? '')) !== 'pagado') {
             return null;
         }
 
@@ -1250,7 +1317,8 @@ if (!function_exists('atenea_capacitacion_certificate_eligible')) {
     function atenea_capacitacion_certificate_eligible(array $enrollment): bool
     {
         return atenea_capacitacion_normalize_approval_status((string) ($enrollment['estado_aprobacion'] ?? '')) === 'aprobado'
-            && !empty($enrollment['certificado_disponible']);
+            && !empty($enrollment['certificado_disponible'])
+            && strtolower((string)($enrollment['pago_estado'] ?? '')) === 'pagado';
     }
 }
 
@@ -1258,7 +1326,7 @@ if (!function_exists('atenea_capacitacion_mark_enrollment_finalized')) {
     function atenea_capacitacion_mark_enrollment_finalized(mysqli $db, int $enrollmentId, int $adminUserId = 0): ?array
     {
         $enrollment = atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
-        if (!$enrollment) {
+        if (!$enrollment || strtolower((string)($enrollment['pago_estado'] ?? '')) !== 'pagado') {
             return null;
         }
 
@@ -1289,7 +1357,7 @@ if (!function_exists('atenea_capacitacion_mark_enrollment_approved')) {
     function atenea_capacitacion_mark_enrollment_approved(mysqli $db, int $enrollmentId, int $adminUserId = 0): ?array
     {
         $enrollment = atenea_capacitacion_fetch_enrollment_by_id($db, $enrollmentId);
-        if (!$enrollment) {
+        if (!$enrollment || strtolower((string)($enrollment['pago_estado'] ?? '')) !== 'pagado') {
             return null;
         }
 

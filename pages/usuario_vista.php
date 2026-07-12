@@ -530,7 +530,7 @@ if ($freshUser) {
 $fullName = trim((string) ($profile['FIRST_NAME'] ?? '') . ' ' . (string) ($profile['LAST_NAME'] ?? ''));
 $email = (string) ($profile['EMAIL'] ?? ($_SESSION['EMAIL'] ?? ''));
 $planStatus = (string) ($profile['PLAN_STATUS'] ?? ($_SESSION['PLAN_STATUS'] ?? 'pending'));
-$planStatusLabel = $planStatus === 'active' ? 'Activo' : 'Pendiente de activar';
+$planStatusLabel = $planStatus === 'active' ? 'Cuenta activa' : 'Pendiente de verificacion';
 $accountStatus = (string) ($profile['ACCOUNT_STATUS'] ?? ($_SESSION['PUBLIC_ACCOUNT_STATUS'] ?? '1'));
 $accountStatusLabel = (string) $accountStatus === '1' ? 'Cuenta activa' : 'Cuenta restringida';
 $birthdate = $hasBirthdateColumn ? trim((string) ($profile['BIRTHDATE'] ?? ($_SESSION['BIRTHDATE'] ?? ''))) : '';
@@ -554,7 +554,7 @@ $profilePhotoRelative = $hasProfilePhotoColumn ? trim((string) ($profile['PROFIL
 $profilePhotoUrl = usuario_profile_photo_public_url($profilePhotoRelative);
 $profileInitials = usuario_profile_initials($fullName);
 $username = (string) ($userAccount['USERNAME'] ?? '');
-$roleLabel = 'Usuario registrado';
+$roleLabel = 'Estudiante';
 $googleId = $hasGoogleIdColumn ? trim((string) ($profile['GOOGLE_ID'] ?? ($_SESSION['GOOGLE_SUB'] ?? ''))) : trim((string) ($_SESSION['GOOGLE_SUB'] ?? ''));
 $googleEmail = $hasGoogleEmailColumn ? trim((string) ($profile['GOOGLE_EMAIL'] ?? ($_SESSION['GOOGLE_EMAIL'] ?? ''))) : trim((string) ($_SESSION['GOOGLE_EMAIL'] ?? ''));
 $isGoogleLinked = $googleId !== '' || $googleEmail !== '' || (string) ($_SESSION['AUTH_PROVIDER'] ?? '') === 'google';
@@ -595,6 +595,12 @@ $activeCourseStatusMeta = $activeEnrollment
     : ['label' => 'Sin curso activo', 'class' => 'secondary'];
 $activeCourseTitle = $activeEnrollment ? (string) ($activeEnrollment['programa_titulo'] ?? 'Curso activo') : 'Sin curso activo';
 $activeCourseProgress = $activeEnrollment ? atenea_capacitacion_progress_percentage($activeEnrollment['progreso'] ?? 0) : 0;
+$dashboardPayment = null;
+if (atenea_capacitacion_payment_ready($db) && $publicUserId > 0) {
+    $stmtDashboardPayment = $db->prepare('SELECT status FROM course_payment_requests WHERE public_user_id=? ORDER BY updated_at DESC LIMIT 1');
+    if ($stmtDashboardPayment) { $stmtDashboardPayment->bind_param('i',$publicUserId); $stmtDashboardPayment->execute(); $dashboardPayment=$stmtDashboardPayment->get_result()->fetch_assoc(); $stmtDashboardPayment->close(); }
+}
+$dashboardPaymentMeta = atenea_capacitacion_payment_status_meta((string)($dashboardPayment['status'] ?? ''));
 
 $navSections = atenea_capacitacion_user_nav_sections('usuario_vista.php'); /*
     [
@@ -620,7 +626,7 @@ $cards = [
     ['title' => 'Mi curso activo', 'value' => $activeCourseStatusMeta['label'], 'icon' => 'workspace_premium', 'accent' => 'success', 'href' => 'mi_curso_activo.php', 'metricLabel' => $activeCourseTitle, 'footerLabel' => 'Entrar al curso'],
     ['title' => 'Capacitacion', 'value' => $programCount, 'icon' => 'school', 'accent' => 'primary', 'href' => 'educacion.php', 'metricLabel' => 'Opciones disponibles', 'footerLabel' => 'Explorar oferta'],
     ['title' => 'Productos', 'value' => $productCount, 'icon' => 'storefront', 'accent' => 'success', 'href' => 'productos.php', 'metricLabel' => 'Items visibles', 'footerLabel' => 'Ir a tienda'],
-    ['title' => 'Pagos confirmados', 'value' => $paidOrdersCount, 'icon' => 'payments', 'accent' => 'warning', 'href' => 'carrito.php', 'metricLabel' => 'Compras finalizadas', 'footerLabel' => 'Revisar carrito'],
+    ['title' => 'Estado de pago', 'value' => $dashboardPaymentMeta['label'], 'icon' => 'payments', 'accent' => $dashboardPaymentMeta['class'], 'href' => 'educacion.php', 'metricLabel' => $activeEnrollment ? 'Acceso confirmado' : 'Sin acceso anticipado', 'footerLabel' => 'Ver capacitacion'],
 ];
 /*
 $cards = [

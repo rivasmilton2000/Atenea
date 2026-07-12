@@ -5,9 +5,9 @@ require_once __DIR__ . '/material_module_shell.php';
 $memberId = (int) ($_SESSION['MEMBER_ID'] ?? 0);
 
 module_shell_begin([
-    'roleLabel' => 'Docente',
+    'roleLabel' => 'Docente / Facilitador',
     'profileUrl' => 'docentes_vista_perfil.php?action=edit&id=' . $memberId,
-    'headerText' => 'Tus herramientas académicas conservan la lógica de siempre y ahora se muestran con el frontend unificado del nuevo dashboard.',
+    'headerText' => 'El panel de docentes queda reducido a un espacio de compatibilidad mientras Atenea termina la migracion funcional de facilitadores. Ya no expone asignaturas, notas ni evaluaciones heredadas.',
     'navSections' => [
         [
             'title' => 'Panel',
@@ -16,13 +16,10 @@ module_shell_begin([
             ],
         ],
         [
-            'title' => 'Módulos',
+            'title' => 'Sistema',
             'items' => [
-                ['label' => 'Asignaturas', 'href' => 'docentes_vista_asignaturas.php', 'icon' => 'menu_book', 'match' => ['docentes_vista_asignaturas.php', 'docentes_vista_contenidos.php', 'docentes_vista_evaluaciones.php', 'docentes_vista_entregas.php', 'docentes_vista_estudiantes.php', 'docentes_vista_notas.php']],
-                ['label' => 'Promedios', 'href' => 'docentes_vista_promedios.php', 'icon' => 'analytics', 'match' => ['docentes_vista_promedios.php', 'docentes_vista_promedios1.php']],
-                ['label' => 'Documentación', 'href' => 'docentes_vista_documentacion.php', 'icon' => 'description', 'match' => ['docentes_vista_documentacion.php']],
-                ['label' => 'Cal. actividades', 'href' => 'docentes_vista_calendario.php', 'icon' => 'calendar_month', 'match' => ['docentes_vista_calendario.php']],
-                ['label' => 'Mensajes', 'href' => 'mensajes_docente_lista.php', 'icon' => 'menu_book', 'match' => ['mensajes_docente_lista.php', 'mensajes_docente.php']],
+                ['label' => 'Perfil', 'href' => 'docentes_vista_perfil.php?action=edit&id=' . $memberId, 'icon' => 'person', 'match' => ['docentes_vista_perfil.php']],
+                ['label' => 'Cerrar sesion', 'href' => 'logout.php?redirect=homepage.php', 'icon' => 'logout', 'match' => ['logout.php']],
             ],
         ],
     ],

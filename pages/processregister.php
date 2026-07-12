@@ -136,9 +136,9 @@ try {
     $passwordHash = sha1($password);
 
     if (atenea_db_has_column($db, 'users', 'U_ESTADO')) {
-        $stmtUser = $db->prepare('INSERT INTO users (EMPLOYEE_ID, USERNAME, PASSWORD, TYPE_ID, ESTUDIANTE_ID, U_ESTADO) VALUES (NULL, ?, ?, NULL, NULL, 1)');
+        $stmtUser = $db->prepare('INSERT INTO users (EMPLOYEE_ID, USERNAME, PASSWORD, TYPE_ID, ESTUDIANTE_ID, U_ESTADO) VALUES (NULL, ?, ?, 3, NULL, 1)');
     } else {
-        $stmtUser = $db->prepare('INSERT INTO users (EMPLOYEE_ID, USERNAME, PASSWORD, TYPE_ID, ESTUDIANTE_ID) VALUES (NULL, ?, ?, NULL, NULL)');
+        $stmtUser = $db->prepare('INSERT INTO users (EMPLOYEE_ID, USERNAME, PASSWORD, TYPE_ID, ESTUDIANTE_ID) VALUES (NULL, ?, ?, 3, NULL)');
     }
 
     if (!$stmtUser) {
@@ -207,6 +207,7 @@ try {
     }
 
     $stmtPublic->close();
+    atenea_set_public_registration_source($db, $userId, 'normal');
     mysqli_commit($db);
     unset($_SESSION['register_form']);
 

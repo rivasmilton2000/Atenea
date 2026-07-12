@@ -34,6 +34,7 @@ $email = trim((string) ($payload['email'] ?? ''));
 $firstName = trim((string) ($payload['given_name'] ?? ''));
 $lastName = trim((string) ($payload['family_name'] ?? ''));
 $googleSub = trim((string) ($payload['sub'] ?? ''));
+$requestedRedirect = atenea_resolve_login_redirect((string) ($_SESSION['ATENEA_LOGIN_REDIRECT'] ?? ''), 'usuario_vista.php');
 
 if ($email === '') {
     echo json_encode([
@@ -61,7 +62,10 @@ if ($existingUser) {
 
     $isPublicUser = atenea_user_is_public($existingUser);
     $needsBillingProfile = $isPublicUser && (int) ($existingUser['BILLING_PROFILE_COMPLETED'] ?? 0) !== 1;
-    $redirect = $needsBillingProfile ? 'billing_profile.php?prompt=1' : atenea_dashboard_route_for_user($existingUser);
+    $redirect = $needsBillingProfile
+        ? 'billing_profile.php?prompt=1&return=' . rawurlencode($requestedRedirect)
+        : $requestedRedirect;
+    if (!$needsBillingProfile) unset($_SESSION['ATENEA_LOGIN_REDIRECT']);
 
     echo json_encode([
         'status' => 'success',
@@ -98,12 +102,12 @@ try {
     if (atenea_db_has_column($db, 'users', 'U_ESTADO')) {
         $stmtUser = $db->prepare(
             'INSERT INTO users (EMPLOYEE_ID, USERNAME, PASSWORD, TYPE_ID, ESTUDIANTE_ID, U_ESTADO)
-             VALUES (NULL, ?, ?, NULL, NULL, 1)'
+             VALUES (NULL, ?, ?, 3, NULL, 1)'
         );
     } else {
         $stmtUser = $db->prepare(
             'INSERT INTO users (EMPLOYEE_ID, USERNAME, PASSWORD, TYPE_ID, ESTUDIANTE_ID)
-             VALUES (NULL, ?, ?, NULL, NULL)'
+             VALUES (NULL, ?, ?, 3, NULL)'
         );
     }
 
@@ -161,6 +165,7 @@ try {
 
     $stmtPublic->close();
     atenea_sync_public_google_identity($db, $userId, $email, $googleSub);
+    atenea_set_public_registration_source($db, $userId, 'google');
 
     mysqli_commit($db);
 
@@ -178,16 +183,17 @@ try {
     echo json_encode([
         'status' => 'success',
         'message' => 'Tu cuenta fue creada correctamente con Google.',
-        'redirect' => 'billing_profile.php?prompt=1',
+        'redirect' => 'billing_profile.php?prompt=1&return=' . rawurlencode($requestedRedirect),
         'requires_billing_profile' => true,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 } catch (Throwable $exception) {
     mysqli_rollback($db);
+    error_log('Atenea Google login: ' . $exception->getMessage());
 
     echo json_encode([
         'status' => 'error',
-        'message' => $exception->getMessage(),
+        'message' => 'No pudimos completar el acceso con Google. Intenta nuevamente.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }

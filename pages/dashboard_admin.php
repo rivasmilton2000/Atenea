@@ -4,142 +4,63 @@ confirm_logged_in();
 
 require_once __DIR__ . '/../includes/connection.php';
 require_once __DIR__ . '/../includes/material_dashboard.php';
+require_once __DIR__ . '/../includes/atenea_admin.php';
 
-dashboard_require_role(
-    $db,
-    ['Admin'],
-    [
-        'Personal' => 'empleados_vista.php',
-        'Estudiante' => 'estudiante_vista.php',
-        'Docente' => 'docentes_vista.php',
-        'SuperAdmin' => 'sa_vista.php',
-    ]
-);
+atenea_backoffice_require($db, ['Admin']);
 
-$memberId = (int) $_SESSION['MEMBER_ID'];
-$profileUrl = 'perfil.php?action=edit&id=' . $memberId;
-
-$asignaturasCount = dashboard_count($db, "SELECT COUNT(*) FROM asignaturas WHERE A_ESTADO = 1");
-$personalCount = dashboard_count($db, "SELECT COUNT(*) FROM employee WHERE JOB_ID IN (2, 3) AND E_ESTADO = 1");
-$docentesCount = dashboard_count($db, "SELECT COUNT(*) FROM employee WHERE JOB_ID = 1 AND E_ESTADO = 1");
-$laboresCount = dashboard_count($db, "SELECT COUNT(*) FROM jobs WHERE j_estado = 1");
-$vehiculosCount = dashboard_count($db, "SELECT COUNT(*) FROM vehicles WHERE v_estado = 1");
-$gradosCount = dashboard_count($db, "SELECT COUNT(*) FROM grados WHERE G_ESTADO = 1");
-$docAsignaturasCount = dashboard_count($db, "SELECT COUNT(*) FROM docentes_asignaturas WHERE da_estado = 1");
-$estudiantesCount = dashboard_count($db, "SELECT COUNT(*) FROM estudiantes WHERE estado_estudiante = 1");
-$distribucionCount = dashboard_count($db, "SELECT COUNT(*) FROM estudiantes_docentes WHERE ed_estado = 1");
-$academicPendingCount = atenea_db_has_table($db, 'academic_charges')
-    ? dashboard_count($db, "SELECT COUNT(*) FROM academic_charges WHERE status IN ('pending','partial','overdue')")
-    : 0;
-$inventarioCount = dashboard_count($db, "SELECT COUNT(*) FROM inventario WHERE i_estado = 1");
-$documentacionCount = dashboard_count($db, "SELECT COUNT(*) FROM archivos WHERE a_estado = 1");
-$contenidosCount = dashboard_count($db, "SELECT COUNT(*) FROM contenidos WHERE c_estado = 1");
-$evaluacionesCount = dashboard_count($db, "SELECT COUNT(*) FROM evaluaciones WHERE evaluacion_estado = 1");
-$calendarioCount = dashboard_count($db, "SELECT COUNT(*) FROM actividades WHERE ACT_ESTADO = 1");
-$dteDocumentsCount = atenea_db_has_table($db, 'dte_documents')
-    ? dashboard_count($db, "SELECT COUNT(*) FROM dte_documents")
-    : 0;
-
-$navSections = [
-    [
-        'title' => 'Panel',
-        'items' => [
-            ['label' => 'Inicio', 'href' => 'index.php', 'icon' => 'dashboard', 'active' => true],
-        ],
-    ],
-    [
-        'title' => 'Página principal',
-        'items' => [
-            ['label' => 'About', 'href' => 'about_admin.php', 'icon' => 'info'],
-            ['label' => 'Servicios', 'href' => 'servicios.php', 'icon' => 'design_services'],
-            ['label' => 'Programas de capacitación', 'href' => 'programas_admin.php', 'icon' => 'school'],
-            ['label' => 'Galería', 'href' => 'galeria_home.php', 'icon' => 'photo_library'],
-            ['label' => 'Noticias', 'href' => 'noticias_admin.php', 'icon' => 'newspaper'],
-        ],
-    ],
-    [
-        'title' => 'Módulos',
-        'items' => [
-            ['label' => 'Asignaturas', 'href' => 'asignaturas.php', 'icon' => 'menu_book'],
-            ['label' => 'Personal', 'href' => 'personal.php', 'icon' => 'groups'],
-            ['label' => 'Docentes', 'href' => 'docentes.php', 'icon' => 'co_present'],
-            ['label' => 'Labores', 'href' => 'labores.php', 'icon' => 'work'],
-            ['label' => 'Vehículos', 'href' => 'vehiculos.php', 'icon' => 'directions_car'],
-            ['label' => 'Videos curso', 'href' => 'videos_admin.php', 'icon' => 'play_circle'],
-            ['label' => 'Configuración email', 'href' => 'configmail_admin.php', 'icon' => 'mail'],
-            ['label' => 'Grados', 'href' => 'grados.php', 'icon' => 'domain'],
-            ['label' => 'Doc. asignaturas', 'href' => 'doc_asignaturas.php', 'icon' => 'assignment'],
-            ['label' => 'Estudiantes', 'href' => 'estudiantes.php', 'icon' => 'school'],
-            ['label' => 'Pagos academicos', 'href' => 'pagos_academicos.php', 'icon' => 'payments'],
-            ['label' => 'Dis. asignaturas', 'href' => 'dis_asignaturas.php', 'icon' => 'account_tree'],
-            ['label' => 'Catálogo Atenea', 'href' => 'productos_admin.php', 'icon' => 'storefront'],
-            ['label' => 'Certificados', 'href' => 'certificados_admin.php', 'icon' => 'workspace_premium'],
-            ['label' => 'Facturacion DTE', 'href' => 'dte_config.php', 'icon' => 'receipt_long'],
-            ['label' => 'Documentos DTE', 'href' => 'dte_documents.php', 'icon' => 'description'],
-            ['label' => 'Categorías catálogo', 'href' => 'categorias_productos.php', 'icon' => 'category'],
-            ['label' => 'Inventario', 'href' => 'inventario.php', 'icon' => 'inventory_2'],
-            ['label' => 'Documentación', 'href' => 'documentacion.php', 'icon' => 'description'],
-            ['label' => 'Con. evaluación', 'href' => 'con_evaluacion.php', 'icon' => 'edit_note'],
-            ['label' => 'Evaluaciones', 'href' => 'evaluaciones.php', 'icon' => 'fact_check'],
-            ['label' => 'Cal. actividades', 'href' => 'calendario.php', 'icon' => 'calendar_month'],
-        ],
-    ],
-];
-
-$cards = [
-    ['title' => 'Asignaturas', 'value' => $asignaturasCount, 'icon' => 'menu_book', 'accent' => 'primary', 'href' => 'asignaturas.php', 'metricLabel' => 'Registros activos', 'footerLabel' => 'Administrar módulo'],
-    ['title' => 'Personal', 'value' => $personalCount, 'icon' => 'groups', 'accent' => 'success', 'href' => 'personal.php', 'metricLabel' => 'Colaboradores activos', 'footerLabel' => 'Ver equipo'],
-    ['title' => 'Docentes', 'value' => $docentesCount, 'icon' => 'co_present', 'accent' => 'info', 'href' => 'docentes.php', 'metricLabel' => 'Docentes activos', 'footerLabel' => 'Gestionar docentes'],
-    ['title' => 'Labores', 'value' => $laboresCount, 'icon' => 'work', 'accent' => 'warning', 'href' => 'labores.php', 'metricLabel' => 'Puestos activos', 'footerLabel' => 'Revisar labores'],
-    ['title' => 'Vehículos', 'value' => $vehiculosCount, 'icon' => 'directions_car', 'accent' => 'danger', 'href' => 'vehiculos.php', 'metricLabel' => 'Vehículos activos', 'footerLabel' => 'Ver flota'],
-    ['title' => 'Grados', 'value' => $gradosCount, 'icon' => 'domain', 'accent' => 'dark', 'href' => 'grados.php', 'metricLabel' => 'Niveles disponibles', 'footerLabel' => 'Abrir catálogo'],
-    ['title' => 'Doc. asignaturas', 'value' => $docAsignaturasCount, 'icon' => 'assignment', 'accent' => 'success', 'href' => 'doc_asignaturas.php', 'metricLabel' => 'Asignaciones activas', 'footerLabel' => 'Ver distribución'],
-    ['title' => 'Estudiantes', 'value' => $estudiantesCount, 'icon' => 'school', 'accent' => 'info', 'href' => 'estudiantes.php', 'metricLabel' => 'Alumnos activos', 'footerLabel' => 'Revisar estudiantes'],
-    ['title' => 'Pagos academicos', 'value' => $academicPendingCount, 'icon' => 'payments', 'accent' => 'warning', 'href' => 'pagos_academicos.php', 'metricLabel' => 'Cargos pendientes', 'footerLabel' => 'Gestionar pagos'],
-    ['title' => 'Dis. asignaturas', 'value' => $distribucionCount, 'icon' => 'account_tree', 'accent' => 'warning', 'href' => 'dis_asignaturas.php', 'metricLabel' => 'Asignaciones vigentes', 'footerLabel' => 'Abrir módulo'],
-    ['title' => 'Inventario', 'value' => $inventarioCount, 'icon' => 'inventory_2', 'accent' => 'danger', 'href' => 'inventario.php', 'metricLabel' => 'Items activos', 'footerLabel' => 'Ver inventario'],
-    ['title' => 'Documentación', 'value' => $documentacionCount, 'icon' => 'description', 'accent' => 'dark', 'href' => 'documentacion.php', 'metricLabel' => 'Archivos disponibles', 'footerLabel' => 'Abrir documentos'],
-    ['title' => 'Con. evaluación', 'value' => $contenidosCount, 'icon' => 'edit_note', 'accent' => 'success', 'href' => 'con_evaluacion.php', 'metricLabel' => 'Contenidos activos', 'footerLabel' => 'Gestionar contenidos'],
-    ['title' => 'Evaluaciones', 'value' => $evaluacionesCount, 'icon' => 'fact_check', 'accent' => 'info', 'href' => 'evaluaciones.php', 'metricLabel' => 'Pruebas activas', 'footerLabel' => 'Abrir evaluaciones'],
-    ['title' => 'Calendario', 'value' => $calendarioCount, 'icon' => 'calendar_month', 'accent' => 'warning', 'href' => 'calendario.php', 'metricLabel' => 'Eventos activos', 'footerLabel' => 'Ver agenda'],
-    ['title' => 'Documentos DTE', 'value' => $dteDocumentsCount, 'icon' => 'receipt_long', 'accent' => 'dark', 'href' => 'dte_documents.php', 'metricLabel' => 'DTE registrados', 'footerLabel' => 'Abrir facturacion'],
-];
-
-$quickLinks = [
-    ['label' => 'Gestionar asignaturas', 'href' => 'asignaturas.php', 'icon' => 'menu_book'],
-    ['label' => 'Revisar docentes', 'href' => 'docentes.php', 'icon' => 'co_present'],
-    ['label' => 'Administrar estudiantes', 'href' => 'estudiantes.php', 'icon' => 'school'],
-    ['label' => 'Gestionar pagos academicos', 'href' => 'pagos_academicos.php', 'icon' => 'payments'],
-    ['label' => 'Gestionar certificados', 'href' => 'certificados_admin.php', 'icon' => 'workspace_premium'],
-    ['label' => 'Controlar inventario', 'href' => 'inventario.php', 'icon' => 'inventory_2'],
-    ['label' => 'Configurar DTE', 'href' => 'dte_config.php', 'icon' => 'receipt_long'],
-    ['label' => 'Ver documentos DTE', 'href' => 'dte_documents.php', 'icon' => 'description'],
-    ['label' => 'Abrir documentación', 'href' => 'documentacion.php', 'icon' => 'description'],
-    ['label' => 'Ver calendario', 'href' => 'calendario.php', 'icon' => 'calendar_month'],
-];
-
-$summaryItems = [
-    ['label' => 'Usuario', 'value' => dashboard_user_name()],
-    ['label' => 'Rol', 'value' => 'Administrador'],
-    ['label' => 'Módulos visibles', 'value' => count($navSections[2]['items'])],
-    ['label' => 'Registros monitoreados', 'value' => $asignaturasCount + $personalCount + $docentesCount + $estudiantesCount],
-    ['label' => 'DTE registrados', 'value' => $dteDocumentsCount],
-];
+$studentsCount = atenea_backoffice_registered_students_count($db);
+$coursesCount = atenea_backoffice_count_courses($db);
+$enrollmentsCount = atenea_backoffice_count_active_enrollments($db);
+$videosCount = atenea_backoffice_count_training_videos($db);
+$certificatesCount = atenea_backoffice_count_emitted_certificates($db);
+$ordersCount = atenea_backoffice_count_paid_orders($db);
+$productsCount = atenea_backoffice_count_products($db);
+$activeUsersCount = atenea_backoffice_count_active_users($db);
+$siteStats = atenea_backoffice_fetch_site_stats($db);
 
 dashboard_render_material_page([
-    'pageTitle' => 'Dashboard administrativo',
-    'roleLabel' => 'Administrador',
-    'welcomeTitle' => 'Control general del campus virtual',
-    'welcomeText' => 'Se reemplazó la vista del dashboard por el diseño Bootstrap nuevo, manteniendo intactos los permisos, rutas y consultas del sistema.',
-    'profileUrl' => $profileUrl,
-    'navSections' => $navSections,
-    'cards' => $cards,
-    'quickLinks' => $quickLinks,
-    'summaryItems' => $summaryItems,
+    'pageTitle' => 'Dashboard Atenea',
+    'roleLabel' => atenea_backoffice_role_label(),
+    'welcomeTitle' => 'Operacion central de la plataforma',
+    'welcomeText' => 'Este panel ya muestra solo modulos vigentes de Atenea: estudiantes reales registrados, cursos, inscripciones, videos, certificados, compras, tienda y administracion del sitio.',
+    'profileUrl' => atenea_backoffice_profile_url(),
+    'navSections' => atenea_backoffice_nav_sections('dashboard_admin.php'),
+    'cards' => [
+        ['title' => 'Estudiantes registrados', 'value' => $studentsCount, 'icon' => 'school', 'accent' => 'primary', 'href' => 'estudiantes.php', 'metricLabel' => 'Usuarios reales en la plataforma', 'footerLabel' => 'Ver estudiantes'],
+        ['title' => 'Cursos / Capacitaciones', 'value' => $coursesCount, 'icon' => 'menu_book', 'accent' => 'success', 'href' => 'programas_admin.php', 'metricLabel' => 'Oferta formativa activa', 'footerLabel' => 'Gestionar cursos'],
+        ['title' => 'Inscripciones activas', 'value' => $enrollmentsCount, 'icon' => 'fact_check', 'accent' => 'info', 'href' => 'inscripciones_admin.php', 'metricLabel' => 'Cursos en seguimiento', 'footerLabel' => 'Ver inscripciones'],
+        ['title' => 'Videos de capacitacion', 'value' => $videosCount, 'icon' => 'smart_display', 'accent' => 'warning', 'href' => 'curso_videos_admin.php', 'metricLabel' => 'Material audiovisual activo', 'footerLabel' => 'Administrar videos'],
+        ['title' => 'Certificados emitidos', 'value' => $certificatesCount, 'icon' => 'workspace_premium', 'accent' => 'success', 'href' => 'curso_certificados_admin.php', 'metricLabel' => 'Certificados habilitados', 'footerLabel' => 'Revisar certificados'],
+        ['title' => 'Pagos / Compras', 'value' => $ordersCount, 'icon' => 'payments', 'accent' => 'danger', 'href' => 'compras_admin.php', 'metricLabel' => 'Ordenes pagadas', 'footerLabel' => 'Ver compras'],
+        ['title' => 'Productos / Tienda', 'value' => $productsCount, 'icon' => 'storefront', 'accent' => 'dark', 'href' => 'productos_admin.php', 'metricLabel' => 'Catalogo disponible', 'footerLabel' => 'Abrir tienda'],
+        ['title' => 'Usuarios activos', 'value' => $activeUsersCount, 'icon' => 'group', 'accent' => 'primary', 'href' => 'usuarios_admin.php', 'metricLabel' => 'Cuentas habilitadas', 'footerLabel' => 'Gestionar usuarios'],
+    ],
+    'quickLinks' => [
+        ['label' => 'Gestionar estudiantes', 'href' => 'estudiantes.php', 'icon' => 'school'],
+        ['label' => 'Abrir cursos', 'href' => 'programas_admin.php', 'icon' => 'menu_book'],
+        ['label' => 'Ver inscripciones', 'href' => 'inscripciones_admin.php', 'icon' => 'fact_check'],
+        ['label' => 'Administrar videos', 'href' => 'curso_videos_admin.php', 'icon' => 'smart_display'],
+        ['label' => 'Seguimiento academico', 'href' => 'record_escolar_admin.php', 'icon' => 'history_edu'],
+        ['label' => 'Control de certificados', 'href' => 'curso_certificados_admin.php', 'icon' => 'workspace_premium'],
+        ['label' => 'Pagos y compras', 'href' => 'compras_admin.php', 'icon' => 'payments'],
+        ['label' => 'Contenido del sitio', 'href' => 'pagina_publica_admin.php', 'icon' => 'language'],
+    ],
+    'summaryItems' => [
+        ['label' => 'Rol activo', 'value' => atenea_backoffice_role_label()],
+        ['label' => 'Noticias activas', 'value' => (string) ($siteStats['noticias'] ?? 0)],
+        ['label' => 'Imagenes en galeria', 'value' => (string) ($siteStats['galeria'] ?? 0)],
+        ['label' => 'Cursos publicados', 'value' => (string) ($siteStats['programas'] ?? 0)],
+        ['label' => 'Productos publicados', 'value' => (string) ($siteStats['productos'] ?? 0)],
+    ],
     'heroBadges' => [
-        $asignaturasCount . ' asignaturas activas',
-        $estudiantesCount . ' estudiantes activos',
-        $calendarioCount . ' actividades vigentes',
-        $dteDocumentsCount . ' DTE registrados',
+        $studentsCount . ' estudiantes',
+        $coursesCount . ' cursos',
+        $enrollmentsCount . ' inscripciones',
+        $ordersCount . ' compras pagadas',
+    ],
+    'heroActions' => [
+        ['label' => 'Estudiantes', 'href' => 'estudiantes.php', 'icon' => 'school'],
+        ['label' => 'Videos', 'href' => 'curso_videos_admin.php', 'icon' => 'smart_display', 'variant' => 'outline'],
+        ['label' => 'Compras', 'href' => 'compras_admin.php', 'icon' => 'payments', 'variant' => 'outline'],
     ],
 ]);

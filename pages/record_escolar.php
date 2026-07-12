@@ -27,7 +27,7 @@ if (!atenea_capacitacion_phase_two_ready($db)) {
     atenea_render_auth_alert(
         'warning',
         'Migracion pendiente',
-        'Debes aplicar Database/migrations/2026_07_09_capacitacion_acceso_videos.sql para habilitar el record escolar.',
+        'El record escolar no esta disponible temporalmente.',
         'usuario_vista.php'
     );
 }
@@ -105,8 +105,7 @@ ob_start();
 
 <?php if (!$phaseThreeReady && $enrollments !== []) : ?>
   <div class="alert alert-warning mb-4">
-    Aplica la migracion <code>Database/migrations/2026_07_09_capacitacion_finalizacion_certificados.sql</code> para habilitar
-    finalizacion, aprobacion y certificado dinamico en el record escolar.
+    El seguimiento de finalizacion y certificados no esta disponible temporalmente.
   </div>
 <?php endif; ?>
 
@@ -116,7 +115,7 @@ ob_start();
       <div class="atenea-record-empty">
         <h4 class="mb-3">Todavia no hay registros academicos</h4>
         <p class="text-muted mb-4">
-          Tu record escolar se construira automaticamente cuando confirmes una inscripcion a un curso o certificacion.
+          Tu record escolar se construira cuando el pago sea confirmado y la inscripcion quede activa.
         </p>
         <a href="educacion.php" class="btn btn-primary">Explorar capacitacion</a>
       </div>

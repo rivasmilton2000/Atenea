@@ -9,89 +9,83 @@ dashboard_require_role(
     $db,
     ['Estudiante'],
     [
-        'Personal' => 'empleados_vista.php',
-        'Admin' => 'index.php',
+        'Admin' => 'dashboard_admin.php',
         'Docente' => 'docentes_vista.php',
+        'Personal' => 'empleados_vista.php',
         'SuperAdmin' => 'sa_vista.php',
     ]
 );
 
-$query = "SELECT u.ESTUDIANTE_ID, e.nombres_estudiante, e.apellidos_estudiante, e.carnet_estudiante, g.G_NAME
-          FROM users u
-          JOIN estudiantes e ON u.ESTUDIANTE_ID = e.ESTUDIANTE_ID
-          LEFT JOIN grados g ON g.G_ID = e.grado_id_estudiante
-          WHERE u.ID = " . (int) $_SESSION['MEMBER_ID'];
-$result = mysqli_query($db, $query) or die(mysqli_error($db));
-$row = mysqli_fetch_assoc($result);
-$estudianteId = (int) $row['ESTUDIANTE_ID'];
-$fullName = $row['nombres_estudiante'] . ' ' . $row['apellidos_estudiante'];
-$carnet = $row['carnet_estudiante'];
-$grado = $row['G_NAME'] ?: 'No asignado';
-$profileUrl = 'estudiante_vista_perfil.php?action=edit&id=' . (int) $_SESSION['MEMBER_ID'];
+$memberId = (int) ($_SESSION['MEMBER_ID'] ?? 0);
+$fullName = trim((string) ($_SESSION['nombres_estudiante'] ?? '') . ' ' . (string) ($_SESSION['apellidos_estudiante'] ?? ''));
+$email = '';
 
-$asignaturasCount = dashboard_count($db, "SELECT COUNT(*) FROM estudiantes_docentes WHERE estudiante_id = $estudianteId AND ed_estado = 1");
-$promediosCount = $asignaturasCount;
-$academicPendingCount = atenea_db_has_table($db, 'academic_charges')
-    ? dashboard_count($db, "SELECT COUNT(*) FROM academic_charges WHERE student_id = $estudianteId AND status IN ('pending','partial','overdue')")
-    : 0;
-$calendarioCount = dashboard_count($db, "SELECT COUNT(*) FROM actividades WHERE ACT_ESTADO = 1");
-$mensajesCount = dashboard_count($db, "SELECT COUNT(*) FROM mensajes WHERE estado = 1");
+$stmt = $db->prepare(
+    'SELECT COALESCE(e.nombres_estudiante, ""), COALESCE(e.apellidos_estudiante, ""), COALESCE(e.correo_estudiante, "")
+     FROM users u
+     LEFT JOIN estudiantes e ON e.ESTUDIANTE_ID = u.ESTUDIANTE_ID
+     WHERE u.ID = ?
+     LIMIT 1'
+);
 
-$navSections = [
-    [
-        'title' => 'Panel',
-        'items' => [
-            ['label' => 'Inicio', 'href' => 'estudiante_vista.php', 'icon' => 'dashboard', 'active' => true],
-        ],
-    ],
-    [
-        'title' => 'Módulos',
-        'items' => [
-            ['label' => 'Asignaturas', 'href' => 'estudiantes_vista_asignaturas.php', 'icon' => 'menu_book'],
-            ['label' => 'Promedios', 'href' => 'estudiantes_vista_promedios.php', 'icon' => 'bar_chart'],
-            ['label' => 'Pagos', 'href' => 'estudiante_pagos.php', 'icon' => 'payments'],
-            ['label' => 'Cal. actividades', 'href' => 'estudiantes_vista_calendario.php', 'icon' => 'calendar_month'],
-            ['label' => 'Mensajes', 'href' => 'mensajes_estudiante_lista.php', 'icon' => 'menu_book', 'match' => ['mensajes_estudiante_lista.php', 'mensajes_estudiante.php']],
-        ],
-    ],
-];
+if ($stmt) {
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $stmt->bind_result($firstName, $lastName, $studentEmail);
+    if ($stmt->fetch()) {
+        $candidateName = trim($firstName . ' ' . $lastName);
+        if ($candidateName !== '') {
+            $fullName = $candidateName;
+        }
+        $email = (string) $studentEmail;
+    }
+    $stmt->close();
+}
 
-$cards = [
-    ['title' => 'Mis asignaturas', 'value' => $asignaturasCount, 'icon' => 'menu_book', 'accent' => 'primary', 'href' => 'estudiantes_vista_asignaturas.php', 'metricLabel' => 'Materias asignadas', 'footerLabel' => 'Abrir materias'],
-    ['title' => 'Promedios', 'value' => $promediosCount, 'icon' => 'bar_chart', 'accent' => 'success', 'href' => 'estudiantes_vista_promedios.php', 'metricLabel' => 'Asignaturas evaluables', 'footerLabel' => 'Consultar notas'],
-    ['title' => 'Pagos', 'value' => $academicPendingCount, 'icon' => 'payments', 'accent' => 'warning', 'href' => 'estudiante_pagos.php', 'metricLabel' => 'Cargos pendientes', 'footerLabel' => 'Ver estado de cuenta'],
-    ['title' => 'Calendario', 'value' => $calendarioCount, 'icon' => 'calendar_month', 'accent' => 'info', 'href' => 'estudiantes_vista_calendario.php', 'metricLabel' => 'Eventos visibles', 'footerLabel' => 'Ver agenda'],
-    ['title' => 'Mensajes', 'value' => $mensajesCount, 'icon' => 'menu_book', 'accent' => 'success', 'href' => 'mensajes_estudiante_lista.php', 'metricLabel' => 'Mensajes visibles', 'footerLabel' => 'Ver mensajes'],
-];
+if ($fullName === '') {
+    $fullName = dashboard_user_name() !== '' ? dashboard_user_name() : 'Cuenta legacy de estudiante';
+}
 
-$quickLinks = [
-    ['label' => 'Entrar a mis asignaturas', 'href' => 'estudiantes_vista_asignaturas.php', 'icon' => 'menu_book'],
-    ['label' => 'Consultar promedios', 'href' => 'estudiantes_vista_promedios.php', 'icon' => 'bar_chart'],
-    ['label' => 'Ver pagos academicos', 'href' => 'estudiante_pagos.php', 'icon' => 'payments'],
-    ['label' => 'Abrir calendario', 'href' => 'estudiantes_vista_calendario.php', 'icon' => 'calendar_month'],
-    ['label' => 'Ver mi perfil', 'href' => $profileUrl, 'icon' => 'person'],
-];
-
-$summaryItems = [
-    ['label' => 'Nombre', 'value' => $fullName],
-    ['label' => 'Rol', 'value' => 'Estudiante'],
-    ['label' => 'Grado', 'value' => $grado],
-    ['label' => 'Carnet', 'value' => $carnet],
-];
+$profileUrl = 'estudiante_vista_perfil.php?action=edit&id=' . $memberId;
 
 dashboard_render_material_page([
-    'pageTitle' => 'Dashboard estudiante',
+    'pageTitle' => 'Panel de estudiante',
     'roleLabel' => 'Estudiante',
-    'welcomeTitle' => 'Tu espacio académico',
-    'welcomeText' => 'Tus accesos a materias, promedios y calendario siguen funcionando igual; solo se renovó la presentación visual del dashboard con el diseño nuevo.',
+    'welcomeTitle' => 'Acceso legado en modo compatibilidad',
+    'welcomeText' => 'Este rol se mantiene solo para cuentas antiguas. El flujo principal de Atenea para estudiantes registrados ahora vive en el panel de usuario con cursos, videos, record escolar, certificados y compras.',
     'profileUrl' => $profileUrl,
-    'navSections' => $navSections,
-    'cards' => $cards,
-    'quickLinks' => $quickLinks,
-    'summaryItems' => $summaryItems,
+    'navSections' => [
+        [
+            'title' => 'Panel',
+            'items' => [
+                ['label' => 'Inicio', 'href' => 'estudiante_vista.php', 'icon' => 'dashboard', 'active' => true],
+            ],
+        ],
+        [
+            'title' => 'Sistema',
+            'items' => [
+                ['label' => 'Perfil', 'href' => $profileUrl, 'icon' => 'person'],
+                ['label' => 'Cerrar sesion', 'href' => 'logout.php?redirect=homepage.php', 'icon' => 'logout'],
+            ],
+        ],
+    ],
+    'cards' => [
+        ['title' => 'Perfil', 'value' => 'Disponible', 'icon' => 'person', 'accent' => 'primary', 'href' => $profileUrl, 'metricLabel' => 'Actualiza tus datos', 'footerLabel' => 'Abrir perfil'],
+        ['title' => 'Rol', 'value' => 'Legacy', 'icon' => 'info', 'accent' => 'warning', 'href' => 'homepage.php', 'metricLabel' => 'Compatibilidad temporal', 'footerLabel' => 'Ir al sitio'],
+        ['title' => 'Sesion', 'value' => 'Activa', 'icon' => 'verified_user', 'accent' => 'success', 'href' => 'logout.php?redirect=homepage.php', 'metricLabel' => 'Cuenta autenticada', 'footerLabel' => 'Cerrar sesion'],
+    ],
+    'quickLinks' => [
+        ['label' => 'Ver mi perfil', 'href' => $profileUrl, 'icon' => 'person'],
+        ['label' => 'Abrir sitio publico', 'href' => 'homepage.php', 'icon' => 'language'],
+    ],
+    'summaryItems' => [
+        ['label' => 'Nombre', 'value' => $fullName],
+        ['label' => 'Correo', 'value' => $email !== '' ? $email : 'No disponible'],
+        ['label' => 'Rol', 'value' => 'Estudiante legacy'],
+    ],
     'heroBadges' => [
-        $grado,
-        $asignaturasCount . ' asignaturas activas',
-        $calendarioCount . ' actividades disponibles',
+        'Panel simplificado',
+        'Sin modulos legacy',
+        'Perfil disponible',
     ],
 ]);

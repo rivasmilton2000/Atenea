@@ -271,11 +271,11 @@ if (!function_exists('module_shell_begin')) {
   <link href="../vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
   <link href="../vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
   <link href="../css/sb-admin-2.min.css" rel="stylesheet">
-  <link href="../css/atenea-ui.css" rel="stylesheet">
   <link href="<?php echo dashboard_h(dashboard_material_asset('css/nucleo-icons.css')); ?>" rel="stylesheet">
   <link href="<?php echo dashboard_h(dashboard_material_asset('css/nucleo-svg.css')); ?>" rel="stylesheet">
   <link href="<?php echo dashboard_h(dashboard_material_asset('css/material-dashboard.min.css')); ?>" rel="stylesheet">
   <link href="../css/cecsb-material-dashboard.css" rel="stylesheet">
+  <link href="../css/atenea-ui.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="../js/atenea-ui.js" defer></script>
 </head>
