@@ -1,0 +1,7 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__, 2) . '/includes/auth.php';
+exigirRol(['docente']);
+$usuario = obtenerUsuarioActual();
+?>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Panel docente | Atenea</title><link rel="icon" type="image/png" href="<?= atenea_url('img/atenea-logo.png') ?>"><link href="<?= atenea_url('src/website/assets/vendor/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet"><style>body{min-height:100vh;background:#f8f5ed;color:#171717}.card{max-width:700px;border:0;border-top:5px solid #c49a3a;border-radius:16px;box-shadow:0 15px 50px #0001}.logo{width:180px;height:110px;object-fit:contain}.btn{background:#c49a3a;color:#fff}.btn:hover{background:#8f6b20;color:#fff}</style></head><body><main class="container min-vh-100 d-flex align-items-center justify-content-center py-4"><section class="card w-100"><div class="card-body p-4 p-md-5 text-center"><img class="logo" src="<?= atenea_url('img/atenea-logo.png') ?>" alt="Atenea Escuela de Naturopatía Holística"><h1>Panel del docente en construcción</h1><p class="lead">Bienvenido, <?= atenea_e((string) $usuario['nombre']) ?>. Este espacio estará disponible próximamente.</p><div class="d-flex gap-2 justify-content-center flex-wrap"><a class="btn" href="<?= atenea_url('index.php') ?>">Ir al sitio</a><a class="btn" href="<?= atenea_url('logout.php') ?>">Cerrar sesión</a></div></div></section></main></body></html>

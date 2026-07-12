@@ -117,6 +117,13 @@ h6 {
   object-position: left center;
 }
 
+.atenea-user-menu { margin-left: 20px; }
+.atenea-user-toggle { display: inline-flex; align-items: center; gap: 8px; max-width: 210px; padding: 5px 12px 5px 5px; border: 1px solid color-mix(in srgb, var(--atenea-dorado), transparent 55%); border-radius: 50px; color: var(--atenea-negro); background: var(--atenea-blanco); }
+.atenea-user-toggle:hover, .atenea-user-toggle:focus { border-color: var(--atenea-dorado); color: var(--atenea-dorado-oscuro); }
+.atenea-user-toggle img, .atenea-user-avatar { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%; object-fit: cover; }
+.atenea-user-avatar { display: inline-flex; align-items: center; justify-content: center; color: var(--atenea-blanco); background: var(--atenea-dorado); font-weight: 700; }
+.atenea-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .btn-atenea {
   display: inline-flex;
   align-items: center;
@@ -172,6 +179,8 @@ h6 {
   .header .btn-getstarted {
     margin: 0 42px 0 0;
   }
+
+  .atenea-user-menu { margin-left: 0; margin-right: 42px; }
 }
 
 @media (max-width: 575px) {
@@ -190,6 +199,9 @@ h6 {
     font-size: 12px;
     white-space: nowrap;
   }
+
+  .atenea-user-toggle { max-width: 105px; padding-right: 8px; }
+  .atenea-user-name { max-width: 48px; font-size: 12px; }
 
   .hero .container {
     padding-inline: 20px;

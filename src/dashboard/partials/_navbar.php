@@ -1,3 +1,4 @@
+<?php require_once __DIR__ . '/../_auth_guard.php'; ?>
 <nav class="navbar default-layout col-lg-12 col-12 p-0 fixed-top d-flex align-items-top flex-row">
   <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-start">
     <div class="me-3">

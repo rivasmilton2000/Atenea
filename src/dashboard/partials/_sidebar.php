@@ -1,3 +1,4 @@
+<?php require_once __DIR__ . '/../_auth_guard.php'; ?>
 <nav class="sidebar sidebar-offcanvas" id="sidebar">
   <ul class="nav">
     <li class="nav-item">

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/auth.php';
+$usuarioNavbar = obtenerUsuarioActual();
 $navItems = [
     'inicio' => ['Inicio', 'index.php'],
     'nosotros' => ['Nosotros', 'src/website/about.php'],
@@ -25,7 +27,24 @@ $navItems = [
       <i class="mobile-nav-toggle d-xl-none bi bi-list" role="button" tabindex="0" aria-label="Abrir menú" aria-expanded="false"></i>
     </nav>
 
-    <?php // Punto preparado para sustituir el botón por el nombre/menú de una sesión activa. ?>
-    <a class="btn-getstarted" href="<?= atenea_url('src/login/login.php') ?>">Iniciar sesión</a>
+    <?php if ($usuarioNavbar === null): ?>
+      <a class="btn-getstarted" href="<?= atenea_url('login.php') ?>">Iniciar sesión</a>
+    <?php else: ?>
+      <div class="dropdown atenea-user-menu">
+        <button class="btn atenea-user-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <?php if (!empty($usuarioNavbar['foto'])): ?>
+            <img src="<?= atenea_url('uploads/perfiles/' . rawurlencode(basename((string) $usuarioNavbar['foto']))) ?>" alt="Foto de <?= atenea_e((string) $usuarioNavbar['nombre']) ?>">
+          <?php else: ?>
+            <span class="atenea-user-avatar" aria-hidden="true"><?= atenea_e(mb_strtoupper(mb_substr((string) $usuarioNavbar['nombre'], 0, 1))) ?></span>
+          <?php endif; ?>
+          <span class="atenea-user-name"><?= atenea_e((string) $usuarioNavbar['nombre']) ?></span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="<?= rutaPanelPorRol((string) $usuarioNavbar['rol']) ?>"><i class="bi bi-grid me-2"></i>Mi panel</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="<?= atenea_url('logout.php') ?>"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>
+        </ul>
+      </div>
+    <?php endif; ?>
   </div>
 </header>

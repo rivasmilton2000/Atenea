@@ -1,5 +1,4 @@
-
-
+<?php require_once __DIR__ . '/_auth_guard.php'; ?>
 <!doctype html>
 <html lang="en" dir="ltr">
   <head>
