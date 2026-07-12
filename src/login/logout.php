@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/session.php';
-require_once __DIR__ . '/includes/config.php';
+require_once dirname(__DIR__, 2) . '/includes/session.php';
+require_once dirname(__DIR__, 2) . '/includes/config.php';
 
 $_SESSION = [];
 

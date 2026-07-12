@@ -32,7 +32,7 @@ function rutaPanelPorRol(string $rol): string
         'admin' => atenea_url('src/admin_auth/index.php'),
         'usuario' => atenea_url('src/estudiantes/index.php'),
         'docente' => atenea_url('src/docente/index.php'),
-        default => atenea_url('login.php'),
+        default => atenea_url('src/login/login.php'),
     };
 }
 
@@ -57,7 +57,7 @@ function exigirAutenticacion(): void
     }
 
     $_SESSION['mensaje_auth'] = 'Debes iniciar sesión para acceder a esa página.';
-    header('Location: ' . atenea_url('login.php'));
+    header('Location: ' . atenea_url('src/login/login.php'));
     exit;
 }
 

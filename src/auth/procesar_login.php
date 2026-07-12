@@ -5,7 +5,7 @@ require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/conexion.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    header('Location: ' . atenea_url('login.php'));
+    header('Location: ' . atenea_url('src/login/login.php'));
     exit;
 }
 
@@ -15,7 +15,7 @@ $intentos = is_array($intentos) ? array_values(array_filter($intentos, static fn
 
 if (count($intentos) >= 5) {
     $_SESSION['mensaje_auth'] = 'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.';
-    header('Location: ' . atenea_url('login.php'));
+    header('Location: ' . atenea_url('src/login/login.php'));
     exit;
 }
 
@@ -26,13 +26,13 @@ $_SESSION['login_correo'] = substr($correo, 0, 190);
 
 if (!validarTokenCsrf($token)) {
     $_SESSION['mensaje_auth'] = 'La solicitud expiró. Intenta iniciar sesión nuevamente.';
-    header('Location: ' . atenea_url('login.php'));
+    header('Location: ' . atenea_url('src/login/login.php'));
     exit;
 }
 
 if (strlen($correo) > 190 || strlen($password) > 255 || !filter_var($correo, FILTER_VALIDATE_EMAIL) || $password === '') {
     $_SESSION['mensaje_auth'] = 'Ingresa un correo electrónico y una contraseña válidos.';
-    header('Location: ' . atenea_url('login.php'));
+    header('Location: ' . atenea_url('src/login/login.php'));
     exit;
 }
 
@@ -50,7 +50,7 @@ try {
         $intentos[] = $ahora;
         $_SESSION['login_intentos'] = $intentos;
         $_SESSION['mensaje_auth'] = 'El correo o la contraseña no son válidos, o la cuenta no está disponible.';
-        header('Location: ' . atenea_url('login.php'));
+        header('Location: ' . atenea_url('src/login/login.php'));
         exit;
     }
 
@@ -68,6 +68,6 @@ try {
 } catch (Throwable $error) {
     error_log('Error de autenticación en Atenea: ' . $error->getMessage());
     $_SESSION['mensaje_auth'] = 'No fue posible iniciar sesión en este momento. Intenta nuevamente más tarde.';
-    header('Location: ' . atenea_url('login.php'));
+    header('Location: ' . atenea_url('src/login/login.php'));
     exit;
 }

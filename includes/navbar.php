@@ -28,7 +28,7 @@ $navItems = [
     </nav>
 
     <?php if ($usuarioNavbar === null): ?>
-      <a class="btn-getstarted" href="<?= atenea_url('login.php') ?>">Iniciar sesión</a>
+      <a class="btn-getstarted" href="<?= atenea_url('src/login/login.php') ?>">Iniciar sesión</a>
     <?php else: ?>
       <div class="dropdown atenea-user-menu">
         <button class="btn atenea-user-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -42,7 +42,7 @@ $navItems = [
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="<?= rutaPanelPorRol((string) $usuarioNavbar['rol']) ?>"><i class="bi bi-grid me-2"></i>Mi panel</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item" href="<?= atenea_url('logout.php') ?>"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>
+          <li><a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>
         </ul>
       </div>
     <?php endif; ?>
