@@ -1,0 +1,650 @@
+body.atenea-user-dashboard {
+  --primary: #0a8b59;
+  --primary-dark: #066b43;
+  --primary-light: #eaf7f0;
+  --surface: #ffffff;
+  --surface-soft: #f6fbf8;
+  --border: rgba(6, 107, 67, 0.14);
+  --text: #16352a;
+  --muted: #6b8378;
+  --radius: 26px;
+  --shadow: 0 24px 60px rgba(10, 44, 32, 0.09);
+  --shadow-soft: 0 16px 38px rgba(10, 44, 32, 0.06);
+  background:
+    radial-gradient(circle at top left, rgba(10, 139, 89, 0.16), transparent 30%),
+    radial-gradient(circle at top right, rgba(144, 231, 192, 0.38), transparent 28%),
+    linear-gradient(180deg, #f2fbf5 0%, #f8fbf9 42%, #fcfefd 100%);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+body.atenea-user-dashboard .main-content {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+body.atenea-user-dashboard #sidenav-main {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 28px 72px rgba(10, 44, 32, 0.12);
+}
+
+body.atenea-user-dashboard .sidenav .nav-link {
+  border-radius: 16px;
+  margin-inline: 0.55rem;
+  min-height: 48px;
+}
+
+body.atenea-user-dashboard .sidenav .nav-link.active {
+  background-image: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  box-shadow: 0 18px 32px rgba(10, 139, 89, 0.22);
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-topbar {
+  margin-top: clamp(0.75rem, 2vw, 1.15rem);
+  margin-inline: clamp(0.75rem, 2.2vw, 1.45rem) !important;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-soft);
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-topbar__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem 1.15rem;
+  align-items: start;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-heading,
+body.atenea-user-dashboard .cecsb-dashboard-topbar__actions,
+body.atenea-user-dashboard .cecsb-dashboard-topbar__nav,
+body.atenea-user-dashboard .cecsb-dashboard-account,
+body.atenea-user-dashboard .cecsb-dashboard-account__meta,
+body.atenea-user-dashboard .cecsb-dashboard-panel,
+body.atenea-user-dashboard .cecsb-dashboard-hero,
+body.atenea-user-dashboard .cecsb-stat-card,
+body.atenea-user-dashboard .cecsb-quick-link {
+  min-width: 0;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-heading .breadcrumb {
+  gap: 0.18rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-heading .breadcrumb-item,
+body.atenea-user-dashboard .cecsb-dashboard-heading .breadcrumb-item a {
+  color: var(--muted) !important;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-heading h6 {
+  color: var(--text);
+  font-size: clamp(1.4rem, 2.6vw, 1.95rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-topbar__actions.collapse:not(.show) {
+  display: block;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-topbar__nav {
+  gap: 0.75rem;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-topbar__toggle-item {
+  padding-left: 0 !important;
+}
+
+body.atenea-user-dashboard .cecsb-sidenav-toggle {
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+body.atenea-user-dashboard .cecsb-sidenav-toggle:hover,
+body.atenea-user-dashboard .cecsb-sidenav-toggle:focus-visible {
+  background: var(--primary-light);
+  color: var(--primary);
+  outline: none;
+}
+
+body.atenea-user-dashboard .atenea-user-menu {
+  width: 100%;
+  max-width: 320px;
+}
+
+body.atenea-user-dashboard .atenea-user-menu-trigger {
+  width: 100%;
+  min-height: 76px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf9 100%);
+  box-shadow: none;
+}
+
+body.atenea-user-dashboard .atenea-user-menu-trigger:hover,
+body.atenea-user-dashboard .atenea-user-menu-trigger:focus-visible {
+  border-color: rgba(10, 139, 89, 0.28);
+  box-shadow: 0 18px 36px rgba(10, 44, 32, 0.1);
+}
+
+body.atenea-user-dashboard .atenea-user-menu-trigger-avatar,
+body.atenea-user-dashboard .atenea-user-dropdown-avatar {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+body.atenea-user-dashboard .atenea-user-menu-trigger-badge {
+  background: rgba(10, 139, 89, 0.1);
+  color: var(--primary);
+}
+
+body.atenea-user-dashboard .atenea-user-menu-trigger-name,
+body.atenea-user-dashboard .atenea-user-dropdown-copy strong {
+  color: var(--text);
+}
+
+body.atenea-user-dashboard .atenea-user-menu-trigger-meta,
+body.atenea-user-dashboard .atenea-user-dropdown-copy span {
+  color: var(--muted);
+}
+
+body.atenea-user-dashboard .atenea-user-dropdown {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 52px rgba(10, 44, 32, 0.14);
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-page {
+  max-width: 1380px;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 2.4vw, 2.2rem) !important;
+  padding-top: clamp(1rem, 2vw, 1.75rem) !important;
+  padding-bottom: clamp(1.35rem, 2vw, 2rem) !important;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-overview,
+body.atenea-user-dashboard .cecsb-dashboard-stats,
+body.atenea-user-dashboard .cecsb-dashboard-secondary {
+  --bs-gutter-x: 1.25rem;
+  --bs-gutter-y: 1.25rem;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero,
+body.atenea-user-dashboard .cecsb-dashboard-account,
+body.atenea-user-dashboard .cecsb-stat-card,
+body.atenea-user-dashboard .cecsb-dashboard-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero {
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 28%),
+    linear-gradient(145deg, var(--primary-dark) 0%, var(--primary) 55%, #2cb67f 100%);
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero::after {
+  width: 240px;
+  height: 240px;
+  right: -88px;
+  top: -86px;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero .card-body {
+  position: relative;
+  z-index: 1;
+  padding: clamp(1.35rem, 2.6vw, 2.15rem) !important;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero .text-sm.text-uppercase {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero h3 {
+  max-width: 11ch;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  line-height: 1.05;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero .text-white-50 {
+  max-width: 60ch;
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero__badges {
+  gap: 0.7rem !important;
+}
+
+body.atenea-user-dashboard .cecsb-hero-badge {
+  align-items: center;
+  min-height: 38px;
+  padding: 0.65rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: normal;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero__actions {
+  gap: 0.8rem !important;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-hero-action {
+  min-height: 48px;
+  border-radius: 16px;
+  padding: 0.8rem 1.1rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-account {
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf9 100%);
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-account .card-body {
+  display: grid;
+  gap: 1.1rem;
+  padding: clamp(1.25rem, 2vw, 1.75rem) !important;
+}
+
+body.atenea-user-dashboard .cecsb-user-avatar {
+  width: 82px;
+  height: 82px;
+  border: 4px solid rgba(10, 139, 89, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 16px 34px rgba(10, 44, 32, 0.08);
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-account__eyebrow {
+  color: var(--primary);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-account h5 {
+  color: var(--text);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-account__meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-account__meta-item {
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(6, 107, 67, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+body.atenea-user-dashboard .cecsb-meta-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.35rem;
+}
+
+body.atenea-user-dashboard .cecsb-meta-value {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-account__actions {
+  gap: 0.8rem !important;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-account__actions .btn {
+  flex: 1 1 180px;
+  min-height: 46px;
+  border-radius: 16px;
+  font-weight: 800;
+}
+
+body.atenea-user-dashboard .cecsb-stat-card,
+body.atenea-user-dashboard .cecsb-dashboard-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf9 100%);
+}
+
+body.atenea-user-dashboard .cecsb-stat-card .card-header,
+body.atenea-user-dashboard .cecsb-dashboard-panel .card-header {
+  border-bottom: 1px solid rgba(6, 107, 67, 0.08);
+  background: transparent;
+  padding: 1.2rem 1.2rem 1rem;
+}
+
+body.atenea-user-dashboard .cecsb-stat-card .card-footer,
+body.atenea-user-dashboard .cecsb-dashboard-panel .card-body {
+  padding: 1rem 1.2rem 1.25rem;
+}
+
+body.atenea-user-dashboard .cecsb-stat-card .horizontal {
+  border-top-color: rgba(6, 107, 67, 0.08);
+}
+
+body.atenea-user-dashboard .cecsb-stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 28px 62px rgba(10, 44, 32, 0.12);
+}
+
+body.atenea-user-dashboard .cecsb-stat-card p.text-uppercase,
+body.atenea-user-dashboard .cecsb-dashboard-panel .card-header p {
+  line-height: 1.55;
+}
+
+body.atenea-user-dashboard .cecsb-stat-card h4 {
+  color: var(--text);
+  font-size: clamp(1.85rem, 2.6vw, 2.15rem);
+  font-weight: 800;
+}
+
+body.atenea-user-dashboard .cecsb-stat-card .icon-shape {
+  border-radius: 20px;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-panel .card-header h6 {
+  color: var(--text);
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+body.atenea-user-dashboard .cecsb-dashboard-panel .card-header p {
+  color: var(--muted);
+}
+
+body.atenea-user-dashboard .cecsb-quick-link {
+  gap: 0.9rem;
+  min-height: 82px;
+  border: 1px solid rgba(6, 107, 67, 0.12);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: none;
+}
+
+body.atenea-user-dashboard .cecsb-quick-link:hover {
+  border-color: rgba(10, 139, 89, 0.24);
+  background: var(--surface);
+  color: var(--primary);
+}
+
+body.atenea-user-dashboard .cecsb-quick-link .material-symbols-rounded {
+  width: 3rem;
+  height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 16px;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+body.atenea-user-dashboard .cecsb-summary-list .list-group-item {
+  border-bottom-color: rgba(6, 107, 67, 0.1);
+  gap: 0.75rem;
+  padding-block: 0.92rem;
+}
+
+body.atenea-user-dashboard .cecsb-summary-list .list-group-item > span:last-child {
+  max-width: 54%;
+  line-height: 1.45;
+}
+
+body.atenea-user-dashboard .footer {
+  padding-top: 0.65rem !important;
+}
+
+body.atenea-user-dashboard .footer .nav-link,
+body.atenea-user-dashboard .footer .copyright {
+  color: var(--muted) !important;
+}
+
+body.atenea-user-dashboard #usuarioProfileModal.profile-modal-overlay {
+  padding: clamp(10px, 3vw, 22px) !important;
+  background: rgba(11, 30, 22, 0.6);
+}
+
+body.atenea-user-dashboard #usuarioProfileModal .modal-content.atenea-profile-modal {
+  border: 1px solid rgba(6, 107, 67, 0.12);
+  background: linear-gradient(180deg, #f7fbf8 0%, #ffffff 100%);
+}
+
+body.atenea-user-dashboard #usuarioProfileModal .profile-form-actions {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #ffffff 36%);
+}
+
+@media (max-width: 1199.98px) {
+  body.atenea-user-dashboard .cecsb-dashboard-topbar__inner {
+    grid-template-columns: 1fr;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-topbar__nav {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  body.atenea-user-dashboard .atenea-user-menu {
+    max-width: none;
+    flex: 1 1 280px;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-account__meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 991.98px) {
+  body.atenea-user-dashboard .cecsb-dashboard-account__meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-hero h3,
+  body.atenea-user-dashboard .cecsb-dashboard-hero .text-white-50 {
+    max-width: none;
+  }
+
+  body.atenea-user-dashboard #usuarioProfileModal .profile-side-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  body.atenea-user-dashboard .cecsb-dashboard-topbar {
+    margin-inline: 0.75rem !important;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-page {
+    padding-inline: 0.9rem !important;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-hero .card-body,
+  body.atenea-user-dashboard .cecsb-dashboard-account .card-body,
+  body.atenea-user-dashboard .cecsb-stat-card .card-header,
+  body.atenea-user-dashboard .cecsb-stat-card .card-footer,
+  body.atenea-user-dashboard .cecsb-dashboard-panel .card-header,
+  body.atenea-user-dashboard .cecsb-dashboard-panel .card-body {
+    padding-inline: 1rem !important;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-hero__badges,
+  body.atenea-user-dashboard .cecsb-dashboard-hero__actions {
+    display: grid !important;
+    grid-template-columns: 1fr;
+  }
+
+  body.atenea-user-dashboard .cecsb-hero-badge,
+  body.atenea-user-dashboard .cecsb-dashboard-hero-action {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-account__meta {
+    grid-template-columns: 1fr;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-account__actions .btn {
+    width: 100%;
+  }
+
+  body.atenea-user-dashboard .cecsb-summary-list .list-group-item {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  body.atenea-user-dashboard .cecsb-summary-list .list-group-item > span:last-child {
+    max-width: 100%;
+    text-align: left !important;
+  }
+
+  body.atenea-user-dashboard #usuarioProfileModal .profile-side-cards,
+  body.atenea-user-dashboard #usuarioProfileModal .profile-info-grid,
+  body.atenea-user-dashboard #usuarioProfileModal .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.atenea-user-dashboard #usuarioProfileModal .atenea-profile-inline-note {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 390px) {
+  body.atenea-user-dashboard .cecsb-dashboard-heading h6 {
+    font-size: 1.26rem;
+  }
+
+  body.atenea-user-dashboard .atenea-user-menu-trigger {
+    min-height: 72px;
+    padding: 0.75rem;
+    gap: 0.6rem;
+  }
+
+  body.atenea-user-dashboard .atenea-user-menu-trigger-avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  body.atenea-user-dashboard .cecsb-user-avatar {
+    width: 74px;
+    height: 74px;
+    border-radius: 20px;
+  }
+
+  body.atenea-user-dashboard .cecsb-quick-link {
+    min-height: 74px;
+    padding: 0.9rem;
+  }
+
+  body.atenea-user-dashboard #usuarioProfileModal .atenea-profile-tab-btn {
+    padding: 0.72rem 0.84rem;
+    font-size: 0.86rem;
+  }
+}
+
+@media (max-width: 344px) {
+  body.atenea-user-dashboard .cecsb-dashboard-topbar {
+    margin-inline: 0.5rem !important;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-page {
+    padding-inline: 0.75rem !important;
+  }
+
+  body.atenea-user-dashboard .cecsb-sidenav-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  body.atenea-user-dashboard .atenea-user-menu-trigger {
+    min-height: 70px;
+    padding: 0.68rem 0.7rem;
+  }
+
+  body.atenea-user-dashboard .atenea-user-menu-trigger-main {
+    gap: 0.6rem;
+  }
+
+  body.atenea-user-dashboard .atenea-user-menu-trigger-name {
+    font-size: 0.9rem;
+    white-space: normal;
+  }
+
+  body.atenea-user-dashboard .atenea-user-menu-trigger-badge {
+    white-space: normal;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-hero h3 {
+    font-size: 1.55rem;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-hero .text-white-50 {
+    font-size: 0.9rem;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-account__meta-item {
+    padding: 0.85rem 0.9rem;
+  }
+
+  body.atenea-user-dashboard .cecsb-quick-link span {
+    font-size: 0.92rem;
+  }
+
+  body.atenea-user-dashboard #usuarioProfileModal .modal-header.atenea-profile-modal__header,
+  body.atenea-user-dashboard #usuarioProfileModal .modal-body.atenea-profile-modal__body {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+
+  body.atenea-user-dashboard #usuarioProfileModal .atenea-profile-badges {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  body.atenea-user-dashboard #usuarioProfileModal .atenea-profile-badges .badge,
+  body.atenea-user-dashboard #usuarioProfileModal .atenea-profile-upload__button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 320px) {
+  body.atenea-user-dashboard .cecsb-dashboard-heading h6 {
+    font-size: 1.18rem;
+  }
+
+  body.atenea-user-dashboard .cecsb-dashboard-hero h3 {
+    font-size: 1.45rem;
+  }
+
+  body.atenea-user-dashboard .cecsb-user-avatar {
+    width: 68px;
+    height: 68px;
+  }
+}
