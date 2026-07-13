@@ -3,7 +3,7 @@ require_once __DIR__ . '/../_auth_guard.php';
 $dashboardActive ??= 'panel';
 $inicioAbierto = in_array($dashboardActive, ['secciones/index.php', 'elementos/index.php', 'hero'], true);
 $configAbierta = in_array($dashboardActive, ['configuracion/index.php', 'navbar/index.php'], true);
-$comercioAbierto = in_array($dashboardActive, ['productos/index.php', 'productos/editar.php', 'pedidos/index.php'], true);
+$comercioAbierto = in_array($dashboardActive, ['productos/index.php', 'productos/editar.php', 'categorias/index.php', 'categorias/editar.php', 'pedidos/index.php'], true);
 $usuariosAbierto = $dashboardActive === 'usuarios/index.php';
 ?>
 <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server">
@@ -58,7 +58,7 @@ $usuariosAbierto = $dashboardActive === 'usuarios/index.php';
     <li class="nav-item nav-category">Comercio</li>
     <li class="nav-item <?= $comercioAbierto ? 'active' : '' ?>">
       <a class="nav-link <?= $comercioAbierto ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#comercio" aria-expanded="<?= $comercioAbierto ? 'true' : 'false' ?>" aria-controls="comercio"><i class="menu-icon mdi mdi-cart-outline"></i><span class="menu-title">Productos y pedidos</span><i class="menu-arrow"></i></a>
-      <div class="collapse <?= $comercioAbierto ? 'show' : '' ?>" id="comercio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive,'productos/')?'active':'' ?>" href="<?=atenea_url('src/dashboard/productos/index.php')?>">Productos</a></li><li class="nav-item"><a class="nav-link <?= $dashboardActive==='pedidos/index.php'?'active':'' ?>" href="<?=atenea_url('src/dashboard/pedidos/index.php')?>">Pedidos</a></li></ul></div>
+      <div class="collapse <?= $comercioAbierto ? 'show' : '' ?>" id="comercio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive,'productos/')?'active':'' ?>" href="<?=atenea_url('src/dashboard/productos/index.php')?>">Productos</a></li><li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive,'categorias/')?'active':'' ?>" href="<?=atenea_url('src/dashboard/categorias/index.php')?>">Categorías de productos</a></li><li class="nav-item"><a class="nav-link <?= $dashboardActive==='pedidos/index.php'?'active':'' ?>" href="<?=atenea_url('src/dashboard/pedidos/index.php')?>">Pedidos</a></li></ul></div>
     </li>
     <li class="nav-item <?= $usuariosAbierto ? 'active' : '' ?>">
       <a class="nav-link <?= $usuariosAbierto ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#tables" aria-expanded="<?= $usuariosAbierto ? 'true' : 'false' ?>" aria-controls="tables">

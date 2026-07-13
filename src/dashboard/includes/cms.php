@@ -57,8 +57,8 @@ function cmsEliminarImagenSiNoSeUsa(?string $ruta): void
     $ruta = (string) $ruta;
     if (!str_starts_with($ruta, 'uploads/contenido/') || str_contains($ruta, '..')) return;
     $pdo = obtenerConexion();
-    $consulta = $pdo->prepare('SELECT (SELECT COUNT(*) FROM secciones WHERE imagen=:ruta1)+(SELECT COUNT(*) FROM elementos_seccion WHERE imagen=:ruta2)+(SELECT COUNT(*) FROM configuracion_sitio WHERE valor=:ruta3)+(SELECT COUNT(*) FROM productos WHERE imagen_principal=:ruta4)+(SELECT COUNT(*) FROM producto_imagenes WHERE ruta=:ruta5)');
-    $consulta->execute(['ruta1'=>$ruta,'ruta2'=>$ruta,'ruta3'=>$ruta,'ruta4'=>$ruta,'ruta5'=>$ruta]);
+    $consulta = $pdo->prepare('SELECT (SELECT COUNT(*) FROM secciones WHERE imagen=:ruta1)+(SELECT COUNT(*) FROM elementos_seccion WHERE imagen=:ruta2)+(SELECT COUNT(*) FROM configuracion_sitio WHERE valor=:ruta3)+(SELECT COUNT(*) FROM productos WHERE imagen_principal=:ruta4)+(SELECT COUNT(*) FROM producto_imagenes WHERE ruta=:ruta5)+(SELECT COUNT(*) FROM categorias_producto WHERE imagen=:ruta6 AND eliminado_at IS NULL)');
+    $consulta->execute(['ruta1'=>$ruta,'ruta2'=>$ruta,'ruta3'=>$ruta,'ruta4'=>$ruta,'ruta5'=>$ruta,'ruta6'=>$ruta]);
     if ((int) $consulta->fetchColumn() === 0) {
         $archivo = ATENEA_ROOT . '/' . $ruta;
         if (is_file($archivo)) unlink($archivo);
@@ -69,8 +69,15 @@ function cmsSubirGaleria(string $campo): array
 {
     if (!isset($_FILES[$campo]['name']) || !is_array($_FILES[$campo]['name'])) return [];
     $rutas=[];$original=$_FILES[$campo];
-    foreach($original['name'] as $i=>$nombre){if(($original['error'][$i]??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)continue;$_FILES['_galeria_temporal']=['name'=>$nombre,'type'=>$original['type'][$i]??'','tmp_name'=>$original['tmp_name'][$i]??'','error'=>$original['error'][$i]??UPLOAD_ERR_NO_FILE,'size'=>$original['size'][$i]??0];$rutas[]=cmsSubirImagen('_galeria_temporal');}
-    unset($_FILES['_galeria_temporal']);return array_values(array_filter($rutas));
+    try {
+        foreach($original['name'] as $i=>$nombre){if(($original['error'][$i]??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)continue;$_FILES['_galeria_temporal']=['name'=>$nombre,'type'=>$original['type'][$i]??'','tmp_name'=>$original['tmp_name'][$i]??'','error'=>$original['error'][$i]??UPLOAD_ERR_NO_FILE,'size'=>$original['size'][$i]??0];$rutas[]=cmsSubirImagen('_galeria_temporal');}
+    } catch (Throwable $e) {
+        foreach ($rutas as $ruta) cmsEliminarImagenSiNoSeUsa($ruta);
+        throw $e;
+    } finally {
+        unset($_FILES['_galeria_temporal']);
+    }
+    return array_values(array_filter($rutas));
 }
 
 function fechaAdminActual(): string

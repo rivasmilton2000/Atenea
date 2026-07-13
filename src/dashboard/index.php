@@ -344,7 +344,7 @@ try {
             <li class="nav-item nav-category">Comercio</li>
             <li class="nav-item">
               <a class="nav-link collapsed" data-bs-toggle="collapse" href="#comercio" aria-expanded="false" aria-controls="comercio"><i class="menu-icon mdi mdi-cart-outline"></i><span class="menu-title">Productos y pedidos</span><i class="menu-arrow"></i></a>
-              <div class="collapse" id="comercio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/productos/index.php')?>">Productos</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/pedidos/index.php')?>">Pedidos</a></li></ul></div>
+              <div class="collapse" id="comercio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/productos/index.php')?>">Productos</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/categorias/index.php')?>">Categorías de productos</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/pedidos/index.php')?>">Pedidos</a></li></ul></div>
             </li>
             <li class="nav-item nav-category">Gestión de usuarios</li>
             <li class="nav-item">
