@@ -45,6 +45,7 @@ $saludo = $horaLocal < 12 ? 'Buenos días' : ($horaLocal < 18 ? 'Buenas tardes' 
           <li class="nav-item static-item"><span class="nav-link static-item disabled"><span class="default-icon">Portal del estudiante</span><span class="mini-icon">-</span></span></li>
           <li class="nav-item"><a class="nav-link active" aria-current="page" href="<?= atenea_url('src/estudiantes/index.php') ?>"><i class="icon"><i class="bi bi-grid"></i></i><span class="item-name">Inicio</span></a></li>
           <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/estudiantes/perfil.php') ?>"><i class="icon"><i class="bi bi-person"></i></i><span class="item-name">Mi perfil</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="icon"><i class="bi bi-bag"></i></i><span class="item-name">Mis pedidos</span></a></li>
           <li class="nav-item"><a class="nav-link" href="<?= atenea_url('index.php') ?>"><i class="icon"><i class="bi bi-globe"></i></i><span class="item-name">Volver al sitio</span></a></li>
           <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"><i class="icon"><i class="bi bi-box-arrow-right"></i></i><span class="item-name">Cerrar sesión</span></a></li>
         </ul>

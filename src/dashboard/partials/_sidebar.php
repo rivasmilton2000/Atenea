@@ -3,6 +3,7 @@ require_once __DIR__ . '/../_auth_guard.php';
 $dashboardActive ??= 'panel';
 $inicioAbierto = in_array($dashboardActive, ['secciones/index.php', 'elementos/index.php', 'hero'], true);
 $configAbierta = in_array($dashboardActive, ['configuracion/index.php', 'navbar/index.php'], true);
+$comercioAbierto = in_array($dashboardActive, ['productos/index.php', 'productos/editar.php', 'pedidos/index.php'], true);
 ?>
 <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server">
   <ul class="nav">
@@ -53,6 +54,11 @@ $configAbierta = in_array($dashboardActive, ['configuracion/index.php', 'navbar/
       </div>
     </li>
     <li class="nav-item nav-category">Gestion de usuarios</li>
+    <li class="nav-item nav-category">Comercio</li>
+    <li class="nav-item <?= $comercioAbierto ? 'active' : '' ?>">
+      <a class="nav-link <?= $comercioAbierto ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#comercio" aria-expanded="<?= $comercioAbierto ? 'true' : 'false' ?>" aria-controls="comercio"><i class="menu-icon mdi mdi-cart-outline"></i><span class="menu-title">Productos y pedidos</span><i class="menu-arrow"></i></a>
+      <div class="collapse <?= $comercioAbierto ? 'show' : '' ?>" id="comercio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive,'productos/')?'active':'' ?>" href="<?=atenea_url('src/dashboard/productos/index.php')?>">Productos</a></li><li class="nav-item"><a class="nav-link <?= $dashboardActive==='pedidos/index.php'?'active':'' ?>" href="<?=atenea_url('src/dashboard/pedidos/index.php')?>">Pedidos</a></li></ul></div>
+    </li>
     <li class="nav-item">
       <a class="nav-link collapsed" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
         <i class="menu-icon mdi mdi-table"></i>

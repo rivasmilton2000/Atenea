@@ -1,0 +1,1 @@
+{"name":"atenea/pagos-stripe","require":{"stripe/stripe-php":"^20.0"},"config":{"sort-packages":true}}

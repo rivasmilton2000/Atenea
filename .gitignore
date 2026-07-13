@@ -3,6 +3,7 @@
 /.env
 /includes/config/mail.php
 /includes/mail/vendor/
+/includes/stripe/vendor/
 /logs/*.log
 /uploads/portal-estudiante/**
 !/uploads/portal-estudiante/**/index.html

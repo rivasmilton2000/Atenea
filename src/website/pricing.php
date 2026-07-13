@@ -1,17 +1,3 @@
-<?php
-$pageTitle = 'Productos | Atenea';
-$pageDescription = 'Productos y recursos de bienestar disponibles en Atenea.';
-$pageClass = 'pricing-page';
-$activePage = 'productos';
-require dirname(__DIR__, 2) . '/includes/header.php';
-?>
-<main class="main">
-  <div class="page-title" data-aos="fade"><div class="heading"><div class="container"><div class="row justify-content-center text-center"><div class="col-lg-8"><h1>Productos</h1><p class="mb-0">Recursos seleccionados para acompañar hábitos conscientes y procesos de bienestar.</p></div></div></div></div><nav class="breadcrumbs"><div class="container"><ol><li><a href="<?= atenea_url('index.php') ?>">Inicio</a></li><li class="current">Productos</li></ol></div></nav></div>
-  <section class="pricing section"><div class="container"><div class="row gy-4">
-    <?php $products = [['bi-book','Material educativo','Guías y recursos de apoyo para continuar aprendiendo.'],['bi-flower1','Bienestar natural','Productos seleccionados con criterios de calidad y uso responsable.'],['bi-gift','Colecciones especiales','Opciones pensadas para el autocuidado o para compartir bienestar.']]; foreach ($products as $i => [$icon,$title,$text]): ?>
-    <div class="col-lg-4 col-md-6" data-aos="zoom-in" data-aos-delay="<?= ($i + 1) * 100 ?>"><div class="pricing-item text-center h-100"><i class="bi <?= $icon ?> fs-1"></i><h2><?= atenea_e($title) ?></h2><p><?= atenea_e($text) ?></p><a href="<?= atenea_url('src/website/contact.php') ?>" class="buy-btn">Solicitar información</a></div></div>
-    <?php endforeach; ?>
-  </div></div></section>
-</main>
-<?php require dirname(__DIR__, 2) . '/includes/footer.php'; ?>
-
+<?php declare(strict_types=1);require_once dirname(__DIR__,2).'/includes/comercio.php';$productos=catalogoProductos();$pageTitle='Productos | Atenea';$pageDescription='Productos y recursos de bienestar disponibles en Atenea.';$pageClass='pricing-page';$activePage='productos';require dirname(__DIR__,2).'/includes/header.php';?>
+<main class="main"><div class="page-title" data-aos="fade"><div class="heading"><div class="container"><div class="row justify-content-center text-center"><div class="col-lg-8"><h1>Productos</h1><p class="mb-0">Recursos seleccionados para acompañar hábitos conscientes y procesos de bienestar.</p></div></div></div></div><nav class="breadcrumbs"><div class="container"><ol><li><a href="<?=atenea_url('index.php')?>">Inicio</a></li><li class="current">Productos</li></ol></div></nav></div>
+<section class="pricing section"><div class="container"><div class="row gy-4"><?php if(!$productos):?><div class="col-12"><div class="pricing-item text-center"><h2>Catálogo en preparación</h2><p>Próximamente encontrarás aquí los productos disponibles de Atenea.</p></div></div><?php endif;?><?php foreach($productos as$i=>$p):$pc=$p['precio_calculado'];$agotado=(int)$p['stock']-(int)$p['stock_reservado']<=0||!$p['disponible'];?><div class="col-lg-4 col-md-6" data-aos="zoom-in" data-aos-delay="<?=($i%3+1)*100?>"><div class="pricing-item h-100 d-flex flex-column"><img src="<?=imagenProducto($p['imagen_principal'])?>" class="img-fluid rounded mb-3" style="aspect-ratio:4/3;object-fit:cover" alt="<?=atenea_e($p['nombre'])?>"><?php if($pc['promocion_valida']):?><span class="badge bg-danger align-self-start mb-2"><?=atenea_e((string)($pc['promocion']['etiqueta']?:'Oferta'))?></span><?php endif;?><h2><?=atenea_e($p['nombre'])?></h2><?php if($p['categoria']):?><p class="text-muted small mb-2"><?=atenea_e($p['categoria'])?></p><?php endif;?><p><?=atenea_e($p['descripcion_corta'])?></p><div class="mt-auto"><?php if($pc['promocion_valida']):?><del class="text-muted">$<?=number_format($pc['normal'],2)?></del> <?php endif;?><strong class="fs-4 d-block mb-2">$<?=number_format($pc['final'],2)?> USD</strong><span class="badge <?=$agotado?'bg-secondary':'bg-success'?> mb-3"><?=$agotado?'Agotado':'Disponible'?></span><div><a href="<?=atenea_url('src/website/product-details.php?id='.(int)$p['id'])?>" class="buy-btn">Ver detalle</a></div></div></div></div><?php endforeach;?></div></div></section></main><?php require dirname(__DIR__,2).'/includes/footer.php';?>
