@@ -1,5 +1,8 @@
 /config/google.local.php
 /vendor/
 /.env
+/includes/config/mail.php
+/includes/mail/vendor/
+/logs/*.log
 /uploads/portal-estudiante/**
 !/uploads/portal-estudiante/**/index.html

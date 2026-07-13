@@ -1,0 +1,10 @@
+{
+  "name": "atenea/contacto-mail",
+  "description": "PHPMailer para el formulario de contacto de Atenea",
+  "require": {
+    "phpmailer/phpmailer": "^6.10"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}
