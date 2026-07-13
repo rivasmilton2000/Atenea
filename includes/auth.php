@@ -7,9 +7,28 @@ require_once __DIR__ . '/perfil_usuario.php';
 
 function usuarioAutenticado(): bool
 {
-    return isset($_SESSION['usuario_id'], $_SESSION['usuario_rol'])
+    $estructuraValida = isset($_SESSION['usuario_id'], $_SESSION['usuario_rol'], $_SESSION['usuario_session_version'])
         && is_int($_SESSION['usuario_id'])
         && in_array($_SESSION['usuario_rol'], ['admin', 'usuario', 'docente'], true);
+    if (!$estructuraValida) return false;
+
+    static $validacion = null;
+    if ($validacion !== null) return $validacion;
+    try {
+        $consulta = obtenerConexion()->prepare('SELECT estado,session_version FROM usuarios WHERE id=:id LIMIT 1');
+        $consulta->execute(['id' => $_SESSION['usuario_id']]);
+        $estado = $consulta->fetch();
+        $validacion = is_array($estado)
+            && ($estado['estado'] ?? '') === 'activo'
+            && (int) $estado['session_version'] === (int) $_SESSION['usuario_session_version'];
+    } catch (Throwable $e) {
+        error_log('Validación de sesión Atenea: ' . $e->getMessage());
+        $validacion = false;
+    }
+    if (!$validacion) {
+        unset($_SESSION['usuario_id'], $_SESSION['usuario_nombre'], $_SESSION['usuario_apellido'], $_SESSION['usuario_correo'], $_SESSION['usuario_rol'], $_SESSION['usuario_foto'], $_SESSION['usuario_perfil_completo'], $_SESSION['usuario_session_version']);
+    }
+    return $validacion;
 }
 
 function obtenerUsuarioActual(): ?array
@@ -38,6 +57,7 @@ function iniciarSesionUsuario(array $usuario): void
     $_SESSION['usuario_correo'] = (string) $usuario['correo'];
     $_SESSION['usuario_rol'] = (string) $usuario['rol'];
     $_SESSION['usuario_foto'] = !empty($usuario['foto']) ? (string) $usuario['foto'] : null;
+    $_SESSION['usuario_session_version'] = (int) ($usuario['session_version'] ?? 1);
     $_SESSION['usuario_perfil_completo'] = datosPerfilCompletos($usuario);
 }
 

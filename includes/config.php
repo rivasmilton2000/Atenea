@@ -29,6 +29,23 @@ function atenea_url(string $path = ''): string
     return ATENEA_BASE_URL . ($path !== '' ? '/' . ltrim($path, '/') : '');
 }
 
+function atenea_url_absoluta(string $path = ''): string
+{
+    $baseConfigurada = getenv('ATENEA_APP_URL');
+    if ($baseConfigurada !== false && trim((string) $baseConfigurada) !== '') {
+        return rtrim(trim((string) $baseConfigurada), '/') . ($path !== '' ? '/' . ltrim($path, '/') : '');
+    }
+
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    if (!preg_match('/^[a-z0-9.-]+(?::\d{1,5})?$/i', $host)) {
+        $host = 'localhost';
+    }
+
+    return ($https ? 'https' : 'http') . '://' . $host . atenea_url($path);
+}
+
 function atenea_e(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');

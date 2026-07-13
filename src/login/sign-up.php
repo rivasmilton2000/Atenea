@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
+require_once dirname(__DIR__, 2) . '/includes/google_oauth.php';
 require_once dirname(__DIR__, 2) . '/includes/portal_estudiante.php';
 
 if (usuarioAutenticado()) {
@@ -12,7 +13,7 @@ $errores = is_array($_SESSION['registro_errores'] ?? null) ? $_SESSION['registro
 $datos = is_array($_SESSION['registro_datos'] ?? null) ? $_SESSION['registro_datos'] : [];
 unset($_SESSION['registro_errores'], $_SESSION['registro_datos']);
 $departamentos = obtenerDepartamentos();
-$google = require dirname(__DIR__, 2) . '/config/google.php';
+$googleDisponible = googleDisponible();
 $fechaMaxima = date('Y-m-d');
 $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
 ?>
@@ -25,6 +26,7 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
   <link rel="icon" href="<?= atenea_url('img/atenea-logo.png') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/core/libs.min.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/hope-ui.min.css') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/login/auth.css') ?>">
 </head>
 <body>
 <div class="wrapper">
@@ -33,7 +35,7 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
       <div class="col-lg-7 py-4">
         <div class="row justify-content-center"><div class="col-xl-10">
           <div class="card card-transparent shadow-none auth-card"><div class="card-body">
-            <a href="<?= atenea_url() ?>" class="navbar-brand d-flex justify-content-center mb-3"><img src="<?= atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo')) ?>" style="max-height:75px" alt="Atenea"></a>
+            <a href="<?= atenea_url('index.php') ?>" class="navbar-brand atenea-auth-logo d-flex justify-content-center mb-3"><img src="<?= atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo')) ?>" alt="Atenea Escuela de Naturopatía Holística"></a>
             <h2 class="text-center"><?= atenea_e(obtenerConfiguracionPortalEstudiante('registro_titulo')) ?></h2>
             <p class="text-center"><?= atenea_e(obtenerConfiguracionPortalEstudiante('registro_subtitulo')) ?></p>
             <?php if ($errores): ?><div class="alert alert-danger"><ul class="mb-0"><?php foreach ($errores as $error): ?><li><?= atenea_e((string) $error) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
@@ -58,7 +60,7 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
               <label><input type="checkbox" name="terminos" value="1" required> Acepto los términos y condiciones</label>
               <div class="text-center mt-3"><button class="btn btn-primary" type="submit"><?= atenea_e(obtenerConfiguracionPortalEstudiante('registro_texto_boton')) ?></button></div>
               <p class="text-center my-3">O continúa con</p>
-              <div class="text-center"><?php if ($google['client_id'] !== ''): ?><div id="google-button"></div><?php else: ?><button class="btn btn-outline-primary" type="button" disabled>Registrarme con Google</button><small class="d-block text-muted mt-2">Google pendiente de configuración</small><?php endif; ?></div>
+              <div class="text-center"><?php if ($googleDisponible): ?><a class="btn btn-google w-100" href="<?= atenea_url('src/auth/google.php') ?>">Continuar con Google</a><?php else: ?><div class="alert alert-warning mb-0">El acceso con Google no está disponible porque falta completar su configuración.</div><?php endif; ?></div>
               <p class="text-center mt-3">¿Ya tienes una cuenta? <a href="<?= atenea_url('src/login/sign-in.php') ?>">Inicia sesión</a></p>
             </form>
           </div></div>
@@ -90,11 +92,5 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
   document.getElementById('telefono').addEventListener('input', event => { event.target.value=event.target.value.replace(/\D/g,'').slice(0,15); });
 })();
 </script>
-<?php if ($google['client_id'] !== ''): ?>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>
-window.onload=()=>google.accounts.id.initialize({client_id:<?= json_encode($google['client_id']) ?>,callback:r=>{const f=document.createElement('form');f.method='post';f.action=<?= json_encode(atenea_url('src/auth/google.php')) ?>;for(const [n,v] of Object.entries({credential:r.credential,csrf_token:<?= json_encode(obtenerTokenCsrf()) ?>})){const i=document.createElement('input');i.type='hidden';i.name=n;i.value=v;f.appendChild(i)}document.body.appendChild(f);f.submit()}});window.onload=(()=>{const previous=window.onload;return()=>{previous();google.accounts.id.renderButton(document.getElementById('google-button'),{theme:'outline',size:'large',text:'signup_with'})}})();
-</script>
-<?php endif; ?>
 <script src="<?= atenea_url('src/estudiantes/assets/js/hope-ui.js') ?>" defer></script>
 </body></html>

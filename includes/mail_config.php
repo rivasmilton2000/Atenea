@@ -23,6 +23,13 @@ function configuracionCorreoAtenea(): array
     ];
 }
 
+function configuracionSmtpCompleta(array $configuracion): bool
+{
+    return trim((string) ($configuracion['host'] ?? '')) !== ''
+        && filter_var($configuracion['smtp_user'] ?? '', FILTER_VALIDATE_EMAIL) !== false
+        && trim((string) ($configuracion['smtp_app_password'] ?? '')) !== '';
+}
+
 function configuracionContactoCompleta(array $configuracion): bool
 {
     return filter_var($configuracion['smtp_user'] ?? '', FILTER_VALIDATE_EMAIL) !== false

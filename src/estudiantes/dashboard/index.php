@@ -26,14 +26,15 @@ $saludo = $horaLocal < 12 ? 'Buenos días' : ($horaLocal < 18 ? 'Buenas tardes' 
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/vendor/aos/dist/aos.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/hope-ui.min.css?v=4.0.0') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/custom.min.css?v=4.0.0') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/atenea-branding.css') ?>">
 </head>
 <body>
   <div id="loading"><div class="loader simple-loader"><div class="loader-body"></div></div></div>
 
   <aside class="sidebar sidebar-default sidebar-white sidebar-base navs-rounded-all">
     <div class="sidebar-header d-flex align-items-center justify-content-start">
-      <a href="<?= atenea_url('src/estudiantes/index.php') ?>" class="navbar-brand">
-        <img src="<?= $logoPortal ?>" class="img-fluid" style="width:auto;height:52px;object-fit:contain" alt="Atenea">
+      <a href="<?= atenea_url('src/estudiantes/index.php') ?>" class="navbar-brand atenea-portal-logo">
+        <img src="<?= $logoPortal ?>" class="img-fluid" alt="Atenea Escuela de Naturopatía Holística">
       </a>
       <div class="sidebar-toggle" data-toggle="sidebar" data-active="true">
         <i class="icon"><svg width="20" viewBox="0 0 24 24" fill="none"><path d="M4.25 12.27h15M10.3 18.3l-6.05-6.03 6.05-6.02" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i>
@@ -57,7 +58,7 @@ $saludo = $horaLocal < 12 ? 'Buenos días' : ($horaLocal < 18 ? 'Buenas tardes' 
   <main class="main-content">
     <nav class="nav navbar navbar-expand-lg navbar-light iq-navbar">
       <div class="container-fluid navbar-inner">
-        <a href="<?= atenea_url('src/estudiantes/index.php') ?>" class="navbar-brand d-lg-none"><img src="<?= $logoPortal ?>" style="width:auto;height:42px;object-fit:contain" alt="Atenea"></a>
+        <a href="<?= atenea_url('src/estudiantes/index.php') ?>" class="navbar-brand d-lg-none atenea-portal-logo-mobile"><img src="<?= $logoPortal ?>" alt="Atenea Escuela de Naturopatía Holística"></a>
         <div class="sidebar-toggle" data-toggle="sidebar" data-active="true"><i class="icon"><i class="bi bi-list"></i></i></div>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Abrir navegación"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">

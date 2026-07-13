@@ -76,6 +76,7 @@ try {
         iniciarSesionUsuario([
             'id' => (int) $pdo->lastInsertId(), 'nombre' => $nombre, 'apellido' => $apellido,
             'correo' => $correo, 'rol' => 'usuario', 'foto' => null,
+            'session_version' => 1,
             'fecha_nacimiento' => $fechaNacimiento, 'dui' => $dui,
             'codigo_telefono' => $codigoTelefono, 'telefono' => $telefono,
             'departamento_id' => $departamentoId, 'municipio_id' => $municipioId, 'distrito_id' => $distritoId,

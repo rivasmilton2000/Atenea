@@ -1,0 +1,52 @@
+:root {
+  --atenea-dorado: #c99a2e;
+  --atenea-verde: #173f35;
+}
+
+.atenea-auth-logo img {
+  width: 130px;
+  height: 100px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.auth-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1.25rem 0;
+  color: #6c757d;
+  font-size: .875rem;
+}
+.auth-separator::before,
+.auth-separator::after { content: ""; flex: 1; height: 1px; background: #dee2e6; }
+
+.btn-google {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid #c7ccd1;
+  border-radius: .5rem;
+  background: #fff;
+  color: #2f3437;
+  font-weight: 600;
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+.btn-google:hover { border-color: var(--atenea-dorado); background: #fffdf8; color: var(--atenea-verde); }
+.btn-google:focus-visible { outline: 3px solid rgba(201, 154, 46, .35); outline-offset: 2px; }
+.google-icon { width: 20px; height: 20px; flex: 0 0 20px; }
+.google-spinner { display: none; color: var(--atenea-verde); }
+.btn-google.is-loading { pointer-events: none; opacity: .8; }
+.btn-google.is-loading .google-spinner { display: inline-block; }
+.back-to-site { color: var(--atenea-verde); font-weight: 600; }
+
+@media (max-width: 575.98px) {
+  .atenea-auth-logo img { width: 112px; height: 86px; }
+  .auth-card .card-body { padding-inline: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

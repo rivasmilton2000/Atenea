@@ -1,0 +1,24 @@
+.navbar .navbar-brand-wrapper {
+  padding: 8px 20px;
+}
+
+.navbar .navbar-brand-wrapper .navbar-brand.brand-logo img {
+  width: 125px;
+  height: 80px;
+  max-width: 125px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.navbar .navbar-brand-wrapper .navbar-brand.brand-logo-mini img {
+  width: 48px;
+  height: 56px;
+  max-width: 48px;
+  max-height: 56px;
+  object-fit: contain;
+}
+
+@media (max-width: 991.98px) {
+  .navbar .navbar-brand-wrapper { padding: 6px 3px; }
+  .navbar .navbar-brand-wrapper > .me-3 { display: none; }
+}
