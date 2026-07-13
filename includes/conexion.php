@@ -26,5 +26,8 @@ function obtenerConexion(): PDO
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 
+    // El Salvador does not observe daylight-saving time.
+    $pdo->exec("SET time_zone = '-06:00'");
+
     return $pdo;
 }

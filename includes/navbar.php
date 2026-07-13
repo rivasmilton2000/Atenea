@@ -15,7 +15,19 @@ $logoNavbar = $configuracionNavbar['logo'] ?? 'img/atenea-logo.png';
     <nav id="navmenu" class="navmenu" aria-label="Navegación principal">
       <ul>
         <?php foreach ($navItems as $item): ?>
-          <?php $esActivo = ($activePage === 'inicio' && $item['url'] === 'index.php'); ?>
+          <?php
+          $paginaPorUrl = [
+              'index.php' => 'inicio',
+              'src/website/about.php' => 'nosotros',
+              'src/website/courses.php' => 'capacitaciones',
+              'src/website/trainers.php' => 'docentes',
+              'src/website/events.php' => 'eventos',
+              'src/website/pricing.php' => 'productos',
+              'index.php#noticias' => 'noticias',
+              'src/website/contact.php' => 'contacto',
+          ];
+          $esActivo = ($paginaPorUrl[$item['url']] ?? '') === $activePage;
+          ?>
           <li><a href="<?= atenea_e(urlContenidoSegura($item['url'])) ?>"<?= $esActivo ? ' class="active" aria-current="page"' : '' ?><?= $item['nueva_pestana'] ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?= atenea_e($item['texto']) ?></a></li>
         <?php endforeach; ?>
       </ul>

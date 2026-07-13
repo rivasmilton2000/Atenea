@@ -103,11 +103,12 @@ h6 {
 }
 
 .header .atenea-brand img {
-  width: clamp(120px, 10vw, 165px);
-  height: 58px;
-  max-height: 58px;
+  width: auto;
+  height: 74px;
+  max-height: 74px;
+  max-width: 150px;
   object-fit: contain;
-  object-position: left center;
+  object-position: center;
 }
 
 .footer-logo img {
@@ -189,8 +190,10 @@ h6 {
   }
 
   .header .atenea-brand img {
-    width: 112px;
-    height: 50px;
+    width: auto;
+    height: 64px;
+    max-height: 64px;
+    max-width: 112px;
   }
 
   .header .btn-getstarted {
@@ -222,7 +225,10 @@ h6 {
 
 @media (max-width: 390px) {
   .header .atenea-brand img {
-    width: 96px;
+    width: auto;
+    height: 60px;
+    max-height: 60px;
+    max-width: 104px;
   }
 
   .header .btn-getstarted {

@@ -7,6 +7,9 @@ $nombreAdmin = trim((string) (($usuarioAdmin['nombre'] ?? 'Administrador') . ' '
 $correoAdmin = (string) ($usuarioAdmin['correo'] ?? '');
 $fotoAdminRuta = trim((string) ($usuarioAdmin['foto'] ?? ''));
 $fotoAdmin = $fotoAdminRuta !== '' ? rutaImagenContenido($fotoAdminRuta, 'src/dashboard/assets/images/faces/face8.jpg') : atenea_url('src/dashboard/assets/images/faces/face8.jpg');
+$horaLocal = (int) date('G');
+$saludoAdmin = $horaLocal < 12 ? 'Buenos días' : ($horaLocal < 18 ? 'Buenas tardes' : 'Buenas noches');
+$fechaAdmin = date('d/m/Y');
 ?>
 <nav class="navbar default-layout col-lg-12 col-12 p-0 fixed-top d-flex align-items-top flex-row">
   <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-start">
@@ -27,7 +30,7 @@ $fotoAdmin = $fotoAdminRuta !== '' ? rutaImagenContenido($fotoAdminRuta, 'src/da
   <div class="navbar-menu-wrapper d-flex align-items-top">
     <ul class="navbar-nav">
       <li class="nav-item fw-semibold d-none d-lg-block ms-0">
-        <h1 class="welcome-text">Buenos dias, <span class="text-black fw-bold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></span></h1>
+        <h1 class="welcome-text"><?= $saludoAdmin ?>, <span class="text-black fw-bold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></span></h1>
         <h3 class="welcome-sub-text">Resumen de la actividad de Atenea esta semana </h3>
       </li>
     </ul>
@@ -58,7 +61,7 @@ $fotoAdmin = $fotoAdminRuta !== '' ? rutaImagenContenido($fotoAdminRuta, 'src/da
           <span class="input-group-addon input-group-prepend border-right">
             <span class="icon-calendar input-group-text calendar-icon"></span>
           </span>
-          <input type="text" class="form-control" value="<?= date('m/d/Y') ?>">
+          <input type="text" class="form-control" value="<?= $fechaAdmin ?>" aria-label="Fecha actual" readonly>
         </div>
       </li>
       <li class="nav-item">

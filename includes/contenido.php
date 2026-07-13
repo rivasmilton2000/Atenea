@@ -55,10 +55,22 @@ function obtenerConfiguracionSitio(): array
 
 function obtenerMenuSitio(): array
 {
+    $menuPredeterminado = [
+        ['texto' => 'Inicio', 'url' => 'index.php', 'nueva_pestana' => 0],
+        ['texto' => 'Nosotros', 'url' => 'src/website/about.php', 'nueva_pestana' => 0],
+        ['texto' => 'Capacitaciones', 'url' => 'src/website/courses.php', 'nueva_pestana' => 0],
+        ['texto' => 'Docentes', 'url' => 'src/website/trainers.php', 'nueva_pestana' => 0],
+        ['texto' => 'Eventos', 'url' => 'src/website/events.php', 'nueva_pestana' => 0],
+        ['texto' => 'Productos', 'url' => 'src/website/pricing.php', 'nueva_pestana' => 0],
+        ['texto' => 'Noticias', 'url' => 'index.php#noticias', 'nueva_pestana' => 0],
+        ['texto' => 'Contacto', 'url' => 'src/website/contact.php', 'nueva_pestana' => 0],
+    ];
+
     try {
-        return obtenerConexion()->query('SELECT texto,url,nueva_pestana FROM menu_sitio WHERE activo=1 ORDER BY orden,id')->fetchAll();
+        $menu = obtenerConexion()->query('SELECT texto,url,nueva_pestana FROM menu_sitio WHERE activo=1 ORDER BY orden,id')->fetchAll();
+        return count($menu) === count($menuPredeterminado) ? $menu : $menuPredeterminado;
     } catch (Throwable $e) {
         error_log('Menú Atenea: ' . $e->getMessage());
-        return [];
+        return $menuPredeterminado;
     }
 }

@@ -12,7 +12,9 @@ $nombreAdmin = trim((string) (($usuarioAdmin['nombre'] ?? 'Administrador') . ' '
 $correoAdmin = (string) ($usuarioAdmin['correo'] ?? '');
 $fotoSesionAdmin = trim((string) ($usuarioAdmin['foto'] ?? ''));
 $fotoAdmin = $fotoSesionAdmin !== '' ? rutaImagenContenido($fotoSesionAdmin, 'src/dashboard/assets/images/faces/face8.jpg') : atenea_url('src/dashboard/assets/images/faces/face8.jpg');
-$fechaDashboard = date('m/d/Y');
+$fechaDashboard = date('d/m/Y');
+$horaDashboard = (int) date('G');
+$saludoDashboard = $horaDashboard < 12 ? 'Buenos días' : ($horaDashboard < 18 ? 'Buenas tardes' : 'Buenas noches');
 
 function contarPanel(PDO $pdo, string $sql, array $params = []): int
 {
@@ -133,7 +135,7 @@ try {
         <div class="navbar-menu-wrapper d-flex align-items-top">
           <ul class="navbar-nav">
             <li class="nav-item fw-semibold d-none d-lg-block ms-0">
-              <h1 class="welcome-text">Buenos dias, <span class="text-black fw-bold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></span></h1>
+              <h1 class="welcome-text"><?= $saludoDashboard ?>, <span class="text-black fw-bold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></span></h1>
               <h3 class="welcome-sub-text">Resumen de la actividad de Atenea esta semana </h3>
             </li>
           </ul>
@@ -176,7 +178,7 @@ try {
                 <span class="input-group-addon input-group-prepend border-right">
                   <span class="icon-calendar input-group-text calendar-icon"></span>
                 </span>
-                <input type="text" class="form-control" value="<?= atenea_e($fechaDashboard) ?>">
+                <input type="text" class="form-control" value="<?= atenea_e($fechaDashboard) ?>" aria-label="Fecha actual" readonly>
               </div>
             </li>
             <li class="nav-item">
@@ -288,9 +290,9 @@ try {
       <!-- partial -->
       <div class="container-fluid page-body-wrapper">
         <!-- partial:partials/_sidebar.html -->
-        <nav class="sidebar sidebar-offcanvas" id="sidebar">
+        <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server">
           <ul class="nav">
-            <li class="nav-item">
+            <li class="nav-item active">
               <a class="nav-link" href="<?= atenea_url('src/dashboard/index.php') ?>">
                 <i class="mdi mdi-grid-large menu-icon"></i>
                 <span class="menu-title">Panel principal</span>
@@ -298,12 +300,12 @@ try {
             </li>
             <li class="nav-item nav-category">Gestion del sitio web</li>
             <li class="nav-item">
-              <a class="nav-link" data-bs-toggle="collapse" href="#ui-basic" aria-expanded="false" aria-controls="ui-basic">
+              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#ui-basic" aria-expanded="false" aria-controls="ui-basic">
                 <i class="menu-icon mdi mdi-floor-plan"></i>
                 <span class="menu-title">Pagina de inicio</span>
                 <i class="menu-arrow"></i>
               </a>
-              <div class="collapse" id="ui-basic">
+              <div class="collapse" id="ui-basic" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
                   <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/secciones/index.php') ?>">Secciones</a></li>
                   <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/elementos/index.php') ?>">Elementos</a></li>
@@ -312,12 +314,12 @@ try {
               </div>
             </li>
             <li class="nav-item">
-              <a class="nav-link" data-bs-toggle="collapse" href="#form-elements" aria-expanded="false" aria-controls="form-elements">
+              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#form-elements" aria-expanded="false" aria-controls="form-elements">
                 <i class="menu-icon mdi mdi-card-text-outline"></i>
                 <span class="menu-title">Configuracion</span>
                 <i class="menu-arrow"></i>
               </a>
-              <div class="collapse" id="form-elements">
+              <div class="collapse" id="form-elements" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
                   <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">Configuracion general</a></li>
                   <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/navbar/index.php') ?>">Navbar y menu</a></li>
@@ -325,12 +327,12 @@ try {
               </div>
             </li>
             <li class="nav-item">
-              <a class="nav-link" data-bs-toggle="collapse" href="#charts" aria-expanded="false" aria-controls="charts">
+              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#charts" aria-expanded="false" aria-controls="charts">
                 <i class="menu-icon mdi mdi-chart-line"></i>
                 <span class="menu-title">Portal estudiante</span>
                 <i class="menu-arrow"></i>
               </a>
-              <div class="collapse" id="charts">
+              <div class="collapse" id="charts" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
                   <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/portal-estudiante/index.php') ?>">Apariencia y textos</a></li>
                 </ul>
@@ -338,12 +340,12 @@ try {
             </li>
             <li class="nav-item nav-category">Gestion de usuarios</li>
             <li class="nav-item">
-              <a class="nav-link" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
+              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
                 <i class="menu-icon mdi mdi-table"></i>
                 <span class="menu-title">Usuarios</span>
                 <i class="menu-arrow"></i>
               </a>
-              <div class="collapse" id="tables">
+              <div class="collapse" id="tables" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
                   <li class="nav-item"> <a class="nav-link" href="#">Estudiantes</a></li>
                   <li class="nav-item"> <a class="nav-link" href="#">Docentes</a></li>
@@ -352,12 +354,12 @@ try {
               </div>
             </li>
             <li class="nav-item">
-              <a class="nav-link" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
+              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
                 <i class="menu-icon mdi mdi-layers-outline"></i>
                 <span class="menu-title">Resumen del sitio</span>
                 <i class="menu-arrow"></i>
               </a>
-              <div class="collapse" id="icons">
+              <div class="collapse" id="icons" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
                   <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/index.php') ?>">Actividad general</a></li>
                 </ul>
@@ -365,12 +367,12 @@ try {
             </li>
             <li class="nav-item nav-category">Cuenta</li>
             <li class="nav-item">
-              <a class="nav-link" data-bs-toggle="collapse" href="#auth" aria-expanded="false" aria-controls="auth">
+              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#auth" aria-expanded="false" aria-controls="auth">
                 <i class="menu-icon mdi mdi-account-circle-outline"></i>
                 <span class="menu-title">Cuenta</span>
                 <i class="menu-arrow"></i>
               </a>
-              <div class="collapse" id="auth">
+              <div class="collapse" id="auth" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
                   <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('index.php') ?>" target="_blank"> Ver sitio </a></li>
                   <li class="nav-item"> <a class="nav-link" href="#"> Mi perfil </a></li>

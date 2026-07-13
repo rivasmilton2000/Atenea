@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+date_default_timezone_set('America/El_Salvador');
+
 if (!defined('ATENEA_ROOT')) {
     define('ATENEA_ROOT', dirname(__DIR__));
 }
