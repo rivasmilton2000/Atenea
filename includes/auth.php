@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/session.php';
+require_once __DIR__ . '/perfil_usuario.php';
 
 function usuarioAutenticado(): bool
 {
@@ -37,16 +38,28 @@ function iniciarSesionUsuario(array $usuario): void
     $_SESSION['usuario_correo'] = (string) $usuario['correo'];
     $_SESSION['usuario_rol'] = (string) $usuario['rol'];
     $_SESSION['usuario_foto'] = !empty($usuario['foto']) ? (string) $usuario['foto'] : null;
+    $_SESSION['usuario_perfil_completo'] = datosPerfilCompletos($usuario);
 }
 
 function rutaPanelPorRol(string $rol): string
 {
     return match ($rol) {
         'admin' => atenea_url('src/dashboard/index.php'),
-        'usuario' => atenea_url('src/estudiantes/index.php'),
+        'usuario' => !($_SESSION['usuario_perfil_completo'] ?? false)
+            ? atenea_url('src/estudiantes/perfil.php?completar=1')
+            : atenea_url('src/estudiantes/index.php'),
         'docente' => atenea_url('src/docente/index.php'),
         default => atenea_url('src/login/sign-in.php'),
     };
+}
+
+function exigirPerfilCompleto(): void
+{
+    exigirRol(['usuario']);
+    if (!($_SESSION['usuario_perfil_completo'] ?? false)) {
+        header('Location: ' . atenea_url('src/estudiantes/perfil.php?completar=1'));
+        exit;
+    }
 }
 
 function redirigirPorRol(?string $rol = null): never
