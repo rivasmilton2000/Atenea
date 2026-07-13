@@ -56,6 +56,11 @@
   </div>
 </footer>
 
+<?php
+require_once __DIR__ . '/perfil_modal.php';
+renderizarModalPerfil('website');
+?>
+
 <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center" aria-label="Volver arriba"><i class="bi bi-arrow-up-short"></i></a>
 <div id="preloader"></div>
 
@@ -66,5 +71,6 @@
 <script src="<?= atenea_url('src/website/assets/vendor/purecounter/purecounter_vanilla.js') ?>"></script>
 <script src="<?= atenea_url('src/website/assets/vendor/swiper/swiper-bundle.min.js') ?>"></script>
 <script src="<?= atenea_url('src/website/assets/js/main.js') ?>"></script>
+<script src="<?= atenea_url('src/website/assets/js/perfil-modal.js') ?>"></script>
 </body>
 </html>

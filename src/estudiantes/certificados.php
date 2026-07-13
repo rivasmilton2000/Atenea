@@ -1,0 +1,3 @@
+<?php declare(strict_types=1);require_once dirname(__DIR__,2).'/includes/portal_estudiante_layout.php';$portal=portalEstudianteCabecera('Certificados','certificados','Consulta los certificados emitidos para tu cuenta.');?>
+<div class="row"><div class="col-12"><div class="card"><div class="card-header"><h1 class="card-title">Mis certificados</h1></div><div class="card-body text-center py-5"><i class="bi bi-award display-3 text-warning"></i><h2 class="h4 mt-3">Aún no tienes certificados disponibles</h2><p class="text-muted mb-0">Los certificados aparecerán aquí cuando corresponda y hayan sido emitidos por Atenea.</p></div></div></div></div>
+<?php portalEstudiantePie(); ?>

@@ -5,11 +5,12 @@
 
 html, body { max-width: 100%; overflow-x: hidden; }
 .main-content { overflow-x: hidden; }
+.main-content .iq-navbar-header { position: relative; }
 .main-content .iq-header-img { width: 100vw; }
 
 @media (min-width: 1200px) {
   .sidebar + .main-content { width: calc(100% - 16.2rem); }
-  .sidebar + .main-content .iq-header-img { width: calc(100vw - 16.2rem); }
+  .sidebar + .main-content .iq-navbar-header .iq-header-img { width: 100%; }
 }
 
 @media (max-width: 1199.98px) {

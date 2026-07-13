@@ -5,13 +5,13 @@ require_once __DIR__ . '/includes/cms.php';
 
 $pdo = obtenerConexion();
 $usuarioAdmin = obtenerUsuarioActual() ?? [];
+$perfilAdmin = obtenerPerfilUsuario((int)($usuarioAdmin['id'] ?? 0)) ?: $usuarioAdmin;
 $configuracionAdmin = obtenerConfiguracionSitio();
 $logoAdmin = rutaImagenContenido($configuracionAdmin['logo'] ?? 'img/atenea-logo.png', 'img/atenea-logo.png');
 $faviconAdmin = rutaImagenContenido($configuracionAdmin['favicon'] ?? 'img/atenea-logo.png', 'img/atenea-logo.png');
 $nombreAdmin = trim((string) (($usuarioAdmin['nombre'] ?? 'Administrador') . ' ' . ($usuarioAdmin['apellido'] ?? '')));
 $correoAdmin = (string) ($usuarioAdmin['correo'] ?? '');
-$fotoSesionAdmin = trim((string) ($usuarioAdmin['foto'] ?? ''));
-$fotoAdmin = $fotoSesionAdmin !== '' ? rutaImagenContenido($fotoSesionAdmin, 'src/dashboard/assets/images/faces/face8.jpg') : atenea_url('src/dashboard/assets/images/faces/face8.jpg');
+$fotoAdmin = rutaFotoPerfil($perfilAdmin);
 $fechaDashboard = date('d/m/Y');
 $horaDashboard = (int) date('G');
 $saludoDashboard = $horaDashboard < 12 ? 'Buenos días' : ($horaDashboard < 18 ? 'Buenas tardes' : 'Buenas noches');
@@ -33,8 +33,9 @@ $totalEstudiantes = contarPanel($pdo, "SELECT COUNT(*) FROM usuarios WHERE rol =
 $totalDocentes = contarPanel($pdo, "SELECT COUNT(*) FROM usuarios WHERE rol = 'docente'");
 $totalAdministradores = contarPanel($pdo, "SELECT COUNT(*) FROM usuarios WHERE rol = 'admin'");
 $seccionesActivas = contarPanel($pdo, 'SELECT COUNT(*) FROM secciones WHERE activo = 1');
-$capacitacionesPublicadas = contarPanel($pdo, "SELECT COUNT(*) FROM secciones WHERE clave LIKE '%capacitacion%' AND activo = 1")
-    + contarPanel($pdo, "SELECT COUNT(*) FROM elementos_seccion WHERE tipo = 'capacitacion' AND activo = 1");
+$capacitacionesPublicadas = contarPanel($pdo, "SELECT COUNT(*) FROM elementos_seccion e INNER JOIN secciones s ON s.id=e.seccion_id WHERE s.clave='capacitaciones' AND e.activo=1");
+$totalProductos = contarPanel($pdo, 'SELECT COUNT(*) FROM productos WHERE eliminado_at IS NULL');
+$totalPedidos = contarPanel($pdo, 'SELECT COUNT(*) FROM pedidos');
 
 $usuariosMensuales = array_fill(1, 12, 0);
 $contenidoMensual = array_fill(1, 12, 0);
@@ -92,6 +93,8 @@ try {
     <!-- End plugin css for this page -->
     <!-- inject:css -->
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/atenea-branding.css">
+    <link rel="stylesheet" href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>">
     <!-- endinject -->
     <link rel="shortcut icon" href="<?= $faviconAdmin ?>" />
   </head>
@@ -102,7 +105,7 @@ try {
           <div class="card-body card-body-padding px-3 d-flex align-items-center justify-content-between">
             <div class="ps-lg-3">
               <div class="d-flex align-items-center justify-content-between">
-                <p class="mb-0 fw-medium me-3 buy-now-text">Panel administrativo de Atenea Escuela de Naturopatia Holistica</p>
+                <p class="mb-0 fw-medium me-3 buy-now-text">Panel administrativo de Atenea Escuela de Naturopatía Holística</p>
                 <a href="<?= atenea_url('index.php') ?>" target="_blank" class="btn me-2 buy-now-btn border-0">Ver sitio</a>
               </div>
             </div>
@@ -141,16 +144,16 @@ try {
           </ul>
           <ul class="navbar-nav ms-auto">
             <li class="nav-item dropdown d-none d-lg-block">
-              <a class="nav-link dropdown-bordered dropdown-toggle dropdown-toggle-split" id="messageDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false"> Seleccionar categoria </a>
+              <a class="nav-link dropdown-bordered dropdown-toggle dropdown-toggle-split" id="messageDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false"> Accesos rápidos </a>
               <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="messageDropdown">
                 <a class="dropdown-item py-3">
-                  <p class="mb-0 fw-medium float-start">Seleccionar categoria</p>
+                  <p class="mb-0 fw-medium float-start">Administración de Atenea</p>
                 </a>
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item preview-item">
                   <div class="preview-item-content flex-grow py-2">
                     <p class="preview-subject ellipsis fw-medium text-dark">Contenido del sitio </p>
-                    <p class="fw-light small-text mb-0">Secciones, elementos y pagina publica</p>
+                    <p class="fw-light small-text mb-0">Secciones, elementos y página pública</p>
                   </div>
                 </a>
                 <a class="dropdown-item preview-item">
@@ -162,7 +165,7 @@ try {
                 <a class="dropdown-item preview-item">
                   <div class="preview-item-content flex-grow py-2">
                     <p class="preview-subject ellipsis fw-medium text-dark">Portal del estudiante</p>
-                    <p class="fw-light small-text mb-0">Textos e imagenes del frontend estudiantil</p>
+                    <p class="fw-light small-text mb-0">Textos e imágenes del portal estudiantil</p>
                   </div>
                 </a>
                 <a class="dropdown-item preview-item">
@@ -174,7 +177,7 @@ try {
               </div>
             </li>
             <li class="nav-item d-none d-lg-block">
-              <div id="datepicker-popup" class="input-group date datepicker navbar-date-picker">
+              <div class="input-group date navbar-date-picker">
                 <span class="input-group-addon input-group-prepend border-right">
                   <span class="icon-calendar input-group-text calendar-icon"></span>
                 </span>
@@ -184,7 +187,7 @@ try {
             <li class="nav-item">
               <form class="search-form" action="#">
                 <i class="icon-search"></i>
-                <input type="search" class="form-control" placeholder="Buscar aqui" title="Buscar aqui">
+                <input type="search" class="form-control" placeholder="Buscar aquí" title="Buscar aquí">
               </form>
             </li>
             <li class="nav-item dropdown">
@@ -238,25 +241,25 @@ try {
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item preview-item">
                   <div class="preview-thumbnail">
-                    <img src="assets/images/faces/face10.jpg" alt="image" class="img-sm profile-pic">
+                    <span class="img-sm profile-pic d-inline-flex align-items-center justify-content-center bg-primary text-white"><i class="mdi mdi-view-dashboard"></i></span>
                   </div>
                   <div class="preview-item-content flex-grow py-2">
                     <p class="preview-subject ellipsis fw-medium text-dark">Secciones </p>
-                    <p class="fw-light small-text mb-0"> Administrar pagina de inicio </p>
+                    <p class="fw-light small-text mb-0"> Administrar página de inicio </p>
                   </div>
                 </a>
                 <a class="dropdown-item preview-item">
                   <div class="preview-thumbnail">
-                    <img src="assets/images/faces/face12.jpg" alt="image" class="img-sm profile-pic">
+                    <span class="img-sm profile-pic d-inline-flex align-items-center justify-content-center bg-primary text-white"><i class="mdi mdi-menu"></i></span>
                   </div>
                   <div class="preview-item-content flex-grow py-2">
                     <p class="preview-subject ellipsis fw-medium text-dark">Navbar y menu </p>
-                    <p class="fw-light small-text mb-0"> Editar navegacion publica </p>
+                    <p class="fw-light small-text mb-0"> Editar navegación pública </p>
                   </div>
                 </a>
                 <a class="dropdown-item preview-item">
                   <div class="preview-thumbnail">
-                    <img src="assets/images/faces/face1.jpg" alt="image" class="img-sm profile-pic">
+                    <span class="img-sm profile-pic d-inline-flex align-items-center justify-content-center bg-primary text-white"><i class="mdi mdi-settings"></i></span>
                   </div>
                   <div class="preview-item-content flex-grow py-2">
                     <p class="preview-subject ellipsis fw-medium text-dark">Configuracion </p>
@@ -267,18 +270,18 @@ try {
             </li>
             <li class="nav-item dropdown d-none d-lg-block user-dropdown">
               <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                <img class="img-xs rounded-circle" src="<?= $fotoAdmin ?>" alt="Profile image"> </a>
+                <img class="img-xs rounded-circle" src="<?= atenea_e($fotoAdmin) ?>" alt="Foto de <?= atenea_e($nombreAdmin) ?>"> </a>
               <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
                 <div class="dropdown-header text-center">
-                  <img class="img-md rounded-circle" src="<?= $fotoAdmin ?>" alt="Profile image">
+                  <img class="img-md rounded-circle" src="<?= atenea_e($fotoAdmin) ?>" alt="Foto de <?= atenea_e($nombreAdmin) ?>">
                   <p class="mb-1 mt-3 fw-semibold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></p>
                   <p class="fw-light text-muted mb-0"><?= atenea_e($correoAdmin) ?></p>
                 </div>
-                <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil <span class="badge badge-pill badge-danger">1</span></a>
+                <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>
                 <a class="dropdown-item" href="<?= atenea_url('index.php') ?>" target="_blank"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
                 <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Actividad</a>
                 <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> Soporte</a>
-                <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Cerrar sesion</a>
+                <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Cerrar sesión</a>
               </div>
             </li>
           </ul>
@@ -316,13 +319,13 @@ try {
             <li class="nav-item">
               <a class="nav-link collapsed" data-bs-toggle="collapse" href="#form-elements" aria-expanded="false" aria-controls="form-elements">
                 <i class="menu-icon mdi mdi-card-text-outline"></i>
-                <span class="menu-title">Configuracion</span>
+                <span class="menu-title">Configuración</span>
                 <i class="menu-arrow"></i>
               </a>
               <div class="collapse" id="form-elements" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">Configuracion general</a></li>
-                  <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/navbar/index.php') ?>">Navbar y menu</a></li>
+                  <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">Configuración general</a></li>
+                  <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/navbar/index.php') ?>">Barra y menú</a></li>
                 </ul>
               </div>
             </li>
@@ -343,7 +346,7 @@ try {
               <a class="nav-link collapsed" data-bs-toggle="collapse" href="#comercio" aria-expanded="false" aria-controls="comercio"><i class="menu-icon mdi mdi-cart-outline"></i><span class="menu-title">Productos y pedidos</span><i class="menu-arrow"></i></a>
               <div class="collapse" id="comercio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/productos/index.php')?>">Productos</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/pedidos/index.php')?>">Pedidos</a></li></ul></div>
             </li>
-            <li class="nav-item nav-category">Gestion de usuarios</li>
+            <li class="nav-item nav-category">Gestión de usuarios</li>
             <li class="nav-item">
               <a class="nav-link collapsed" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
                 <i class="menu-icon mdi mdi-table"></i>
@@ -352,9 +355,9 @@ try {
               </a>
               <div class="collapse" id="tables" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"> <a class="nav-link" href="#">Estudiantes</a></li>
-                  <li class="nav-item"> <a class="nav-link" href="#">Docentes</a></li>
-                  <li class="nav-item"> <a class="nav-link" href="#">Administradores</a></li>
+                  <li class="nav-item"> <a class="nav-link" href="<?=atenea_url('src/dashboard/usuarios/index.php?rol=usuario')?>">Estudiantes</a></li>
+                  <li class="nav-item"> <a class="nav-link" href="<?=atenea_url('src/dashboard/usuarios/index.php?rol=docente')?>">Docentes</a></li>
+                  <li class="nav-item"> <a class="nav-link" href="<?=atenea_url('src/dashboard/usuarios/index.php?rol=admin')?>">Administradores</a></li>
                 </ul>
               </div>
             </li>
@@ -380,8 +383,8 @@ try {
               <div class="collapse" id="auth" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
                   <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('index.php') ?>" target="_blank"> Ver sitio </a></li>
-                  <li class="nav-item"> <a class="nav-link" href="#"> Mi perfil </a></li>
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"> Cerrar sesion </a></li>
+                  <li class="nav-item"> <button class="nav-link border-0 bg-transparent" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"> Mi perfil </button></li>
+                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"> Cerrar sesión </a></li>
                 </ul>
               </div>
             </li>
@@ -411,7 +414,7 @@ try {
                         <a class="nav-link" id="contact-tab" data-bs-toggle="tab" href="#demographics" role="tab" aria-selected="false">Contenido</a>
                       </li>
                       <li class="nav-item">
-                        <a class="nav-link border-0" id="more-tab" data-bs-toggle="tab" href="#more" role="tab" aria-selected="false">Mas</a>
+                        <a class="nav-link border-0" id="more-tab" data-bs-toggle="tab" href="#more" role="tab" aria-selected="false">Más</a>
                       </li>
                     </ul>
                     <div>
@@ -460,6 +463,10 @@ try {
                           </div>
                         </div>
                       </div>
+                      <div class="row mb-3">
+                        <div class="col-md-6"><div class="card card-rounded bg-light"><div class="card-body py-3 d-flex justify-content-between align-items-center"><div><p class="statistics-title mb-1">Productos registrados</p><h3 class="rate-percentage mb-0"><?= number_format($totalProductos) ?></h3></div><i class="mdi mdi-package-variant fs-2 text-primary"></i></div></div></div>
+                        <div class="col-md-6"><div class="card card-rounded bg-light"><div class="card-body py-3 d-flex justify-content-between align-items-center"><div><p class="statistics-title mb-1">Pedidos registrados</p><h3 class="rate-percentage mb-0"><?= number_format($totalPedidos) ?></h3></div><i class="mdi mdi-receipt fs-2 text-primary"></i></div></div></div>
+                      </div>
                       <div class="row">
                         <div class="col-lg-8 d-flex flex-column">
                           <div class="row flex-grow">
@@ -477,7 +484,7 @@ try {
                                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
                                           <h6 class="dropdown-header">Periodo</h6>
                                           <a class="dropdown-item" href="#">Este mes</a>
-                                          <a class="dropdown-item" href="#">Este anio</a>
+                                          <a class="dropdown-item" href="#">Este año</a>
                                           <a class="dropdown-item" href="#">Historico</a>
                                           <div class="dropdown-divider"></div>
                                           <a class="dropdown-item" href="#">Separated link</a>
@@ -512,7 +519,7 @@ try {
                                       <p class="card-subtitle card-subtitle-dash">Contenido reciente publicado en Atenea</p>
                                     </div>
                                     <div>
-                                      <a class="btn btn-primary btn-lg text-white mb-0 me-0" href="<?= atenea_url('src/dashboard/secciones/crear.php') ?>"><i class="mdi mdi-plus"></i>Nueva seccion</a>
+                                      <a class="btn btn-primary btn-lg text-white mb-0 me-0" href="<?= atenea_url('src/dashboard/secciones/editar.php') ?>"><i class="mdi mdi-plus"></i>Nueva sección</a>
                                     </div>
                                   </div>
                                   <div class="table-responsive  mt-1">
@@ -601,7 +608,7 @@ try {
                                   <div class="row">
                                     <div class="col-lg-12">
                                       <div class="d-flex justify-content-between align-items-center">
-                                        <h4 class="card-title card-title-dash">Ultimos usuarios</h4>
+                                        <h4 class="card-title card-title-dash">Últimos usuarios</h4>
                                         <div class="add-items d-flex mb-0">
                                           <!-- <input type="text" class="form-control todo-list-input" placeholder="What do you need to do today?"> -->
                                           <button class="add btn btn-icons btn-rounded btn-primary todo-list-add-btn text-white me-0 pl-12p"><i class="mdi mdi-plus"></i></button>
@@ -681,7 +688,7 @@ try {
                                             <button class="btn btn-light dropdown-toggle toggle-dark btn-lg mb-0 me-0" type="button" id="dropdownMenuButton3" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> Por mes </button>
                                             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton3">
                                               <h6 class="dropdown-header">Por semana</h6>
-                                              <a class="dropdown-item" href="#">Por anio</a>
+                                              <a class="dropdown-item" href="#">Por año</a>
                                             </div>
                                           </div>
                                         </div>
@@ -720,6 +727,7 @@ try {
       <!-- page-body-wrapper ends -->
     </div>
     <!-- container-scroller -->
+    <?php require_once dirname(__DIR__,2).'/includes/perfil_modal.php'; renderizarModalPerfil('dashboard'); ?>
     <!-- plugins:js -->
     <script src="assets/vendors/js/vendor.bundle.base.js"></script>
     <script src="assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
@@ -749,6 +757,7 @@ try {
       };
     </script>
     <script src="assets/js/dashboard.js"></script>
+    <script src="<?= atenea_url('src/website/assets/js/perfil-modal.js') ?>"></script>
     <!-- <script src="assets/js/Chart.roundedBarCharts.js"></script> -->
     <!-- End custom js for this page-->
   </body>

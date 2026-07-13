@@ -71,13 +71,39 @@ function datosPerfilCompletos(array $usuario): bool
 function obtenerPerfilUsuario(int $usuarioId): ?array
 {
     $consulta = obtenerConexion()->prepare(
-        'SELECT id,nombre,apellido,correo,rol,foto,proveedor,email_verificado,fecha_nacimiento,dui,
-                codigo_telefono,telefono,departamento_id,municipio_id,distrito_id,direccion
-         FROM usuarios WHERE id = :id AND estado = \'activo\' LIMIT 1'
+        'SELECT u.id,u.nombre,u.apellido,u.correo,u.password,u.rol,u.foto,u.proveedor,u.google_id,
+                u.email_verificado,u.fecha_nacimiento,u.dui,u.codigo_telefono,u.telefono,
+                u.departamento_id,u.municipio_id,u.distrito_id,u.direccion,u.estado,u.ultimo_acceso,
+                u.session_version,u.created_at,u.updated_at,d.nombre departamento,m.nombre municipio,
+                di.nombre distrito
+         FROM usuarios u
+         LEFT JOIN departamentos d ON d.id=u.departamento_id
+         LEFT JOIN municipios m ON m.id=u.municipio_id
+         LEFT JOIN distritos di ON di.id=u.distrito_id
+         WHERE u.id = :id AND u.estado = \'activo\' LIMIT 1'
     );
     $consulta->execute(['id' => $usuarioId]);
     $usuario = $consulta->fetch();
     return is_array($usuario) ? $usuario : null;
+}
+
+function etiquetaRol(string $rol): string
+{
+    return match ($rol) {
+        'admin' => 'Administrador',
+        'docente' => 'Docente',
+        default => 'Estudiante',
+    };
+}
+
+function rutaFotoPerfil(array $usuario): string
+{
+    $foto = trim((string) ($usuario['foto'] ?? ''));
+    if ($foto !== '') {
+        if (preg_match('#^https://#i', $foto)) return $foto;
+        return atenea_url(ltrim($foto, '/'));
+    }
+    return atenea_url('src/estudiantes/assets/images/avatars/01.png');
 }
 
 function obtenerDepartamentos(): array

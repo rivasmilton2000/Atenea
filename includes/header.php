@@ -30,6 +30,7 @@ $faviconSitio = $configuracionSitio['favicon'] ?? 'img/atenea-logo.png';
   <link href="<?= atenea_url('src/website/assets/vendor/glightbox/css/glightbox.min.css') ?>" rel="stylesheet">
   <link href="<?= atenea_url('src/website/assets/vendor/swiper/swiper-bundle.min.css') ?>" rel="stylesheet">
   <link href="<?= atenea_url('src/website/assets/css/main.css') ?>" rel="stylesheet">
+  <link href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>" rel="stylesheet">
 </head>
 <body class="<?= atenea_e($pageClass) ?>">
 <?php require __DIR__ . '/navbar.php'; ?>

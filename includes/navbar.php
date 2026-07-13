@@ -47,6 +47,7 @@ $logoNavbar = $configuracionNavbar['logo'] ?? 'img/atenea-logo.png';
           <span class="atenea-user-name"><?= atenea_e((string) $usuarioNavbar['nombre']) ?></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
+          <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="bi bi-person me-2"></i>Mi perfil</button></li>
           <li><a class="dropdown-item" href="<?= rutaPanelPorRol((string) $usuarioNavbar['rol']) ?>"><i class="bi bi-grid me-2"></i>Mi panel</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>

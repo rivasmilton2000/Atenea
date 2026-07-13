@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 3) . '/includes/auth.php';
 require_once dirname(__DIR__, 3) . '/includes/conexion.php';
 require_once dirname(__DIR__, 3) . '/includes/contenido.php';
+require_once dirname(__DIR__, 3) . '/includes/perfil_modal.php';
 exigirRol(['admin']);
 
 function cmsFlash(string $tipo, string $mensaje): void
@@ -104,5 +105,6 @@ function cmsPie(): void
     echo '</div>';
     require dirname(__DIR__) . '/partials/_footer.php';
     echo '</div></div></div>';
+    renderizarModalPerfil('dashboard');
     require dirname(__DIR__) . '/includes/scripts.php';
 }

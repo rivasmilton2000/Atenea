@@ -5,8 +5,8 @@ $configuracionAdmin ??= obtenerConfiguracionSitio();
 $logoAdmin = rutaImagenContenido($configuracionAdmin['logo'] ?? 'img/atenea-logo.png', 'img/atenea-logo.png');
 $nombreAdmin = trim((string) (($usuarioAdmin['nombre'] ?? 'Administrador') . ' ' . ($usuarioAdmin['apellido'] ?? '')));
 $correoAdmin = (string) ($usuarioAdmin['correo'] ?? '');
-$fotoAdminRuta = trim((string) ($usuarioAdmin['foto'] ?? ''));
-$fotoAdmin = $fotoAdminRuta !== '' ? rutaImagenContenido($fotoAdminRuta, 'src/dashboard/assets/images/faces/face8.jpg') : atenea_url('src/dashboard/assets/images/faces/face8.jpg');
+$perfilAdminNav = obtenerPerfilUsuario((int)($usuarioAdmin['id'] ?? 0)) ?: $usuarioAdmin;
+$fotoAdmin = rutaFotoPerfil($perfilAdminNav);
 $horaLocal = (int) date('G');
 $saludoAdmin = $horaLocal < 12 ? 'Buenos días' : ($horaLocal < 18 ? 'Buenas tardes' : 'Buenas noches');
 $fechaAdmin = date('d/m/Y');
@@ -36,28 +36,28 @@ $fechaAdmin = date('d/m/Y');
     </ul>
     <ul class="navbar-nav ms-auto">
       <li class="nav-item dropdown d-none d-lg-block">
-        <a class="nav-link dropdown-bordered dropdown-toggle dropdown-toggle-split" id="messageDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false"> Seleccionar categoria </a>
+        <a class="nav-link dropdown-bordered dropdown-toggle dropdown-toggle-split" id="messageDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false"> Accesos rápidos </a>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="messageDropdown">
           <a class="dropdown-item py-3">
-            <p class="mb-0 fw-medium float-start">Seleccionar categoria</p>
+            <p class="mb-0 fw-medium float-start">Administración de Atenea</p>
           </a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item preview-item" href="<?= atenea_url('src/dashboard/secciones/index.php') ?>">
             <div class="preview-item-content flex-grow py-2">
               <p class="preview-subject ellipsis fw-medium text-dark">Contenido del sitio </p>
-              <p class="fw-light small-text mb-0">Secciones, elementos y pagina publica</p>
+              <p class="fw-light small-text mb-0">Secciones, elementos y página pública</p>
             </div>
           </a>
           <a class="dropdown-item preview-item" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">
             <div class="preview-item-content flex-grow py-2">
-              <p class="preview-subject ellipsis fw-medium text-dark">Configuracion general</p>
+              <p class="preview-subject ellipsis fw-medium text-dark">Configuración general</p>
               <p class="fw-light small-text mb-0">Identidad y datos visibles</p>
             </div>
           </a>
         </div>
       </li>
       <li class="nav-item d-none d-lg-block">
-        <div id="datepicker-popup" class="input-group date datepicker navbar-date-picker">
+        <div class="input-group date navbar-date-picker">
           <span class="input-group-addon input-group-prepend border-right">
             <span class="icon-calendar input-group-text calendar-icon"></span>
           </span>
@@ -67,7 +67,7 @@ $fechaAdmin = date('d/m/Y');
       <li class="nav-item">
         <form class="search-form" action="#">
           <i class="icon-search"></i>
-          <input type="search" class="form-control" placeholder="Buscar aqui" title="Buscar aqui">
+          <input type="search" class="form-control" placeholder="Buscar aquí" title="Buscar aquí">
         </form>
       </li>
       <li class="nav-item dropdown">
@@ -103,29 +103,29 @@ $fechaAdmin = date('d/m/Y');
           <div class="dropdown-divider"></div>
           <a class="dropdown-item preview-item" href="<?= atenea_url('src/dashboard/secciones/index.php') ?>">
             <div class="preview-thumbnail">
-              <img src="<?= atenea_url('src/dashboard/assets/images/faces/face10.jpg') ?>" alt="image" class="img-sm profile-pic">
+              <span class="img-sm profile-pic d-inline-flex align-items-center justify-content-center bg-primary text-white"><i class="mdi mdi-view-dashboard"></i></span>
             </div>
             <div class="preview-item-content flex-grow py-2">
               <p class="preview-subject ellipsis fw-medium text-dark">Secciones </p>
-              <p class="fw-light small-text mb-0"> Administrar pagina de inicio </p>
+              <p class="fw-light small-text mb-0"> Administrar página de inicio </p>
             </div>
           </a>
         </div>
       </li>
       <li class="nav-item dropdown d-none d-lg-block user-dropdown">
         <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-          <img class="img-xs rounded-circle" src="<?= $fotoAdmin ?>" alt="Profile image"> </a>
+          <img class="img-xs rounded-circle" src="<?= atenea_e($fotoAdmin) ?>" alt="Foto de <?= atenea_e($nombreAdmin) ?>"> </a>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
           <div class="dropdown-header text-center">
-            <img class="img-md rounded-circle" src="<?= $fotoAdmin ?>" alt="Profile image">
+            <img class="img-md rounded-circle" src="<?= atenea_e($fotoAdmin) ?>" alt="Foto de <?= atenea_e($nombreAdmin) ?>">
             <p class="mb-1 mt-3 fw-semibold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></p>
             <p class="fw-light text-muted mb-0"><?= atenea_e($correoAdmin) ?></p>
           </div>
-          <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil <span class="badge badge-pill badge-danger">1</span></a>
+          <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>
           <a class="dropdown-item" href="<?= atenea_url('index.php') ?>" target="_blank"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
           <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Actividad</a>
           <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> Soporte</a>
-          <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Cerrar sesion</a>
+          <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Cerrar sesión</a>
         </div>
       </li>
     </ul>

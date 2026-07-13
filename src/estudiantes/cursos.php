@@ -1,0 +1,3 @@
+<?php declare(strict_types=1);require_once dirname(__DIR__,2).'/includes/portal_estudiante_layout.php';$portal=portalEstudianteCabecera('Mis capacitaciones','cursos','Accede a las capacitaciones vinculadas con tu cuenta.');?>
+<div class="row"><div class="col-12"><div class="card"><div class="card-header"><h1 class="card-title">Mis capacitaciones</h1></div><div class="card-body text-center py-5"><i class="bi bi-journal-bookmark display-3 text-primary"></i><h2 class="h4 mt-3">No hay capacitaciones asignadas</h2><p class="text-muted">Atenea todavía no ha asociado una matrícula o capacitación a tu cuenta.</p><a class="btn btn-primary" href="<?=atenea_url('src/website/courses.php')?>">Ver capacitaciones disponibles</a></div></div></div></div>
+<?php portalEstudiantePie(); ?>

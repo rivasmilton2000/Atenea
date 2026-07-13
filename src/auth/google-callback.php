@@ -2,13 +2,13 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/google_oauth.php';
+require_once dirname(__DIR__, 2) . '/includes/cuenta.php';
 
 function falloCallbackGoogle(string $mensaje, string $accion = 'login'): never
 {
     if ($accion === 'vincular') {
-        $_SESSION['perfil_mensaje'] = $mensaje;
-        $_SESSION['perfil_mensaje_tipo'] = 'danger';
-        header('Location: ' . atenea_url('src/estudiantes/perfil.php'));
+        cuentaFlash(['general' => $mensaje]);
+        header('Location: ' . rutaPanelPorRol((string)($_SESSION['usuario_rol'] ?? '')));
     } else {
         $_SESSION['mensaje_auth'] = $mensaje;
         $_SESSION['mensaje_auth_tipo'] = 'danger';
@@ -23,6 +23,7 @@ $datosEstado = $state !== '' && isset($estados[$state]) && is_array($estados[$st
 if ($state !== '') unset($estados[$state]);
 $_SESSION['google_oauth_states'] = $estados;
 $accion = is_array($datosEstado) && ($datosEstado['accion'] ?? '') === 'vincular' ? 'vincular' : 'login';
+$retornoVinculacion = is_array($datosEstado) ? cuentaRetornoSeguro($datosEstado['retorno'] ?? null) : rutaPanelPorRol((string)($_SESSION['usuario_rol'] ?? ''));
 
 if (!is_array($datosEstado)
     || !isset($datosEstado['valor'])
@@ -41,14 +42,21 @@ try {
     $configuracion = obtenerConfiguracionGoogle();
     if (!googleDisponible($configuracion)) throw new RuntimeException('Configuración incompleta.');
     $perfil = obtenerPerfilGoogle($codigo, $configuracion);
-    $usuario = autenticarConPerfilGoogle($perfil, $accion === 'vincular');
-    iniciarSesionUsuario($usuario);
     if ($accion === 'vincular') {
-        $_SESSION['perfil_mensaje'] = 'La cuenta de Google se vinculó correctamente.';
-        $_SESSION['perfil_mensaje_tipo'] = 'success';
-        header('Location: ' . atenea_url('src/estudiantes/perfil.php'));
+        exigirAutenticacion();
+        $actual = obtenerPerfilUsuario((int)$_SESSION['usuario_id']);
+        if (!$actual || strtolower((string)$actual['correo']) !== strtolower((string)$perfil['correo'])) throw new RuntimeException('El correo de Google no coincide con la cuenta actual.');
+        $pdo = obtenerConexion();
+        $consulta = $pdo->prepare('SELECT id FROM usuarios WHERE google_id=:google AND id<>:id LIMIT 1');
+        $consulta->execute(['google'=>$perfil['google_id'],'id'=>$actual['id']]);
+        if ($consulta->fetch()) throw new RuntimeException('La identidad de Google ya pertenece a otra cuenta.');
+        $verificacion = crearVerificacionCuenta($pdo,(int)$actual['id'],'vincular_google',['google_id'=>$perfil['google_id']],(string)$actual['correo']);
+        cuentaFlash([], 'Enviamos un código a tu correo para confirmar la vinculación.', $verificacion);
+        header('Location: ' . $retornoVinculacion);
         exit;
     }
+    $usuario = autenticarConPerfilGoogle($perfil);
+    iniciarSesionUsuario($usuario);
     redirigirPorRol((string) $usuario['rol']);
 } catch (Throwable $e) {
     error_log('OAuth Google Atenea: ' . $e->getMessage());

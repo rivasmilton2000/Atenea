@@ -4,6 +4,7 @@ $dashboardActive ??= 'panel';
 $inicioAbierto = in_array($dashboardActive, ['secciones/index.php', 'elementos/index.php', 'hero'], true);
 $configAbierta = in_array($dashboardActive, ['configuracion/index.php', 'navbar/index.php'], true);
 $comercioAbierto = in_array($dashboardActive, ['productos/index.php', 'productos/editar.php', 'pedidos/index.php'], true);
+$usuariosAbierto = $dashboardActive === 'usuarios/index.php';
 ?>
 <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server">
   <ul class="nav">
@@ -13,11 +14,11 @@ $comercioAbierto = in_array($dashboardActive, ['productos/index.php', 'productos
         <span class="menu-title">Panel principal</span>
       </a>
     </li>
-    <li class="nav-item nav-category">Gestion del sitio web</li>
+    <li class="nav-item nav-category">Gestión del sitio web</li>
     <li class="nav-item <?= $inicioAbierto ? 'active' : '' ?>">
       <a class="nav-link <?= $inicioAbierto ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#ui-basic" aria-expanded="<?= $inicioAbierto ? 'true' : 'false' ?>" aria-controls="ui-basic">
         <i class="menu-icon mdi mdi-floor-plan"></i>
-        <span class="menu-title">Pagina de inicio</span>
+        <span class="menu-title">Página de inicio</span>
         <i class="menu-arrow"></i>
       </a>
       <div class="collapse <?= $inicioAbierto ? 'show' : '' ?>" id="ui-basic" data-bs-parent="#sidebar">
@@ -31,13 +32,13 @@ $comercioAbierto = in_array($dashboardActive, ['productos/index.php', 'productos
     <li class="nav-item <?= $configAbierta ? 'active' : '' ?>">
       <a class="nav-link <?= $configAbierta ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#form-elements" aria-expanded="<?= $configAbierta ? 'true' : 'false' ?>" aria-controls="form-elements">
         <i class="menu-icon mdi mdi-card-text-outline"></i>
-        <span class="menu-title">Configuracion</span>
+        <span class="menu-title">Configuración</span>
         <i class="menu-arrow"></i>
       </a>
       <div class="collapse <?= $configAbierta ? 'show' : '' ?>" id="form-elements" data-bs-parent="#sidebar">
         <ul class="nav flex-column sub-menu">
-          <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'configuracion/index.php' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">Configuracion general</a></li>
-          <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'navbar/index.php' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/navbar/index.php') ?>">Navbar y menu</a></li>
+          <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'configuracion/index.php' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">Configuración general</a></li>
+          <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'navbar/index.php' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/navbar/index.php') ?>">Barra y menú</a></li>
         </ul>
       </div>
     </li>
@@ -53,23 +54,23 @@ $comercioAbierto = in_array($dashboardActive, ['productos/index.php', 'productos
         </ul>
       </div>
     </li>
-    <li class="nav-item nav-category">Gestion de usuarios</li>
+    <li class="nav-item nav-category">Gestión de usuarios</li>
     <li class="nav-item nav-category">Comercio</li>
     <li class="nav-item <?= $comercioAbierto ? 'active' : '' ?>">
       <a class="nav-link <?= $comercioAbierto ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#comercio" aria-expanded="<?= $comercioAbierto ? 'true' : 'false' ?>" aria-controls="comercio"><i class="menu-icon mdi mdi-cart-outline"></i><span class="menu-title">Productos y pedidos</span><i class="menu-arrow"></i></a>
       <div class="collapse <?= $comercioAbierto ? 'show' : '' ?>" id="comercio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive,'productos/')?'active':'' ?>" href="<?=atenea_url('src/dashboard/productos/index.php')?>">Productos</a></li><li class="nav-item"><a class="nav-link <?= $dashboardActive==='pedidos/index.php'?'active':'' ?>" href="<?=atenea_url('src/dashboard/pedidos/index.php')?>">Pedidos</a></li></ul></div>
     </li>
-    <li class="nav-item">
-      <a class="nav-link collapsed" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
+    <li class="nav-item <?= $usuariosAbierto ? 'active' : '' ?>">
+      <a class="nav-link <?= $usuariosAbierto ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#tables" aria-expanded="<?= $usuariosAbierto ? 'true' : 'false' ?>" aria-controls="tables">
         <i class="menu-icon mdi mdi-table"></i>
         <span class="menu-title">Usuarios</span>
         <i class="menu-arrow"></i>
       </a>
-      <div class="collapse" id="tables" data-bs-parent="#sidebar">
+      <div class="collapse <?= $usuariosAbierto ? 'show' : '' ?>" id="tables" data-bs-parent="#sidebar">
         <ul class="nav flex-column sub-menu">
-          <li class="nav-item"> <a class="nav-link" href="#">Estudiantes</a></li>
-          <li class="nav-item"> <a class="nav-link" href="#">Docentes</a></li>
-          <li class="nav-item"> <a class="nav-link" href="#">Administradores</a></li>
+          <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/usuarios/index.php?rol=usuario') ?>">Estudiantes</a></li>
+          <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/usuarios/index.php?rol=docente') ?>">Docentes</a></li>
+          <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/usuarios/index.php?rol=admin') ?>">Administradores</a></li>
         </ul>
       </div>
     </li>
@@ -83,8 +84,8 @@ $comercioAbierto = in_array($dashboardActive, ['productos/index.php', 'productos
       <div class="collapse" id="auth" data-bs-parent="#sidebar">
         <ul class="nav flex-column sub-menu">
           <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('index.php') ?>" target="_blank"> Ver sitio </a></li>
-          <li class="nav-item"> <a class="nav-link" href="#"> Mi perfil </a></li>
-          <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"> Cerrar sesion </a></li>
+          <li class="nav-item"> <button class="nav-link border-0 bg-transparent" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"> Mi perfil </button></li>
+          <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"> Cerrar sesión </a></li>
         </ul>
       </div>
     </li>
