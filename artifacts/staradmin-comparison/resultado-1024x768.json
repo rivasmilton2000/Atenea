@@ -1,0 +1,16 @@
+{
+  "url": "http://localhost/Atenea/src/dashboard/index.php",
+  "title": "Panel principal | Atenea",
+  "sidebarWidth": 220,
+  "navbarHeight": 145,
+  "tabs": [
+    "Resumen",
+    "Usuarios",
+    "Contenido",
+    "Mas"
+  ],
+  "hasChart": true,
+  "hasTodo": true,
+  "customCss": false,
+  "bodyTextHead": "Panel administrativo de Atenea Escuela de Naturopatia Holistica\n\nVer sitio\nBuenos dias, Administrador Atenea\nResumen de la actividad de Atenea esta semana\nSeleccionar categoria\nPanel principal\nGESTION DEL SITIO WEB\nPagina de inicio\nSecciones\nElementos\nHero principal\nConfiguracion\nConfiguracion gener"
+}

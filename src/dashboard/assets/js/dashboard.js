@@ -182,10 +182,10 @@
       new Chart(marketingOverviewCanvas, {
         type: 'bar',
         data: {
-          labels: ["JAN","FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"],
+          labels: (window.ateneaDashboardData && window.ateneaDashboardData.labels) || ["JAN","FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"],
           datasets: [{
-            label: 'Last week',
-            data: [110, 220, 200, 190, 220, 110, 210, 110, 205, 202, 201, 150],
+            label: 'Contenido',
+            data: (window.ateneaDashboardData && window.ateneaDashboardData.contenidoMensual) || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             backgroundColor: "#52CDFF",
             borderColor: [
                 '#52CDFF',
@@ -195,8 +195,8 @@
               fill: true, // 3: no fill
               
           },{
-            label: 'This week',
-            data: [215, 290, 210, 250, 290, 230, 290, 210, 280, 220, 190, 300],
+            label: 'Estudiantes',
+            data: (window.ateneaDashboardData && window.ateneaDashboardData.usuariosMensuales) || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             backgroundColor: "#1F3BB3",
             borderColor: [
                 '#1F3BB3',
@@ -365,9 +365,9 @@
       new Chart(doughnutChartCanvas, {
         type: 'doughnut',
         data: {
-          labels: ['Total','Net','Gross','AVG'],
+          labels: (window.ateneaDashboardData && window.ateneaDashboardData.rolesLabels) || ['Total','Estudiantes','Docentes','Administradores'],
           datasets: [{
-            data: [40, 20, 30, 10],
+            data: (window.ateneaDashboardData && window.ateneaDashboardData.rolesData) || [0, 0, 0, 0],
             backgroundColor: [
               "#1F3BB3",
               "#FDD0C7",
@@ -422,10 +422,10 @@
       new Chart(leaveReportCanvas, {
         type: 'bar',
         data: {
-          labels: ["Jan","Feb", "Mar", "Apr", "May"],
+          labels: (window.ateneaDashboardData && window.ateneaDashboardData.labelsCortas) || ["Jan","Feb", "Mar", "Apr", "May"],
           datasets: [{
-              label: 'Last week',
-              data: [18, 25, 39, 11, 24],
+              label: 'Contenido',
+              data: (window.ateneaDashboardData && window.ateneaDashboardData.contenidoCorto) || [0, 0, 0, 0, 0],
               backgroundColor: "#52CDFF",
               borderColor: [
                   '#52CDFF',

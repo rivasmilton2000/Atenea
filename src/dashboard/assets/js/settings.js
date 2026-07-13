@@ -89,19 +89,19 @@
 
     $(".color-theme.default").click(function(){
       $(".color-theme.default").attr({
-        "href" : "https://www.bootstrapdash.com/demo/star-admin2-pro/template/demo/vertical-default-light/index.php",
+        "href" : "https://www.bootstrapdash.com/demo/star-admin2-pro/template/demo/vertical-default-light/index.html",
         "title" : "Light"
       });
     });
     $(".color-theme.dark").click(function(){
       $(".color-theme.dark").attr({
-        "href" : "https://www.bootstrapdash.com/demo/star-admin2-pro/template/demo/vertical-default-dark/index.php",
+        "href" : "https://www.bootstrapdash.com/demo/star-admin2-pro/template/demo/vertical-default-dark/index.html",
         "title" : "Dark"
       });
     });
     $(".color-theme.brown").click(function(){
       $(".color-theme.brown").attr({
-        "href" : "https://www.bootstrapdash.com/demo/star-admin2-pro/template/demo/vertical-default-brown/index.php",
+        "href" : "https://www.bootstrapdash.com/demo/star-admin2-pro/template/demo/vertical-default-brown/index.html",
         "title" : "Brown"
       });
     });
