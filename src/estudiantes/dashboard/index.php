@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_auth_guard.php';
 require_once dirname(__DIR__, 3) . '/includes/portal_estudiante.php';
+require_once dirname(__DIR__, 3) . '/includes/contenido.php';
 
 $usuario = obtenerUsuarioActual() ?? [];
 $nombreEstudiante = trim((string) (($usuario['nombre'] ?? '') . ' ' . ($usuario['apellido'] ?? '')));
