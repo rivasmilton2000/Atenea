@@ -2,6 +2,7 @@
 /vendor/
 /.env
 /includes/config/mail.php
+/includes/config/services.local.php
 /includes/mail/vendor/
 /includes/stripe/vendor/
 /logs/*.log

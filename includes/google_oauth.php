@@ -2,11 +2,11 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/config/services.php';
 
 function obtenerConfiguracionGoogle(): array
 {
-    $configuracion = require dirname(__DIR__) . '/config/google.php';
-    return is_array($configuracion) ? $configuracion : [];
+    return GoogleConfig::toArray();
 }
 
 function googleDisponible(?array $configuracion = null): bool
@@ -20,12 +20,7 @@ function googleDisponible(?array $configuracion = null): bool
 
 function googleEsDesarrollo(): bool
 {
-    $entorno = strtolower((string) (getenv('ATENEA_ENV') ?: ''));
-    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
-    return in_array($entorno, ['dev', 'development', 'local'], true)
-        || $host === 'localhost'
-        || str_starts_with($host, 'localhost:')
-        || str_starts_with($host, '127.0.0.1');
+    return AppConfig::isLocal();
 }
 
 function diagnosticoGoogle(?array $configuracion = null): array
@@ -70,7 +65,7 @@ function solicitudGoogle(string $url, array $opciones = []): array
 
 function obtenerPerfilGoogle(string $codigo, array $configuracion): array
 {
-    $token = solicitudGoogle('https://oauth2.googleapis.com/token', ['post' => [
+    $token = solicitudGoogle((string) ($configuracion['token_uri'] ?? GoogleConfig::tokenUri()), ['post' => [
         'code' => $codigo,
         'client_id' => (string) $configuracion['client_id'],
         'client_secret' => (string) $configuracion['client_secret'],
@@ -81,7 +76,7 @@ function obtenerPerfilGoogle(string $codigo, array $configuracion): array
     $idToken = (string) ($token['id_token'] ?? '');
     if ($accessToken === '' || $idToken === '') throw new RuntimeException('Google no entregó los datos de acceso esperados.');
 
-    $verificacion = solicitudGoogle('https://oauth2.googleapis.com/tokeninfo?id_token=' . rawurlencode($idToken));
+    $verificacion = solicitudGoogle((string) ($configuracion['tokeninfo_uri'] ?? GoogleConfig::tokenInfoUri()) . '?id_token=' . rawurlencode($idToken));
     if (!hash_equals((string) $configuracion['client_id'], (string) ($verificacion['aud'] ?? ''))
         || empty($verificacion['sub'])
         || empty($verificacion['email'])
@@ -89,7 +84,7 @@ function obtenerPerfilGoogle(string $codigo, array $configuracion): array
         throw new RuntimeException('La identidad devuelta por Google no pudo validarse.');
     }
 
-    $perfil = solicitudGoogle('https://www.googleapis.com/oauth2/v2/userinfo', [
+    $perfil = solicitudGoogle((string) ($configuracion['userinfo_uri'] ?? GoogleConfig::userInfoUri()), [
         'headers' => ['Authorization: Bearer ' . $accessToken],
     ]);
     if (strtolower((string) ($perfil['email'] ?? '')) !== strtolower((string) $verificacion['email'])) {

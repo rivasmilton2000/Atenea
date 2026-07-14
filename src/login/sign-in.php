@@ -79,6 +79,5 @@ document.getElementById('google-login')?.addEventListener('click', function () {
   this.querySelector('.google-label').textContent = 'Redirigiendo a Google…';
 });
 </script>
-<script src="<?= atenea_url('src/estudiantes/assets/js/hope-ui.js') ?>" defer></script>
 </body>
 </html>

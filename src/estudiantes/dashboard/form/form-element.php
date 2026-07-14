@@ -1162,7 +1162,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="exampleInputPassword3">Password Input</label>
-                            <input type="password" class="form-control" id="exampleInputPassword3" value="markjhon123" placeholder="Enter Password">
+                            <input type="password" class="form-control" id="exampleInputPassword3" placeholder="Enter Password">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="exampleInputdate">Date Input</label>

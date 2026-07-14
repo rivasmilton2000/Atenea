@@ -8,7 +8,7 @@ if (PHP_SAPI !== 'cli') {
 
 require_once dirname(__DIR__, 2) . '/includes/conexion.php';
 
-$passwordTemporal = getenv('ATENEA_ADMIN_PASSWORD') ?: 'AteneaAdmin2026!';
+$passwordTemporal = trim((string) (getenv('ATENEA_ADMIN_PASSWORD') ?: ''));
 $crearPruebas = in_array('--crear-pruebas', $argv, true);
 
 if (strlen($passwordTemporal) < 12) {
@@ -47,8 +47,7 @@ try {
         ]);
         echo "Usuario preparado: {$correo} ({$rol}, {$estado})\n";
     }
-
-    echo "Contraseña temporal de desarrollo: {$passwordTemporal}\n";
+    echo "Contraseña temporal configurada mediante variable de entorno.\n";
     echo "Cámbiela antes de utilizar el sistema fuera del entorno local.\n";
 } catch (Throwable $error) {
     fwrite(STDERR, "No fue posible crear los usuarios. Verifique que db_atenea.sql esté importado y la conexión configurada.\n");

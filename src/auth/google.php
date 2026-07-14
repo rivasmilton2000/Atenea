@@ -43,12 +43,12 @@ $parametros = [
     'client_id' => (string) $configuracion['client_id'],
     'redirect_uri' => (string) $configuracion['redirect_uri'],
     'response_type' => 'code',
-    'scope' => 'openid email profile',
+    'scope' => (string) ($configuracion['scopes'] ?? GoogleConfig::scopes()),
     'state' => $state,
     'prompt' => 'select_account',
     'include_granted_scopes' => 'true',
 ];
 
 header('Cache-Control: no-store');
-header('Location: https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($parametros, '', '&', PHP_QUERY_RFC3986));
+header('Location: ' . (string) ($configuracion['authorization_uri'] ?? GoogleConfig::authorizationUri()) . '?' . http_build_query($parametros, '', '&', PHP_QUERY_RFC3986));
 exit;

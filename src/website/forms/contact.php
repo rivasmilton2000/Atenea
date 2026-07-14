@@ -27,13 +27,13 @@ function volverContacto(string $tipo, string $mensaje, array $datos = []): never
     exit;
 }
 
-function verificarRecaptcha(string $token, string $secreto, string $ip): bool
+function verificarRecaptcha(string $token, string $secreto, string $ip, string $endpoint): bool
 {
     if ($token === '' || $secreto === '') return false;
     $campos = http_build_query(['secret' => $secreto, 'response' => $token, 'remoteip' => $ip]);
 
     if (function_exists('curl_init')) {
-        $curl = curl_init('https://www.google.com/recaptcha/api/siteverify');
+        $curl = curl_init($endpoint);
         curl_setopt_array($curl, [
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $campos,
@@ -47,8 +47,20 @@ function verificarRecaptcha(string $token, string $secreto, string $ip): bool
         if (!is_string($respuesta) || $estado !== 200) return false;
     } else {
         $contexto = stream_context_create(['http' => ['method' => 'POST', 'header' => "Content-Type: application/x-www-form-urlencoded\r\n", 'content' => $campos, 'timeout' => 10]]);
-        $respuesta = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $contexto);
-        if (!is_string($respuesta)) return false;
+        $advertencia = '';
+        set_error_handler(static function (int $nivel, string $mensaje) use (&$advertencia): bool {
+            $advertencia = $mensaje;
+            return true;
+        });
+        try {
+            $respuesta = file_get_contents($endpoint, false, $contexto);
+        } finally {
+            restore_error_handler();
+        }
+        if (!is_string($respuesta)) {
+            registrarErrorContacto('Error de transporte al verificar reCAPTCHA: ' . ($advertencia !== '' ? $advertencia : 'sin respuesta'));
+            return false;
+        }
     }
 
     $resultado = json_decode($respuesta, true);
@@ -112,7 +124,7 @@ if (!configuracionContactoCompleta($configuracion) || !is_file($autoload)) {
 }
 
 $captcha = (string) ($_POST['g-recaptcha-response'] ?? '');
-if (!verificarRecaptcha($captcha, (string) $configuracion['recaptcha_secret_key'], $ip)) {
+if (!verificarRecaptcha($captcha, (string) $configuracion['recaptcha_secret_key'], $ip, (string) $configuracion['recaptcha_verify_uri'])) {
     volverContacto('error', 'Completa correctamente el CAPTCHA.', $datos);
 }
 
@@ -127,15 +139,23 @@ require $autoload;
 try {
     $correoSmtp = new PHPMailer(true);
     $correoSmtp->isSMTP();
-    $correoSmtp->Host = 'smtp.gmail.com';
-    $correoSmtp->Port = 587;
+    $correoSmtp->Host = (string) $configuracion['host'];
+    $correoSmtp->Port = (int) $configuracion['port'];
     $correoSmtp->SMTPAuth = true;
-    $correoSmtp->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $encryption = strtolower((string) $configuracion['encryption']);
+    if ($encryption === 'ssl') {
+        $correoSmtp->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    } elseif ($encryption === 'tls') {
+        $correoSmtp->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    } else {
+        $correoSmtp->SMTPAutoTLS = false;
+        $correoSmtp->SMTPSecure = '';
+    }
     $correoSmtp->Username = (string) $configuracion['smtp_user'];
     $correoSmtp->Password = (string) $configuracion['smtp_app_password'];
     $correoSmtp->Timeout = 15;
     $correoSmtp->CharSet = PHPMailer::CHARSET_UTF8;
-    $correoSmtp->setFrom((string) $configuracion['smtp_user'], 'Atenea - Formulario web');
+    $correoSmtp->setFrom((string) $configuracion['from_email'], (string) $configuracion['from_name']);
     $correoSmtp->addAddress((string) $configuracion['recipient']);
     $correoSmtp->addReplyTo($correo, $nombre);
     $correoSmtp->Subject = '[Contacto Atenea] ' . $asunto;

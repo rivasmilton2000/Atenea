@@ -41,6 +41,7 @@
         <h4>Boletín de Atenea</h4>
         <p>Recibe novedades sobre programas, eventos y bienestar holístico.</p>
         <form action="<?= atenea_url('src/website/forms/newsletter.php') ?>" method="post" class="php-email-form">
+          <input type="hidden" name="csrf_token" value="<?= atenea_e(obtenerTokenCsrf()) ?>">
           <div class="newsletter-form"><input type="email" name="email" aria-label="Correo electrónico" required><input type="submit" value="Suscribirme"></div>
           <div class="loading">Enviando</div>
           <div class="error-message"></div>

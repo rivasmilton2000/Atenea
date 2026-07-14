@@ -1,39 +1,27 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/env.php';
+require_once __DIR__ . '/config/services.php';
 
 function configuracionCorreoAtenea(): array
 {
-    $privada = __DIR__ . '/config/mail.php';
-    if (is_file($privada)) {
-        $configuracion = require $privada;
-        if (is_array($configuracion)) return $configuracion;
-    }
-
-    return [
-        'host' => 'smtp.gmail.com',
-        'port' => 587,
-        'encryption' => 'tls',
-        'smtp_user' => entornoAtenea('GMAIL_SMTP_USER'),
-        'smtp_app_password' => entornoAtenea('GMAIL_SMTP_APP_PASSWORD'),
-        'recipient' => entornoAtenea('CONTACT_RECIPIENT'),
-        'recaptcha_site_key' => entornoAtenea('RECAPTCHA_SITE_KEY'),
-        'recaptcha_secret_key' => entornoAtenea('RECAPTCHA_SECRET_KEY'),
-    ];
+    return MailConfig::toArray();
 }
 
 function configuracionSmtpCompleta(array $configuracion): bool
 {
     return trim((string) ($configuracion['host'] ?? '')) !== ''
-        && filter_var($configuracion['smtp_user'] ?? '', FILTER_VALIDATE_EMAIL) !== false
-        && trim((string) ($configuracion['smtp_app_password'] ?? '')) !== '';
+        && (int) ($configuracion['port'] ?? 0) >= 1
+        && trim((string) ($configuracion['smtp_user'] ?? '')) !== ''
+        && trim((string) ($configuracion['smtp_app_password'] ?? '')) !== ''
+        && in_array((string) ($configuracion['encryption'] ?? ''), ['tls', 'ssl', 'none'], true)
+        && filter_var($configuracion['from_email'] ?? '', FILTER_VALIDATE_EMAIL) !== false
+        && trim((string) ($configuracion['from_name'] ?? '')) !== '';
 }
 
 function configuracionContactoCompleta(array $configuracion): bool
 {
-    return filter_var($configuracion['smtp_user'] ?? '', FILTER_VALIDATE_EMAIL) !== false
-        && trim((string) ($configuracion['smtp_app_password'] ?? '')) !== ''
+    return configuracionSmtpCompleta($configuracion)
         && filter_var($configuracion['recipient'] ?? '', FILTER_VALIDATE_EMAIL) !== false
         && trim((string) ($configuracion['recaptcha_site_key'] ?? '')) !== ''
         && trim((string) ($configuracion['recaptcha_secret_key'] ?? '')) !== '';

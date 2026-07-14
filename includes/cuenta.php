@@ -97,9 +97,13 @@ function guardarFotoPerfil(array $archivo, ?string $anterior): string
     if (($archivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) throw new RuntimeException('No fue posible recibir la fotografía.');
     if ((int) ($archivo['size'] ?? 0) < 1 || (int) $archivo['size'] > 3 * 1024 * 1024) throw new RuntimeException('La fotografía debe pesar como máximo 3 MB.');
     $tmp = (string) ($archivo['tmp_name'] ?? '');
+    if (!is_uploaded_file($tmp)) throw new RuntimeException('No fue posible validar la fotografía recibida.');
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
     $permitidos = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-    if (!isset($permitidos[$mime]) || @getimagesize($tmp) === false) throw new RuntimeException('Selecciona una imagen JPG, PNG o WEBP válida.');
+    $contenido = file_get_contents($tmp);
+    if (!isset($permitidos[$mime]) || !is_string($contenido) || getimagesizefromstring($contenido) === false) {
+        throw new RuntimeException('Selecciona una imagen JPG, PNG o WEBP válida.');
+    }
     if (preg_match('/\.(?:php\d*|phtml|phar|html?|svg)(?:\.|$)/i', (string) ($archivo['name'] ?? ''))) throw new RuntimeException('El nombre del archivo no es seguro.');
     $directorio = ATENEA_ROOT . '/uploads/perfiles';
     if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) throw new RuntimeException('No fue posible preparar la carpeta de perfiles.');
@@ -113,7 +117,21 @@ function eliminarFotoPerfilLocal(?string $ruta): void
     $ruta = (string) $ruta;
     if (str_starts_with($ruta, 'uploads/perfiles/') && !str_contains($ruta, '..')) {
         $archivo = ATENEA_ROOT . '/' . $ruta;
-        if (is_file($archivo)) @unlink($archivo);
+        if (is_file($archivo)) {
+            $detalle = '';
+            set_error_handler(static function (int $nivel, string $mensaje) use (&$detalle): bool {
+                $detalle = $mensaje;
+                return true;
+            });
+            try {
+                $eliminada = unlink($archivo);
+            } finally {
+                restore_error_handler();
+            }
+            if (!$eliminada) {
+                error_log('Atenea no pudo eliminar una fotografía de perfil local: ' . ($detalle !== '' ? $detalle : 'error desconocido'));
+            }
+        }
     }
 }
 

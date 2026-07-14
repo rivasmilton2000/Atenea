@@ -63,9 +63,9 @@ pk\_test\_51T09gWE8YH5P1jJksI3DLYSKwIeLbdUYjJNEm9xGW3UcaA9qzwo1BXsOJz9VMVi89VE7b
 
 
 
-&#x20;       'recaptcha\_site\_key' => entornoAtenea('6Lez1lAtAAAAAMldVwHgvaHRz2yHEuJDr0ol2htz'),
+&#x20;       'recaptcha\_site\_key' => entornoAtenea('RECAPTCHA_SITE_KEY'),
 
-&#x20;       'recaptcha\_secret\_key' => entornoAtenea('6Lez1lAtAAAAABJoavF0sq6LZ13qebfXydqNvqdq'),
+&#x20;       'recaptcha\_secret\_key' => entornoAtenea('RECAPTCHA_SECRET_KEY'),
 
 
 

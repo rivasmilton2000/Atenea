@@ -92,5 +92,4 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
   document.getElementById('telefono').addEventListener('input', event => { event.target.value=event.target.value.replace(/\D/g,'').slice(0,15); });
 })();
 </script>
-<script src="<?= atenea_url('src/estudiantes/assets/js/hope-ui.js') ?>" defer></script>
 </body></html>

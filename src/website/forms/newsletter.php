@@ -1,39 +1,63 @@
 <?php
-  /**
-  * Requires the "PHP Email Form" library
-  * The "PHP Email Form" library is available only in the pro version of the template
-  * The library should be uploaded to: vendor/php-email-form/php-email-form.php
-  * For more info and help: https://bootstrapmade.com/php-email-form/
-  */
+declare(strict_types=1);
 
-  // Replace contact@example.com with your real receiving email address
-  $receiving_email_address = 'contact@example.com';
+require_once dirname(__DIR__, 3) . '/includes/config.php';
+require_once dirname(__DIR__, 3) . '/includes/session.php';
+require_once dirname(__DIR__, 3) . '/includes/mailer.php';
 
-  if( file_exists($php_email_form = '../assets/vendor/php-email-form/php-email-form.php' )) {
-    include( $php_email_form );
-  } else {
-    die( 'Unable to load the "PHP Email Form" Library!');
-  }
+const BOLETIN_MAX_INTENTOS = 5;
+const BOLETIN_VENTANA_SEGUNDOS = 600;
 
-  $contact = new PHP_Email_Form;
-  $contact->ajax = true;
-  
-  $contact->to = $receiving_email_address;
-  $contact->from_name = $_POST['email'];
-  $contact->from_email = $_POST['email'];
-  $contact->subject ="New Subscription: " . $_POST['email'];
+function responderBoletin(string $mensaje, int $estado = 200): never
+{
+    http_response_code($estado);
+    header('Content-Type: text/plain; charset=UTF-8');
+    echo $mensaje;
+    exit;
+}
 
-  // Uncomment below code if you want to use SMTP to send emails. You need to enter your correct SMTP credentials
-  /*
-  $contact->smtp = array(
-    'host' => 'example.com',
-    'username' => 'example',
-    'password' => 'pass',
-    'port' => '587'
-  );
-  */
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    responderBoletin('Método no permitido.', 405);
+}
 
-  $contact->add_message( $_POST['email'], 'Email');
+if (!validarTokenCsrf(isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : null)) {
+    responderBoletin('La solicitud expiró. Recarga la página e inténtalo nuevamente.');
+}
 
-  echo $contact->send();
-?>
+$ahora = time();
+$intentos = array_values(array_filter(
+    is_array($_SESSION['boletin_intentos'] ?? null) ? $_SESSION['boletin_intentos'] : [],
+    static fn($momento): bool => is_int($momento) && $momento >= $ahora - BOLETIN_VENTANA_SEGUNDOS
+));
+if (count($intentos) >= BOLETIN_MAX_INTENTOS) {
+    responderBoletin('Has realizado demasiados intentos. Espera unos minutos.');
+}
+$intentos[] = $ahora;
+$_SESSION['boletin_intentos'] = $intentos;
+
+$correo = strtolower(trim((string) ($_POST['email'] ?? '')));
+if (!filter_var($correo, FILTER_VALIDATE_EMAIL) || strlen($correo) > 190) {
+    responderBoletin('Ingresa un correo electrónico válido.');
+}
+
+$configuracion = configuracionCorreoAtenea();
+$destinatario = (string) ($configuracion['recipient'] ?? '');
+if (!configuracionSmtpCompleta($configuracion) || !filter_var($destinatario, FILTER_VALIDATE_EMAIL)) {
+    responderBoletin('El boletín no está disponible temporalmente. Inténtalo más tarde.');
+}
+
+try {
+    $correoSeguro = atenea_e($correo);
+    enviarCorreoAtenea(
+        $destinatario,
+        (string) ($configuracion['from_name'] ?? 'Atenea'),
+        'Nueva suscripción al boletín de Atenea',
+        '<h2>Nueva suscripción al boletín</h2><p><strong>Correo:</strong> ' . $correoSeguro . '</p><p><strong>Fecha:</strong> ' . atenea_e(date('d/m/Y H:i')) . '</p>',
+        "Nueva suscripción al boletín de Atenea\nCorreo: {$correo}\nFecha: " . date('d/m/Y H:i')
+    );
+} catch (Throwable $e) {
+    error_log('Boletín Atenea: ' . $e->getMessage());
+    responderBoletin('No fue posible procesar la suscripción. Inténtalo nuevamente.');
+}
+
+responderBoletin('OK');

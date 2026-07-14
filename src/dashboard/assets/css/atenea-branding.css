@@ -30,6 +30,38 @@
   max-height: 72px;
 }
 
+.admin-profile-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 50%;
+  line-height: 0;
+}
+
+.admin-profile-trigger:focus-visible {
+  outline: 2px solid #b88a2a;
+  outline-offset: 2px;
+}
+
+.admin-navbar-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.admin-profile-modal-photo {
+  max-width: 120px;
+  max-height: 120px;
+}
+
 @media (max-width: 991.98px) {
   .navbar .navbar-brand-wrapper { padding: 6px 3px; }
   .navbar .navbar-brand-wrapper > .me-3 { display: none; }

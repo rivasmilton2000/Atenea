@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const modal = document.getElementById('modalPerfil');
+  const modal = document.querySelector('[data-atenea-profile-modal]');
   if (!modal) return;
 
-  const foto = document.getElementById('cuenta_foto');
-  const preview = document.getElementById('vistaPreviaFoto');
+  const foto = modal.querySelector('[data-profile-photo-input]');
+  const preview = modal.querySelector('[data-profile-photo-preview]');
   foto?.addEventListener('change', () => {
     const archivo = foto.files?.[0];
     if (!archivo) return;
@@ -38,5 +38,4 @@ document.addEventListener('DOMContentLoaded', () => {
     llenar(municipio, 'municipios', departamento.value, municipio.dataset.selected)
       .then(() => municipio.value && llenar(distrito, 'distritos', municipio.value, distrito.dataset.selected));
   }
-  if (modal.dataset.autoOpen === '1' && window.bootstrap) new bootstrap.Modal(modal).show();
 });

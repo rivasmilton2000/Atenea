@@ -19,14 +19,20 @@ function enviarCorreoAtenea(string $destinatario, string $nombre, string $asunto
     $correo->Host = (string) $configuracion['host'];
     $correo->Port = (int) ($configuracion['port'] ?? 587);
     $correo->SMTPAuth = true;
-    $correo->SMTPSecure = strtolower((string) ($configuracion['encryption'] ?? 'tls')) === 'ssl'
-        ? PHPMailer::ENCRYPTION_SMTPS
-        : PHPMailer::ENCRYPTION_STARTTLS;
+    $encryption = strtolower((string) ($configuracion['encryption'] ?? 'tls'));
+    if ($encryption === 'ssl') {
+        $correo->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    } elseif ($encryption === 'tls') {
+        $correo->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    } else {
+        $correo->SMTPAutoTLS = false;
+        $correo->SMTPSecure = '';
+    }
     $correo->Username = (string) $configuracion['smtp_user'];
     $correo->Password = (string) $configuracion['smtp_app_password'];
     $correo->Timeout = 15;
     $correo->CharSet = PHPMailer::CHARSET_UTF8;
-    $correo->setFrom((string) $configuracion['smtp_user'], 'Atenea');
+    $correo->setFrom((string) $configuracion['from_email'], (string) $configuracion['from_name']);
     $correo->addAddress($destinatario, $nombre);
     $correo->isHTML(true);
     $correo->Subject = $asunto;

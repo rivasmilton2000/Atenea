@@ -112,16 +112,21 @@ $fechaAdmin = date('d/m/Y');
           </a>
         </div>
       </li>
+      <li class="nav-item d-none d-lg-block">
+        <button type="button" id="adminProfileTrigger" class="admin-profile-trigger" data-bs-toggle="modal" data-bs-target="#adminProfileModal" aria-label="Abrir mi perfil">
+          <img class="admin-navbar-avatar" src="<?= atenea_e($fotoAdmin) ?>" alt="Fotografía del administrador">
+        </button>
+      </li>
       <li class="nav-item dropdown d-none d-lg-block user-dropdown">
-        <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-          <img class="img-xs rounded-circle" src="<?= atenea_e($fotoAdmin) ?>" alt="Foto de <?= atenea_e($nombreAdmin) ?>"> </a>
-        <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
+        <button type="button" class="nav-link border-0 bg-transparent" id="adminUserMenuToggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir menú de usuario">
+          <i class="mdi mdi-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="adminUserMenuToggle">
           <div class="dropdown-header text-center">
-            <img class="img-md rounded-circle" src="<?= atenea_e($fotoAdmin) ?>" alt="Foto de <?= atenea_e($nombreAdmin) ?>">
-            <p class="mb-1 mt-3 fw-semibold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></p>
+            <p class="mb-1 fw-semibold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></p>
             <p class="fw-light text-muted mb-0"><?= atenea_e($correoAdmin) ?></p>
           </div>
-          <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>
+          <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#adminProfileModal"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>
           <a class="dropdown-item" href="<?= atenea_url('index.php') ?>"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
           <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Actividad</a>
           <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> Soporte</a>
