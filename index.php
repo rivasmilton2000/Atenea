@@ -5,6 +5,7 @@ $pageDescription = 'Formación integral en naturopatía, terapias naturales y bi
 $pageClass = 'index-page';
 $activePage = 'inicio';
 $errorContenido = null;
+
 try {
     $contenidoInicio = cargarContenidoInicio();
     $configSitio = $contenidoInicio['configuracion'];
