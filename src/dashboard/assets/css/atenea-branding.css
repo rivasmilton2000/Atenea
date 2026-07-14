@@ -18,6 +18,18 @@
   object-fit: contain;
 }
 
+.navbar .user-dropdown > .nav-link .img-xs,
+.navbar .user-dropdown .dropdown-header .img-md {
+  object-fit: cover;
+}
+
+.navbar .user-dropdown .dropdown-header .img-md {
+  width: 72px;
+  height: 72px;
+  max-width: 72px;
+  max-height: 72px;
+}
+
 @media (max-width: 991.98px) {
   .navbar .navbar-brand-wrapper { padding: 6px 3px; }
   .navbar .navbar-brand-wrapper > .me-3 { display: none; }

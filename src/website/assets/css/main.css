@@ -69,6 +69,14 @@ body {
   color: var(--default-color);
   background-color: var(--background-color);
   font-family: var(--default-font);
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1 0 auto;
 }
 
 a {
@@ -677,8 +685,9 @@ h6 {
   color: var(--default-color);
   background-color: var(--background-color);
   font-size: 14px;
-  padding-bottom: 50px;
+  padding-bottom: 0;
   position: relative;
+  flex-shrink: 0;
 }
 
 .footer .footer-top {

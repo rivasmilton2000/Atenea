@@ -106,11 +106,11 @@ try {
             <div class="ps-lg-3">
               <div class="d-flex align-items-center justify-content-between">
                 <p class="mb-0 fw-medium me-3 buy-now-text">Panel administrativo de Atenea Escuela de Naturopatía Holística</p>
-                <a href="<?= atenea_url('index.php') ?>" target="_blank" class="btn me-2 buy-now-btn border-0">Ver sitio</a>
+                <a href="<?= atenea_url('index.php') ?>" class="btn me-2 buy-now-btn border-0">Ver sitio</a>
               </div>
             </div>
             <div class="d-flex align-items-center justify-content-between">
-              <a href="<?= atenea_url('index.php') ?>" target="_blank"><i class="ti-home me-3 text-white"></i></a>
+              <a href="<?= atenea_url('index.php') ?>"><i class="ti-home me-3 text-white"></i></a>
               <button id="bannerClose" class="btn border-0 p-0">
                 <i class="ti-close text-white"></i>
               </button>
@@ -278,7 +278,7 @@ try {
                   <p class="fw-light text-muted mb-0"><?= atenea_e($correoAdmin) ?></p>
                 </div>
                 <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>
-                <a class="dropdown-item" href="<?= atenea_url('index.php') ?>" target="_blank"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
+                <a class="dropdown-item" href="<?= atenea_url('index.php') ?>"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
                 <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Actividad</a>
                 <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> Soporte</a>
                 <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Cerrar sesión</a>
@@ -382,14 +382,14 @@ try {
               </a>
               <div class="collapse" id="auth" data-bs-parent="#sidebar">
                 <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('index.php') ?>" target="_blank"> Ver sitio </a></li>
+                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('index.php') ?>"> Ver sitio </a></li>
                   <li class="nav-item"> <button class="nav-link border-0 bg-transparent" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"> Mi perfil </button></li>
                   <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"> Cerrar sesión </a></li>
                 </ul>
               </div>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="<?= atenea_url('index.php') ?>" target="_blank">
+              <a class="nav-link" href="<?= atenea_url('index.php') ?>">
                 <i class="menu-icon mdi mdi-file-document"></i>
                 <span class="menu-title">Ver sitio</span>
               </a>

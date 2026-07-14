@@ -122,7 +122,7 @@ $fechaAdmin = date('d/m/Y');
             <p class="fw-light text-muted mb-0"><?= atenea_e($correoAdmin) ?></p>
           </div>
           <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>
-          <a class="dropdown-item" href="<?= atenea_url('index.php') ?>" target="_blank"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
+          <a class="dropdown-item" href="<?= atenea_url('index.php') ?>"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
           <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Actividad</a>
           <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> Soporte</a>
           <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Cerrar sesión</a>

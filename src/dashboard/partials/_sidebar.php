@@ -83,14 +83,14 @@ $usuariosAbierto = $dashboardActive === 'usuarios/index.php';
       </a>
       <div class="collapse" id="auth" data-bs-parent="#sidebar">
         <ul class="nav flex-column sub-menu">
-          <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('index.php') ?>" target="_blank"> Ver sitio </a></li>
+          <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('index.php') ?>"> Ver sitio </a></li>
           <li class="nav-item"> <button class="nav-link border-0 bg-transparent" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"> Mi perfil </button></li>
           <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"> Cerrar sesión </a></li>
         </ul>
       </div>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="<?= atenea_url('index.php') ?>" target="_blank">
+      <a class="nav-link" href="<?= atenea_url('index.php') ?>">
         <i class="menu-icon mdi mdi-file-document"></i>
         <span class="menu-title">Ver sitio</span>
       </a>
