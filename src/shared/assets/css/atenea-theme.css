@@ -1,0 +1,40 @@
+:root {
+  --atenea-gold: #c49a3a;
+  --atenea-gold-hover: #a97e24;
+  --atenea-gold-soft: #ead081;
+  --atenea-green: #173f35;
+  --atenea-green-soft: #2f6655;
+  --atenea-cream: #f7f4ec;
+  --atenea-surface: #ffffff;
+  --atenea-text: #20251f;
+  --atenea-muted: #66706a;
+  --atenea-danger: #b4232f;
+  --atenea-warning: #9a6b12;
+  --atenea-success: #26734d;
+  --atenea-border: #ded8c9;
+  --atenea-shadow: 0 14px 38px rgba(23, 63, 53, .14);
+  --atenea-focus-ring: 0 0 0 .2rem rgba(196, 154, 58, .28);
+}
+
+.swal2-popup.atenea-alert-popup {
+  border: 1px solid var(--atenea-border);
+  border-radius: 14px;
+  background: var(--atenea-surface);
+  color: var(--atenea-text);
+  box-shadow: var(--atenea-shadow);
+  font-family: inherit;
+}
+
+.atenea-alert-popup .swal2-title { color: var(--atenea-green); }
+.atenea-alert-popup .swal2-html-container { color: var(--atenea-text); line-height: 1.6; }
+.atenea-alert-popup .swal2-confirm,
+.atenea-alert-popup .swal2-cancel { border-radius: 8px; font-weight: 600; }
+.atenea-alert-popup .swal2-confirm:focus-visible,
+.atenea-alert-popup .swal2-cancel:focus-visible { box-shadow: var(--atenea-focus-ring) !important; }
+.atenea-alert-popup .swal2-icon.swal2-success { border-color: var(--atenea-success); color: var(--atenea-success); }
+.atenea-alert-popup .swal2-success-ring { border-color: rgba(38, 115, 77, .28) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .swal2-popup { animation-duration: .01ms !important; }
+}
+

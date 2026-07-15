@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/google_oauth.php';
 require_once dirname(__DIR__, 2) . '/includes/portal_estudiante.php';
+require_once dirname(__DIR__, 2) . '/includes/alerts.php';
 
 if (usuarioAutenticado()) {
     redirigirPorRol();
@@ -27,6 +28,7 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/core/libs.min.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/hope-ui.min.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/login/auth.css') ?>">
+  <?php ateneaAlertasHead(); ?>
 </head>
 <body>
 <div class="wrapper">
@@ -38,7 +40,7 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
             <a href="<?= atenea_url('index.php') ?>" class="navbar-brand atenea-auth-logo d-flex justify-content-center mb-3"><img src="<?= atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo')) ?>" alt="Atenea Escuela de Naturopatía Holística"></a>
             <h2 class="text-center"><?= atenea_e(obtenerConfiguracionPortalEstudiante('registro_titulo')) ?></h2>
             <p class="text-center"><?= atenea_e(obtenerConfiguracionPortalEstudiante('registro_subtitulo')) ?></p>
-            <?php if ($errores): ?><div class="alert alert-danger"><ul class="mb-0"><?php foreach ($errores as $error): ?><li><?= atenea_e((string) $error) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
+            <?php if ($errores): ?><noscript><div class="alert alert-danger"><ul class="mb-0"><?php foreach ($errores as $error): ?><li><?= atenea_e((string) $error) ?></li><?php endforeach; ?></ul></div></noscript><?php endif; ?>
 
             <form method="post" action="<?= atenea_url('src/auth/procesar_registro.php') ?>">
               <input type="hidden" name="csrf_token" value="<?= atenea_e(obtenerTokenCsrf()) ?>">
@@ -92,4 +94,5 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
   document.getElementById('telefono').addEventListener('input', event => { event.target.value=event.target.value.replace(/\D/g,'').slice(0,15); });
 })();
 </script>
+<?php ateneaAlertasScripts($errores ? ['type' => 'error', 'title' => 'Revisa el formulario', 'message' => implode("\n", array_map('strval', $errores))] : null); ?>
 </body></html>

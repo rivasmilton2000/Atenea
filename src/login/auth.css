@@ -1,6 +1,6 @@
 :root {
-  --atenea-dorado: #c99a2e;
-  --atenea-verde: #173f35;
+  --atenea-dorado: var(--atenea-gold, #c49a3a);
+  --atenea-verde: var(--atenea-green, #173f35);
 }
 
 html,
@@ -12,8 +12,37 @@ body {
 body {
   min-height: 100vh;
   min-height: 100dvh;
-  background: #fff;
+  background: var(--atenea-cream, #f7f4ec);
 }
+
+.login-content { color: var(--atenea-text, #20251f); }
+.login-content h1,
+.login-content h2 { color: var(--atenea-green, #173f35); }
+.login-content a:not(.btn-google) { color: var(--atenea-green-soft, #2f6655); }
+.login-content a:not(.btn-google):hover { color: var(--atenea-gold-hover, #a97e24); }
+.login-content .btn-primary {
+  border-color: var(--atenea-gold, #c49a3a);
+  background: var(--atenea-gold, #c49a3a);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(196, 154, 58, .2);
+}
+.login-content .btn-primary:hover,
+.login-content .btn-primary:active {
+  border-color: var(--atenea-gold-hover, #a97e24) !important;
+  background: var(--atenea-gold-hover, #a97e24) !important;
+}
+.login-content .btn-primary:focus-visible,
+.login-content .form-control:focus,
+.login-content .form-select:focus {
+  border-color: var(--atenea-gold, #c49a3a);
+  box-shadow: var(--atenea-focus-ring, 0 0 0 .2rem rgba(196,154,58,.28));
+}
+.login-content .btn-primary:disabled { border-color: #b9aa83; background: #b9aa83; }
+.login-content .bg-primary { background-color: var(--atenea-green, #173f35) !important; }
+.login-content .bg-primary img { opacity: .86; }
+.login-content .form-control,
+.login-content .form-select { border-color: var(--atenea-border, #ded8c9); }
+.login-content input[type="checkbox"] { accent-color: var(--atenea-gold, #c49a3a); }
 
 body > .wrapper,
 .login-content {
@@ -72,7 +101,7 @@ body > .wrapper,
   font-size: .875rem;
 }
 .auth-separator::before,
-.auth-separator::after { content: ""; flex: 1; height: 1px; background: #dee2e6; }
+.auth-separator::after { content: ""; flex: 1; height: 1px; background: var(--atenea-border, #ded8c9); }
 
 .btn-google {
   display: inline-flex;
@@ -96,6 +125,20 @@ body > .wrapper,
 .back-to-site { color: var(--atenea-verde); font-weight: 600; }
 
 @media (max-width: 575.98px) {
+  .login-content > .row > :first-child,
+  .login-content .col-md-10,
+  .login-content .col-xl-8,
+  .login-content .auth-card,
+  .login-content .auth-card .card-body {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .login-content > .row > :first-child { padding-inline: 1rem; }
+  .login-content .auth-card p,
+  .login-content .auth-card a { overflow-wrap: anywhere; }
+  .login-content .btn,
+  .login-content .form-control { max-width: 100%; box-sizing: border-box; }
   .atenea-auth-logo img { width: 112px; height: 86px; }
   .auth-card .card-body { padding-inline: 0; }
 }

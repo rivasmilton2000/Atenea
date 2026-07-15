@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/cms.php';
+require_once dirname(__DIR__, 3) . '/includes/alerts.php';
 $dashboardTitle ??= 'Panel principal';
 $configuracionAdmin ??= obtenerConfiguracionSitio();
 $logoAdmin = $configuracionAdmin['logo'] ?? 'img/atenea-logo.png';
@@ -21,6 +22,7 @@ $faviconAdmin = $configuracionAdmin['favicon'] ?? 'img/atenea-logo.png';
   <link rel="stylesheet" href="<?= atenea_url('src/dashboard/assets/css/style.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/dashboard/assets/css/atenea-branding.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>">
+  <?php ateneaAlertasHead(); ?>
   <link rel="icon" type="image/png" href="<?= rutaImagenContenido($faviconAdmin, 'img/atenea-logo.png') ?>">
 </head>
 <body class="with-welcome-text">

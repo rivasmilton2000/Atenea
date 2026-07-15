@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/cms.php';
+require_once dirname(__DIR__, 2) . '/includes/alerts.php';
 
 $pdo = obtenerConexion();
 $usuarioAdmin = obtenerUsuarioActual() ?? [];
@@ -95,6 +96,7 @@ try {
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/atenea-branding.css">
     <link rel="stylesheet" href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>">
+    <?php ateneaAlertasHead(); ?>
     <!-- endinject -->
     <link rel="shortcut icon" href="<?= $faviconAdmin ?>" />
   </head>
@@ -298,112 +300,13 @@ try {
       <!-- partial -->
       <div class="container-fluid page-body-wrapper">
         <!-- partial:partials/_sidebar.html -->
-        <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server">
-          <ul class="nav">
-            <li class="nav-item active">
-              <a class="nav-link" href="<?= atenea_url('src/dashboard/index.php') ?>">
-                <i class="mdi mdi-grid-large menu-icon"></i>
-                <span class="menu-title">Panel principal</span>
-              </a>
-            </li>
-            <li class="nav-item nav-category">Gestion del sitio web</li>
-            <li class="nav-item">
-              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#ui-basic" aria-expanded="false" aria-controls="ui-basic">
-                <i class="menu-icon mdi mdi-floor-plan"></i>
-                <span class="menu-title">Pagina de inicio</span>
-                <i class="menu-arrow"></i>
-              </a>
-              <div class="collapse" id="ui-basic" data-bs-parent="#sidebar">
-                <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/secciones/index.php') ?>">Secciones</a></li>
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/elementos/index.php') ?>">Elementos</a></li>
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/secciones/index.php') ?>">Hero principal</a></li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#form-elements" aria-expanded="false" aria-controls="form-elements">
-                <i class="menu-icon mdi mdi-card-text-outline"></i>
-                <span class="menu-title">Configuración</span>
-                <i class="menu-arrow"></i>
-              </a>
-              <div class="collapse" id="form-elements" data-bs-parent="#sidebar">
-                <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">Configuración general</a></li>
-                  <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/navbar/index.php') ?>">Barra y menú</a></li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#charts" aria-expanded="false" aria-controls="charts">
-                <i class="menu-icon mdi mdi-chart-line"></i>
-                <span class="menu-title">Portal estudiante</span>
-                <i class="menu-arrow"></i>
-              </a>
-              <div class="collapse" id="charts" data-bs-parent="#sidebar">
-                <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/portal-estudiante/index.php') ?>">Apariencia y textos</a></li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item nav-category">Comercio</li>
-            <li class="nav-item">
-              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#comercio" aria-expanded="false" aria-controls="comercio"><i class="menu-icon mdi mdi-cart-outline"></i><span class="menu-title">Productos y pedidos</span><i class="menu-arrow"></i></a>
-              <div class="collapse" id="comercio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/productos/index.php')?>">Productos</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/categorias/index.php')?>">Categorías de productos</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/pedidos/index.php')?>">Pedidos</a></li></ul></div>
-            </li>
-            <li class="nav-item nav-category">Gestión de usuarios</li>
-            <li class="nav-item">
-              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
-                <i class="menu-icon mdi mdi-table"></i>
-                <span class="menu-title">Usuarios</span>
-                <i class="menu-arrow"></i>
-              </a>
-              <div class="collapse" id="tables" data-bs-parent="#sidebar">
-                <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"> <a class="nav-link" href="<?=atenea_url('src/dashboard/usuarios/index.php?rol=usuario')?>">Estudiantes</a></li>
-                  <li class="nav-item"> <a class="nav-link" href="<?=atenea_url('src/dashboard/usuarios/index.php?rol=docente')?>">Docentes</a></li>
-                  <li class="nav-item"> <a class="nav-link" href="<?=atenea_url('src/dashboard/usuarios/index.php?rol=admin')?>">Administradores</a></li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
-                <i class="menu-icon mdi mdi-layers-outline"></i>
-                <span class="menu-title">Resumen del sitio</span>
-                <i class="menu-arrow"></i>
-              </a>
-              <div class="collapse" id="icons" data-bs-parent="#sidebar">
-                <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/dashboard/index.php') ?>">Actividad general</a></li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item nav-category">Cuenta</li>
-            <li class="nav-item">
-              <a class="nav-link collapsed" data-bs-toggle="collapse" href="#auth" aria-expanded="false" aria-controls="auth">
-                <i class="menu-icon mdi mdi-account-circle-outline"></i>
-                <span class="menu-title">Cuenta</span>
-                <i class="menu-arrow"></i>
-              </a>
-              <div class="collapse" id="auth" data-bs-parent="#sidebar">
-                <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('index.php') ?>"> Ver sitio </a></li>
-                  <li class="nav-item"> <button class="nav-link border-0 bg-transparent" type="button" data-bs-toggle="modal" data-bs-target="#adminProfileModal"> Mi perfil </button></li>
-                  <li class="nav-item"> <a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"> Cerrar sesión </a></li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="<?= atenea_url('index.php') ?>">
-                <i class="menu-icon mdi mdi-file-document"></i>
-                <span class="menu-title">Ver sitio</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
+        <?php
+        $dashboardActive = 'panel';
+        require __DIR__ . '/partials/_sidebar.php';
+        ?>
         <!-- partial -->
         <div class="main-panel">
-          <div class="content-wrapper">
+          <div class="content-wrapper" id="resumen-sitio">
             <div class="row">
               <div class="col-sm-12">
                 <div class="home-tab">
@@ -763,6 +666,7 @@ try {
     </script>
     <script src="assets/js/dashboard.js"></script>
     <script src="<?= atenea_url('src/website/assets/js/perfil-modal.js') ?>"></script>
+    <?php ateneaAlertasScripts(); ?>
     <!-- <script src="assets/js/Chart.roundedBarCharts.js"></script> -->
     <!-- End custom js for this page-->
   </body>

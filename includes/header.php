@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/contenido.php';
+require_once __DIR__ . '/alerts.php';
 
 $pageTitle = $pageTitle ?? 'Atenea Escuela de Naturopatía Holística';
 $pageDescription = $pageDescription ?? 'Capacitaciones y certificaciones en naturopatía y bienestar holístico.';
@@ -31,6 +32,7 @@ $faviconSitio = $configuracionSitio['favicon'] ?? 'img/atenea-logo.png';
   <link href="<?= atenea_url('src/website/assets/vendor/swiper/swiper-bundle.min.css') ?>" rel="stylesheet">
   <link href="<?= atenea_url('src/website/assets/css/main.css') ?>" rel="stylesheet">
   <link href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>" rel="stylesheet">
+  <?php ateneaAlertasHead(); ?>
 </head>
 <body class="<?= atenea_e($pageClass) ?>">
 <?php require __DIR__ . '/navbar.php'; ?>

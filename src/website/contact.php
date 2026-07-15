@@ -21,6 +21,13 @@ $pageTitle = 'Contacto | Atenea';
 $pageDescription = 'Comunícate con Atenea Escuela de Naturopatía Holística.';
 $pageClass = 'contact-page';
 $activePage = 'contacto';
+if ($contactoFlash) {
+    $_SESSION['flash'] = [
+        'type' => ($contactoFlash['tipo'] ?? '') === 'exito' ? 'success' : 'error',
+        'title' => ($contactoFlash['tipo'] ?? '') === 'exito' ? 'Mensaje enviado' : 'No fue posible enviar el mensaje',
+        'message' => (string) ($contactoFlash['mensaje'] ?? ''),
+    ];
+}
 require dirname(__DIR__, 2) . '/includes/header.php';
 ?>
 <main class="main">
@@ -40,8 +47,8 @@ require dirname(__DIR__, 2) . '/includes/header.php';
           <?php if (($configuracionCorreo['recaptcha_site_key'] ?? '') !== ''): ?><div class="col-md-12"><div class="g-recaptcha" data-sitekey="<?= atenea_e((string) $configuracionCorreo['recaptcha_site_key']) ?>"></div></div><?php endif; ?>
           <div class="col-md-12 text-center">
             <div class="loading">Enviando</div>
-            <div class="error-message <?= ($contactoFlash['tipo'] ?? '') === 'error' ? 'd-block' : '' ?>"><?= atenea_e((string) (($contactoFlash['tipo'] ?? '') === 'error' ? $contactoFlash['mensaje'] : '')) ?></div>
-            <div class="sent-message <?= ($contactoFlash['tipo'] ?? '') === 'exito' ? 'd-block' : '' ?>"><?= atenea_e((string) (($contactoFlash['tipo'] ?? '') === 'exito' ? $contactoFlash['mensaje'] : '')) ?></div>
+            <div class="error-message"></div>
+            <div class="sent-message"></div>
             <?php if (!$contactoDisponible): ?><div class="alert alert-warning mt-3">El formulario de contacto está temporalmente fuera de servicio.</div><?php endif; ?>
             <button type="submit" <?= !$contactoDisponible ? 'disabled' : '' ?>>Enviar mensaje</button>
           </div>

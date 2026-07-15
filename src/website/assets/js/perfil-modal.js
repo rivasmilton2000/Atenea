@@ -9,7 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!archivo) return;
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(archivo.type) || archivo.size > 3 * 1024 * 1024) {
       foto.value = '';
-      alert('Selecciona una imagen JPG, PNG o WEBP de hasta 3 MB.');
+      if (window.AteneaAlerts) {
+        window.AteneaAlerts.error('Imagen no válida', 'Selecciona una imagen JPG, PNG o WEBP de hasta 3 MB.');
+      } else {
+        window.alert('Selecciona una imagen JPG, PNG o WEBP de hasta 3 MB.');
+      }
       return;
     }
     preview.src = URL.createObjectURL(archivo);

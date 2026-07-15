@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/google_oauth.php';
 require_once dirname(__DIR__, 2) . '/includes/portal_estudiante.php';
+require_once dirname(__DIR__, 2) . '/includes/alerts.php';
 
 if (usuarioAutenticado()) redirigirPorRol();
 $mensaje = (string) ($_SESSION['mensaje_auth'] ?? '');
@@ -24,6 +25,7 @@ $logo = atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo'));
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/core/libs.min.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/hope-ui.min.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/login/auth.css') ?>">
+  <?php ateneaAlertasHead(); ?>
 </head>
 <body>
 <div class="wrapper">
@@ -37,7 +39,7 @@ $logo = atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo'));
             </a>
             <h1 class="h2 mb-2 text-center"><?= atenea_e(obtenerConfiguracionPortalEstudiante('login_titulo')) ?></h1>
             <p class="text-center"><?= atenea_e(obtenerConfiguracionPortalEstudiante('login_subtitulo')) ?></p>
-            <?php if ($mensaje !== ''): ?><div class="alert alert-<?= $tipoMensaje ?>" role="alert"><?= atenea_e($mensaje) ?></div><?php endif; ?>
+            <?php if ($mensaje !== ''): ?><noscript><div class="alert alert-<?= $tipoMensaje ?>" role="alert"><?= atenea_e($mensaje) ?></div></noscript><?php endif; ?>
 
             <form method="post" action="<?= atenea_url('src/auth/procesar_login.php') ?>">
               <input type="hidden" name="csrf_token" value="<?= atenea_e(obtenerTokenCsrf()) ?>">
@@ -79,5 +81,6 @@ document.getElementById('google-login')?.addEventListener('click', function () {
   this.querySelector('.google-label').textContent = 'Redirigiendo a Google…';
 });
 </script>
+<?php ateneaAlertasScripts($mensaje !== '' ? ['type' => $tipoMensaje, 'title' => $tipoMensaje === 'success' ? 'Operación completada' : 'No fue posible iniciar sesión', 'message' => $mensaje] : null); ?>
 </body>
 </html>

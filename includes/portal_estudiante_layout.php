@@ -5,6 +5,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/portal_estudiante.php';
 require_once __DIR__ . '/contenido.php';
 require_once __DIR__ . '/perfil_modal.php';
+require_once __DIR__ . '/alerts.php';
 
 function datosPortalEstudiante(int $usuarioId): array
 {
@@ -57,6 +58,7 @@ function portalEstudianteCabecera(string $titulo, string $activo = 'inicio', str
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/rtl.min.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/atenea-branding.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>">
+  <?php ateneaAlertasHead(); ?>
 </head><body>
 <aside class="sidebar sidebar-default sidebar-white sidebar-base navs-rounded-all">
   <div class="sidebar-header d-flex align-items-center justify-content-start"><a href="<?= atenea_url('src/estudiantes/index.php') ?>" class="navbar-brand atenea-portal-logo"><img src="<?= atenea_e($logo) ?>" class="img-fluid" alt="Atenea Escuela de Naturopatía Holística"></a><div class="sidebar-toggle" data-toggle="sidebar" data-active="true"><i class="icon"><svg width="20" viewBox="0 0 24 24" fill="none"><path d="M4.25 12.27h15M10.3 18.3l-6.05-6.03 6.05-6.02" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i></div></div>
@@ -70,7 +72,7 @@ function portalEstudianteCabecera(string $titulo, string $activo = 'inicio', str
     <li class="nav-item"><button class="nav-link w-100 border-0 bg-transparent text-start" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="icon"><i class="bi bi-person"></i></i><span class="item-name">Mi perfil</span></button></li>
     <li class="nav-item"><a class="<?= $enlace('pedidos','') ?>" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="icon"><i class="bi bi-receipt"></i></i><span class="item-name">Mis pedidos y pagos</span></a></li>
     <li class="nav-item"><a class="nav-link" href="<?= atenea_url('index.php') ?>"><i class="icon"><i class="bi bi-globe"></i></i><span class="item-name">Volver al sitio</span></a></li>
-    <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/login/logout.php') ?>"><i class="icon"><i class="bi bi-box-arrow-right"></i></i><span class="item-name">Cerrar sesión</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-atenea-confirm="logout" href="<?= atenea_url('src/login/logout.php') ?>"><i class="icon"><i class="bi bi-box-arrow-right"></i></i><span class="item-name">Cerrar sesión</span></a></li>
   </ul></div></div><div class="sidebar-footer"></div>
 </aside>
 <main class="main-content">
@@ -98,5 +100,6 @@ function portalEstudiantePie(): void
 <script src="<?= atenea_url('src/estudiantes/assets/vendor/aos/dist/aos.js') ?>"></script>
 <script src="<?= atenea_url('src/estudiantes/assets/js/hope-ui.js') ?>" defer></script>
 <script src="<?= atenea_url('src/website/assets/js/perfil-modal.js') ?>"></script>
+<?php ateneaAlertasScripts(); ?>
 </body></html><?php
 }

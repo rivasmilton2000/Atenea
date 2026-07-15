@@ -93,6 +93,7 @@ function cmsCabecera(string $titulo, string $activo, string $descripcion = 'Admi
     $dashboardActive = $activo;
     $dashboardDescription = $descripcion;
     $dashboardFlash = cmsObtenerFlash();
+    $GLOBALS['atenea_dashboard_flash'] = $dashboardFlash;
     $usuarioAdmin = obtenerUsuarioActual();
     $configuracionAdmin = obtenerConfiguracionSitio();
     require dirname(__DIR__) . '/includes/header.php';
@@ -101,10 +102,6 @@ function cmsCabecera(string $titulo, string $activo, string $descripcion = 'Admi
     require dirname(__DIR__) . '/partials/_sidebar.php';
     echo '<div class="main-panel"><div class="content-wrapper">';
     echo '<div class="d-sm-flex align-items-center justify-content-between border-bottom mb-4"><div><nav aria-label="breadcrumb"><ol class="breadcrumb mb-2"><li class="breadcrumb-item"><a href="'.atenea_url('src/dashboard/index.php').'">Panel principal</a></li><li class="breadcrumb-item active">'.atenea_e($titulo).'</li></ol></nav><h1 class="h3 mb-1">'.atenea_e($titulo).'</h1><p class="text-muted mb-3">'.atenea_e($descripcion).'</p></div></div>';
-    if ($dashboardFlash) {
-        $clase = $dashboardFlash['tipo'] === 'exito' ? 'success' : 'danger';
-        echo '<div class="alert alert-'.$clase.' alert-dismissible fade show" role="alert">'.atenea_e((string)$dashboardFlash['mensaje']).'<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-    }
 }
 
 function cmsPie(): void
