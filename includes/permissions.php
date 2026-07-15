@@ -18,6 +18,7 @@ function permisosPorRolAtenea(string $rol): array
             'users.send_notice',
             'users.start_password_recovery',
             'users.delete',
+            'users.delete_admin',
             'audit.view',
             'payments.view_summary',
         ],
@@ -31,8 +32,11 @@ function permisosPorRolAtenea(string $rol): array
 function usuarioTienePermiso(string $permiso, ?array $usuario = null): bool
 {
     $usuario ??= obtenerUsuarioActual();
-    return $usuario !== null
-        && in_array($permiso, permisosPorRolAtenea((string) ($usuario['rol'] ?? '')), true);
+    if ($usuario === null || !in_array($permiso, permisosPorRolAtenea((string) ($usuario['rol'] ?? '')), true)) return false;
+    if ($permiso !== 'users.delete_admin') return true;
+    $consulta = obtenerConexion()->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol='admin' AND es_superadmin=1 AND estado='activo' AND deleted_at IS NULL");
+    $consulta->execute(['id'=>(int)$usuario['id']]);
+    return (bool)$consulta->fetchColumn();
 }
 
 function exigirPermiso(string $permiso): void
@@ -48,4 +52,3 @@ function rolesAdministrablesAtenea(): array
 {
     return ['usuario', 'docente', 'admin'];
 }
-

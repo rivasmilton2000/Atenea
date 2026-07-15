@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
+require_once dirname(__DIR__, 2) . '/includes/audit.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Location: ' . atenea_url('src/login/sign-up.php'));
@@ -61,20 +62,23 @@ try {
     }
 
     if (!$errores) {
+        $nombreUsuario = generarNombreUsuarioDisponible($pdo, $correo, $nombre . '.' . $apellido);
         $consulta = $pdo->prepare(
             "INSERT INTO usuarios
-             (nombre,apellido,correo,password,rol,estado,proveedor,email_verificado,fecha_nacimiento,dui,codigo_telefono,telefono,departamento_id,municipio_id,distrito_id,direccion,created_at,updated_at)
-             VALUES(:nombre,:apellido,:correo,:password,'usuario','activo','local',0,:fecha,:dui,:codigo,:telefono,:departamento,:municipio,:distrito,:direccion,NOW(),NOW())"
+             (nombre,apellido,nombre_usuario,correo,password,rol,estado,proveedor,email_verificado,fecha_nacimiento,dui,codigo_telefono,telefono,departamento_id,municipio_id,distrito_id,direccion,created_at,updated_at)
+             VALUES(:nombre,:apellido,:nombre_usuario,:correo,:password,'usuario','activo','local',0,:fecha,:dui,:codigo,:telefono,:departamento,:municipio,:distrito,:direccion,NOW(),NOW())"
         );
         $consulta->execute([
-            'nombre' => $nombre, 'apellido' => $apellido, 'correo' => $correo,
+            'nombre' => $nombre, 'apellido' => $apellido, 'nombre_usuario' => $nombreUsuario, 'correo' => $correo,
             'password' => password_hash($password, PASSWORD_DEFAULT), 'fecha' => $fechaNacimiento,
             'dui' => $dui, 'codigo' => $codigoTelefono, 'telefono' => $telefono,
             'departamento' => $departamentoId, 'municipio' => $municipioId, 'distrito' => $distritoId,
             'direccion' => $direccion === '' ? null : $direccion,
         ]);
+        $usuarioId = (int) $pdo->lastInsertId();
+        registrarAuditoria(['actor_user_id'=>$usuarioId,'target_user_id'=>$usuarioId,'event_type'=>'user.created','module'=>'users','entity_type'=>'user','entity_id'=>$usuarioId,'action'=>'create','result'=>'success','description'=>'Se creo una cuenta mediante registro tradicional.','metadata'=>['provider'=>'local','role'=>'usuario']],$pdo);
         iniciarSesionUsuario([
-            'id' => (int) $pdo->lastInsertId(), 'nombre' => $nombre, 'apellido' => $apellido,
+            'id' => $usuarioId, 'nombre' => $nombre, 'apellido' => $apellido,
             'correo' => $correo, 'rol' => 'usuario', 'foto' => null,
             'session_version' => 1,
             'fecha_nacimiento' => $fechaNacimiento, 'dui' => $dui,

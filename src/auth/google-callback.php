@@ -30,10 +30,21 @@ if (!is_array($datosEstado)
     || !is_string($datosEstado['valor'])
     || !hash_equals($datosEstado['valor'], $state)
     || (int) ($datosEstado['expira'] ?? 0) < time()) {
+    registrarAuditoria(['event_type'=>'auth.google_state_failed','module'=>'auth','action'=>'google_callback','result'=>'blocked','description'=>'Se bloqueo un callback de Google por state invalido o vencido.']);
     falloCallbackGoogle('La verificación de seguridad de Google expiró o no es válida.', $accion);
 }
 if (isset($_GET['error'])) {
-    falloCallbackGoogle('El acceso con Google fue cancelado o no pudo autorizarse.', $accion);
+    $errorGoogle = (string) $_GET['error'];
+    registrarAuditoria([
+        'actor_user_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,
+        'event_type'=>$errorGoogle === 'access_denied' ? 'auth.google_access_denied' : 'auth.google_failed',
+        'module'=>'auth','action'=>'google_callback','result'=>'failure',
+        'description'=>$errorGoogle === 'access_denied' ? 'El usuario cancelo la autorizacion de Google.' : 'Google devolvio un error de autorizacion.',
+        'metadata'=>['oauth_error'=>$errorGoogle],
+    ]);
+    falloCallbackGoogle($errorGoogle === 'access_denied'
+        ? 'Cancelaste el acceso con Google. Puedes intentarlo nuevamente cuando quieras.'
+        : 'Google no pudo autorizar el acceso. Intenta nuevamente.', $accion);
 }
 $codigo = (string) ($_GET['code'] ?? '');
 if ($codigo === '' || strlen($codigo) > 4096) falloCallbackGoogle('Google no devolvió un código de autorización válido.', $accion);
@@ -60,5 +71,11 @@ try {
     redirigirPorRol((string) $usuario['rol']);
 } catch (Throwable $e) {
     error_log('OAuth Google Atenea: ' . $e->getMessage());
+    registrarAuditoria([
+        'actor_user_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,
+        'event_type'=>'auth.google_failed','module'=>'auth','action'=>'google_callback','result'=>'failure',
+        'description'=>'No fue posible validar una autenticacion con Google.',
+        'metadata'=>['error_class'=>get_class($e)],
+    ]);
     falloCallbackGoogle('No fue posible iniciar sesión con Google. Intenta nuevamente.', $accion);
 }

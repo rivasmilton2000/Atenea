@@ -13,9 +13,12 @@ function obtenerConfiguracionGoogle(): array
 function googleDisponible(?array $configuracion = null): bool
 {
     $configuracion ??= obtenerConfiguracionGoogle();
+    $esperada = rtrim((string)($configuracion['app_url'] ?? ''), '/') . '/src/auth/google-callback.php';
     return trim((string) ($configuracion['client_id'] ?? '')) !== ''
         && trim((string) ($configuracion['client_secret'] ?? '')) !== ''
         && filter_var($configuracion['redirect_uri'] ?? '', FILTER_VALIDATE_URL) !== false
+        && filter_var($configuracion['app_url'] ?? '', FILTER_VALIDATE_URL) !== false
+        && hash_equals($esperada, (string)($configuracion['redirect_uri'] ?? ''))
         && extension_loaded('curl');
 }
 
@@ -32,6 +35,8 @@ function diagnosticoGoogle(?array $configuracion = null): array
     if (trim((string) ($configuracion['client_id'] ?? '')) === '') $faltantes[] = 'GOOGLE_CLIENT_ID';
     if (trim((string) ($configuracion['client_secret'] ?? '')) === '') $faltantes[] = 'GOOGLE_CLIENT_SECRET';
     if (filter_var($configuracion['redirect_uri'] ?? '', FILTER_VALIDATE_URL) === false) $faltantes[] = 'GOOGLE_REDIRECT_URI';
+    if (filter_var($configuracion['app_url'] ?? '', FILTER_VALIDATE_URL) === false) $faltantes[] = 'APP_URL';
+    elseif (rtrim((string)$configuracion['app_url'], '/') . '/src/auth/google-callback.php' !== (string)($configuracion['redirect_uri'] ?? '')) $faltantes[] = 'GOOGLE_REDIRECT_URI debe coincidir con APP_URL';
     if (!extension_loaded('curl')) $faltantes[] = 'extensión cURL de PHP';
     return $faltantes;
 }
@@ -78,7 +83,12 @@ function obtenerPerfilGoogle(string $codigo, array $configuracion): array
     if ($accessToken === '' || $idToken === '') throw new RuntimeException('Google no entregó los datos de acceso esperados.');
 
     $verificacion = solicitudGoogle((string) ($configuracion['tokeninfo_uri'] ?? GoogleConfig::tokenInfoUri()) . '?id_token=' . rawurlencode($idToken));
+    $issuer = (string) ($verificacion['iss'] ?? '');
+    $expiracion = filter_var($verificacion['exp'] ?? null, FILTER_VALIDATE_INT);
     if (!hash_equals((string) $configuracion['client_id'], (string) ($verificacion['aud'] ?? ''))
+        || !in_array($issuer, ['accounts.google.com', 'https://accounts.google.com'], true)
+        || $expiracion === false
+        || $expiracion <= time()
         || empty($verificacion['sub'])
         || empty($verificacion['email'])
         || !in_array($verificacion['email_verified'] ?? false, [true, 'true', '1', 1], true)) {
@@ -139,11 +149,18 @@ function autenticarConPerfilGoogle(array $perfil, bool $vincular = false): array
             $consulta->execute(['google_id' => $perfil['google_id'], 'id' => (int) $usuario['id']]);
             $usuario['google_id'] = $perfil['google_id'];
             $usuario['email_verificado'] = 1;
+            if (empty($usuario['nombre_usuario'])) {
+                $nombreUsuario = generarNombreUsuarioDisponible($pdo, (string) $perfil['correo'], (string) $perfil['nombre']);
+                $pdo->prepare('UPDATE usuarios SET nombre_usuario=:nombre_usuario WHERE id=:id')->execute(['nombre_usuario'=>$nombreUsuario,'id'=>(int)$usuario['id']]);
+                $usuario['nombre_usuario'] = $nombreUsuario;
+            }
         } else {
-            $consulta = $pdo->prepare("INSERT INTO usuarios(nombre,apellido,correo,password,google_id,proveedor,email_verificado,foto,rol,estado) VALUES(:nombre,:apellido,:correo,NULL,:google_id,'google',1,:foto,'usuario','activo')");
+            $nombreUsuario = generarNombreUsuarioDisponible($pdo, (string) $perfil['correo'], (string) $perfil['nombre']);
+            $consulta = $pdo->prepare("INSERT INTO usuarios(nombre,apellido,nombre_usuario,correo,password,google_id,proveedor,email_verificado,foto,rol,estado) VALUES(:nombre,:apellido,:nombre_usuario,:correo,NULL,:google_id,'google',1,:foto,'usuario','activo')");
             $consulta->execute([
                 'nombre' => $perfil['nombre'] !== '' ? $perfil['nombre'] : 'Estudiante',
                 'apellido' => $perfil['apellido'],
+                'nombre_usuario' => $nombreUsuario,
                 'correo' => $perfil['correo'],
                 'google_id' => $perfil['google_id'],
                 'foto' => $perfil['foto'] !== '' ? $perfil['foto'] : null,
@@ -151,6 +168,7 @@ function autenticarConPerfilGoogle(array $perfil, bool $vincular = false): array
             $consulta = $pdo->prepare('SELECT * FROM usuarios WHERE id=:id');
             $consulta->execute(['id' => (int) $pdo->lastInsertId()]);
             $usuario = $consulta->fetch();
+            registrarAuditoria(['actor_user_id'=>(int)$usuario['id'],'target_user_id'=>(int)$usuario['id'],'event_type'=>'user.created','module'=>'users','entity_type'=>'user','entity_id'=>$usuario['id'],'action'=>'create','result'=>'success','description'=>'Se creo una cuenta mediante Google.','metadata'=>['provider'=>'google','role'=>'usuario']],$pdo);
         }
 
         if (!is_array($usuario) || ($usuario['estado'] ?? '') !== 'activo') throw new RuntimeException('La cuenta no está activa.');

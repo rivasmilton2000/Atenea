@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/env.php';
+cargarEntornoAtenea();
+
 date_default_timezone_set('America/El_Salvador');
 
 if (!defined('ATENEA_ROOT')) {
@@ -31,7 +34,10 @@ function atenea_url(string $path = ''): string
 
 function atenea_url_absoluta(string $path = ''): string
 {
-    $baseConfigurada = getenv('ATENEA_APP_URL');
+    $baseConfigurada = getenv('APP_URL');
+    if ($baseConfigurada === false || trim((string) $baseConfigurada) === '') {
+        $baseConfigurada = getenv('ATENEA_APP_URL');
+    }
     if ($baseConfigurada !== false && trim((string) $baseConfigurada) !== '') {
         return rtrim(trim((string) $baseConfigurada), '/') . ($path !== '' ? '/' . ltrim($path, '/') : '');
     }

@@ -135,3 +135,22 @@ function exigirRol(array $roles): void
         redirigirPorRol();
     }
 }
+
+function generarNombreUsuarioDisponible(PDO $pdo, string $correo, string $nombre = ''): string
+{
+    $base = trim($nombre) !== '' ? trim($nombre) : (string) strstr($correo, '@', true);
+    $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $base);
+    $base = strtolower((string) ($ascii === false ? $base : $ascii));
+    $base = trim((string) preg_replace('/[^a-z0-9._-]+/', '.', $base), '.-_');
+    if ($base === '') $base = 'usuario';
+    $base = mb_substr($base, 0, 65);
+
+    $consulta = $pdo->prepare('SELECT 1 FROM usuarios WHERE nombre_usuario=:nombre_usuario LIMIT 1');
+    for ($intento = 0; $intento < 100; $intento++) {
+        $sufijo = $intento === 0 ? '' : '-' . ($intento + 1);
+        $candidato = mb_substr($base, 0, 80 - strlen($sufijo)) . $sufijo;
+        $consulta->execute(['nombre_usuario' => $candidato]);
+        if (!$consulta->fetchColumn()) return $candidato;
+    }
+    return 'usuario-' . bin2hex(random_bytes(6));
+}

@@ -34,7 +34,7 @@ final class AppConfig
 
     public static function isLocal(): bool
     {
-        $environment = strtolower(self::value('ATENEA_ENV'));
+        $environment = strtolower(self::value('APP_ENV', '', ['ATENEA_ENV']));
         if ($environment !== '') {
             return in_array($environment, ['dev', 'development', 'local'], true);
         }
@@ -82,6 +82,14 @@ final class GoogleConfig
     private function __construct() {}
     public static function clientId(): string { return AppConfig::value('GOOGLE_CLIENT_ID'); }
     public static function clientSecret(): string { return AppConfig::value('GOOGLE_CLIENT_SECRET'); }
+    public static function appUrl(): string
+    {
+        return rtrim(AppConfig::value('APP_URL', '', ['ATENEA_APP_URL']), '/');
+    }
+    public static function environment(): string
+    {
+        return AppConfig::value('APP_ENV', 'production', ['ATENEA_ENV']);
+    }
     public static function redirectUri(): string
     {
         $configured = AppConfig::value('GOOGLE_REDIRECT_URI');
@@ -99,7 +107,10 @@ final class GoogleConfig
         $missing = [];
         if (self::clientId() === '') $missing[] = 'GOOGLE_CLIENT_ID';
         if (self::clientSecret() === '') $missing[] = 'GOOGLE_CLIENT_SECRET';
+        if (!self::validHttpUrl(self::appUrl())) $missing[] = 'APP_URL';
         if (!self::validHttpUrl(self::redirectUri())) $missing[] = 'GOOGLE_REDIRECT_URI';
+        $esperada = self::appUrl() !== '' ? self::appUrl() . '/src/auth/google-callback.php' : '';
+        if ($esperada !== '' && self::redirectUri() !== $esperada) $missing[] = 'GOOGLE_REDIRECT_URI (debe coincidir con APP_URL)';
         return $missing;
     }
 
@@ -108,7 +119,8 @@ final class GoogleConfig
         return ['client_id' => self::clientId(), 'client_secret' => self::clientSecret(),
             'redirect_uri' => self::redirectUri(), 'authorization_uri' => self::authorizationUri(),
             'token_uri' => self::tokenUri(), 'tokeninfo_uri' => self::tokenInfoUri(),
-            'userinfo_uri' => self::userInfoUri(), 'scopes' => self::scopes()];
+            'userinfo_uri' => self::userInfoUri(), 'scopes' => self::scopes(),
+            'app_url' => self::appUrl(), 'app_env' => self::environment()];
     }
 
     private static function validHttpUrl(string $url): bool
