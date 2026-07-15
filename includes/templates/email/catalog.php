@@ -89,6 +89,39 @@ function plantillaCorreoAtenea(string $tipo, array $datos): array
             $texto = "Hola, {$nombre}. El tipo de acceso de tu cuenta ahora es: " . ($datos['rol'] ?? '') . '.';
             break;
 
+        case 'recuperacion_asistida_codigo':
+            $asunto = 'Codigo de recuperacion asistida de Atenea';
+            $preencabezado = 'Comparte este codigo unicamente con el personal de Atenea que atiende tu solicitud.';
+            $html = $parrafo('Hola, ' . $e($nombre) . '.') . $parrafo('Un administrador autorizado inicio una recuperacion asistida para tu cuenta.')
+                . '<p style="margin:22px 0;padding:16px;background:#f7f4ec;border:1px solid #e7c66a;border-radius:8px;text-align:center;font-size:28px;letter-spacing:6px;font-weight:700;color:#173f35;">' . $e($datos['codigo'] ?? '') . '</p>'
+                . $parrafo('El codigo vence en 10 minutos, tiene intentos limitados y solo debe comunicarse al personal que ya atiende tu caso. Atenea nunca te pedira tu contrasena.');
+            $texto = "Hola, {$nombre}. Codigo de recuperacion asistida: " . ($datos['codigo'] ?? '') . ". Vence en 10 minutos. Atenea nunca te pedira tu contrasena.";
+            break;
+
+        case 'recuperacion_asistida_enlace':
+            $asunto = 'Crea una nueva contrasena para tu cuenta Atenea';
+            $preencabezado = 'La verificacion asistida finalizo; solo tu puedes establecer la nueva contrasena.';
+            $html = $parrafo('Hola, ' . $e($nombre) . '.') . $parrafo('El codigo de recuperacion fue validado. Utiliza el siguiente enlace de un solo uso para crear tu nueva contrasena:')
+                . botonCorreoAtenea('Crear nueva contrasena', (string)($datos['enlace'] ?? ''))
+                . $parrafo('El enlace vence en 30 minutos. El administrador no puede ver ni elegir tu contrasena.');
+            $texto = "Hola, {$nombre}. Crea tu nueva contrasena con este enlace de un solo uso: " . ($datos['enlace'] ?? '') . ". Vence en 30 minutos.";
+            break;
+
+        case 'cuenta_eliminacion_solicitada':
+            $asunto = 'Solicitud administrativa sobre tu cuenta Atenea';
+            $preencabezado = 'Tu cuenta fue desactivada y entro en un periodo de gracia.';
+            $html = $parrafo('Hola, ' . $e($nombre) . '.') . $parrafo('Tu cuenta fue desactivada y entro en un periodo de gracia hasta <strong>' . $e($datos['fecha_limite'] ?? '') . '</strong>.')
+                . $parrafo('Los pedidos, comprobantes y registros que deban conservarse no se eliminan. Contacta a Atenea si consideras que se trata de un error.');
+            $texto = "Hola, {$nombre}. Tu cuenta fue desactivada y entro en periodo de gracia hasta " . ($datos['fecha_limite'] ?? '') . ". Contacta a Atenea si necesitas asistencia.";
+            break;
+
+        case 'cuenta_restaurada':
+            $asunto = 'Tu cuenta Atenea fue restaurada';
+            $preencabezado = 'La solicitud de eliminacion fue cancelada.';
+            $html = $parrafo('Hola, ' . $e($nombre) . '. Tu cuenta fue restaurada y la solicitud de eliminacion quedo cancelada. Por seguridad, deberas iniciar sesion nuevamente.');
+            $texto = "Hola, {$nombre}. Tu cuenta Atenea fue restaurada. Por seguridad, deberas iniciar sesion nuevamente.";
+            break;
+
         case 'cuenta_desactivada':
             $asunto = 'Aviso sobre tu cuenta de Atenea';
             $preencabezado = 'Tu cuenta fue desactivada.';

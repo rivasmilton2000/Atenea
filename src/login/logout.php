@@ -3,6 +3,21 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/session.php';
 require_once dirname(__DIR__, 2) . '/includes/config.php';
+require_once dirname(__DIR__, 2) . '/includes/audit.php';
+
+if (isset($_SESSION['usuario_id'])) {
+    registrarAuditoria([
+        'actor_user_id' => (int) $_SESSION['usuario_id'],
+        'target_user_id' => (int) $_SESSION['usuario_id'],
+        'event_type' => 'auth.logout',
+        'module' => 'auth',
+        'entity_type' => 'user',
+        'entity_id' => (int) $_SESSION['usuario_id'],
+        'action' => 'logout',
+        'result' => 'success',
+        'description' => 'Cierre de sesion exitoso.',
+    ]);
+}
 
 $_SESSION = [];
 

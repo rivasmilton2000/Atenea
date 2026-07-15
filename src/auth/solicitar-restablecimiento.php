@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/mailer.php';
+require_once dirname(__DIR__, 2) . '/includes/audit.php';
 
 const MENSAJE_RECUPERACION = 'Si existe una cuenta asociada a ese correo, recibirás un enlace para restablecer la contraseña.';
 
@@ -45,6 +46,7 @@ try {
             'token_hash' => $token !== null ? hash('sha256', $token) : null,
             'ip_hash' => $ipHash,
         ]);
+        registrarAuditoria(['target_user_id'=>is_array($usuario)?(int)$usuario['id']:null,'event_type'=>'password.reset_requested','module'=>'security','entity_type'=>is_array($usuario)?'user':null,'entity_id'=>is_array($usuario)?(int)$usuario['id']:null,'action'=>'request','result'=>'success','description'=>'Se proceso una solicitud de recuperacion de contrasena.'], $pdo);
         $pdo->commit();
     }
 } catch (Throwable $e) {

@@ -5,6 +5,7 @@ require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/comercio.php';
 require_once dirname(__DIR__, 2) . '/includes/stripe_config.php';
 require_once dirname(__DIR__, 2) . '/includes/alerts.php';
+require_once dirname(__DIR__, 2) . '/includes/audit.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Location: ' . atenea_url('src/website/pricing.php'));
@@ -69,6 +70,7 @@ try {
     $consulta->execute(['pedido' => $pedidoId, 'producto' => $productoId, 'nombre' => $producto['nombre'], 'sku' => $producto['sku'], 'cantidad' => $cantidad, 'normal' => $precio['normal'], 'unitario' => $precio['final'], 'descuento' => $precio['descuento'], 'subtotal' => $total, 'promocion' => $precio['promocion']['id'] ?? null]);
     $pdo->prepare('UPDATE productos SET stock_reservado=stock_reservado+:cantidad WHERE id=:id')->execute(['cantidad' => $cantidad, 'id' => $productoId]);
     registrarHistorialPedido($pdo, $pedidoId, null, 'pendiente', 'sistema', (int) $_SESSION['usuario_id'], 'Pedido creado con precio recalculado en el servidor; stock reservado.');
+    registrarAuditoria(['actor_user_id'=>(int)$_SESSION['usuario_id'],'target_user_id'=>(int)$_SESSION['usuario_id'],'event_type'=>'purchase.started','module'=>'payments','entity_type'=>'order','entity_id'=>$pedidoId,'action'=>'checkout','result'=>'success','description'=>'El usuario inicio una compra con precio y stock validados en el servidor.','metadata'=>['quantity'=>$cantidad,'currency'=>$configuracion['currency']]],$pdo);
     $pdo->commit();
 
     require_once $autoload;
@@ -115,6 +117,7 @@ try {
                 $pdo->prepare("UPDATE pedidos SET estado='fallido',payment_status='failed' WHERE id=:id")->execute(['id' => $pedidoId]);
                 $pdo->prepare('UPDATE productos SET stock_reservado=GREATEST(stock_reservado-:cantidad,0) WHERE id=:id')->execute(['cantidad' => $cantidad, 'id' => $productoId]);
                 registrarHistorialPedido($pdo, $pedidoId, (string) $estado, 'fallido', 'sistema', null, 'No fue posible completar la creación del Checkout; reserva liberada.');
+                registrarAuditoria(['actor_user_id'=>(int)$_SESSION['usuario_id'],'target_user_id'=>(int)$_SESSION['usuario_id'],'event_type'=>'purchase.checkout_failed','module'=>'payments','entity_type'=>'order','entity_id'=>$pedidoId,'action'=>'checkout','result'=>'failure','description'=>'No fue posible completar la creacion de Checkout y se libero la reserva.'], $pdo);
             }
             $pdo->commit();
         } catch (Throwable $compensacion) {

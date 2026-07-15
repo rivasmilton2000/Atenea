@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/pedidos_pago.php';
+require_once dirname(__DIR__, 2) . '/includes/audit.php';
 
 exigirRol(['usuario']);
 $pedidoId = filter_input(INPUT_GET, 'pedido', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
@@ -35,6 +36,8 @@ function contenidoComprobanteAtenea(array $pedido): string
 }
 
 if ($pedido && isset($_GET['descargar'])) {
+    actualizarActividadUsuario((int)$_SESSION['usuario_id']);
+    registrarAuditoria(['actor_user_id'=>(int)$_SESSION['usuario_id'],'target_user_id'=>(int)$_SESSION['usuario_id'],'event_type'=>'receipt.downloaded','module'=>'payments','entity_type'=>'order','entity_id'=>$pedidoId,'action'=>'download','result'=>'success','description'=>'El propietario descargo su comprobante interno de compra.']);
     $contenido = contenidoComprobanteAtenea($pedido);
     $nombreArchivo = preg_replace('/[^A-Za-z0-9_-]/', '-', (string) $pedido['numero']) ?: 'atenea';
     header('Content-Type: text/html; charset=UTF-8');

@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/audit.php';
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/config/services.php';
@@ -153,7 +154,8 @@ function autenticarConPerfilGoogle(array $perfil, bool $vincular = false): array
         }
 
         if (!is_array($usuario) || ($usuario['estado'] ?? '') !== 'activo') throw new RuntimeException('La cuenta no está activa.');
-        $pdo->prepare('UPDATE usuarios SET ultimo_acceso=NOW() WHERE id=:id')->execute(['id' => (int) $usuario['id']]);
+        $pdo->prepare('UPDATE usuarios SET ultimo_acceso=NOW(),last_activity_at=NOW() WHERE id=:id')->execute(['id' => (int) $usuario['id']]);
+        registrarAuditoria(['actor_user_id'=>(int)$usuario['id'],'target_user_id'=>(int)$usuario['id'],'event_type'=>'auth.google_login','module'=>'auth','entity_type'=>'user','entity_id'=>$usuario['id'],'action'=>'login','result'=>'success','description'=>'Inicio de sesion exitoso mediante Google.'],$pdo);
         $pdo->commit();
         return $usuario;
     } catch (Throwable $e) {

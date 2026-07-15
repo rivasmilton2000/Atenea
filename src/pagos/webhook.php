@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/pedidos_pago.php';
 require_once dirname(__DIR__, 2) . '/includes/stripe_config.php';
+require_once dirname(__DIR__, 2) . '/includes/audit.php';
 
 function liberarReservaPedido(PDO $pdo, array $pedido, string $estado, string $nota): void
 {
@@ -126,6 +127,7 @@ try {
             $pdo->prepare("INSERT INTO pagos(pedido_id,stripe_payment_intent_id,importe,moneda,estado,datos_referencia) VALUES(:pedido,:intent,:importe,:moneda,'pagado',:referencia) ON DUPLICATE KEY UPDATE estado='pagado',stripe_payment_intent_id=VALUES(stripe_payment_intent_id),importe=VALUES(importe),moneda=VALUES(moneda),datos_referencia=VALUES(datos_referencia)")
                 ->execute(['pedido' => $pedidoId, 'intent' => $paymentIntent ?: null, 'importe' => $pedido['total'], 'moneda' => $pedido['moneda'], 'referencia' => $referencia]);
             registrarHistorialPedido($pdo, $pedidoId, (string) $pedido['estado'], 'pagado', 'stripe', null, 'Pago, importe y moneda confirmados por webhook; stock descontado.');
+            registrarAuditoria(['target_user_id'=>(int)$pedido['usuario_id'],'event_type'=>'payment.approved','module'=>'payments','entity_type'=>'order','entity_id'=>$pedidoId,'action'=>'confirm','result'=>'success','description'=>'Stripe confirmo el pago por webhook verificado; importe y moneda coincidieron.','metadata'=>['currency'=>$pedido['moneda'],'brand'=>$metodoPago['brand'],'last4'=>$metodoPago['last4']]],$pdo);
             $enviarCorreoPedido = $pedidoId;
         } else {
             $enviarCorreoPedido = $pedidoId;
@@ -142,6 +144,7 @@ try {
         $consulta = $pdo->prepare("UPDATE pedidos SET estado='fallido',payment_status='failed',stripe_payment_intent_id=:intent,last_stripe_event_id=:evento WHERE id=:id AND estado<>'pagado'");
         $consulta->execute(['intent' => substr((string) $objeto->id, 0, 255), 'evento' => $evento->id, 'id' => $pedidoId]);
         if ($consulta->rowCount() === 1) registrarHistorialPedido($pdo, $pedidoId, 'esperando_pago', 'fallido', 'stripe', null, 'Intento de pago rechazado por Stripe; la reserva se conserva hasta expirar el Checkout.');
+        if ($consulta->rowCount() === 1) registrarAuditoria(['event_type'=>'payment.failed','module'=>'payments','entity_type'=>'order','entity_id'=>$pedidoId,'action'=>'confirm','result'=>'failure','description'=>'Stripe informo un intento de pago fallido.'], $pdo);
     } elseif ($evento->type === 'charge.refunded') {
         $paymentIntent = substr((string) ($objeto->payment_intent ?? ''), 0, 255);
         if ($paymentIntent !== '') {

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/cuenta.php';
+require_once dirname(__DIR__, 2) . '/includes/audit.php';
 exigirAutenticacion();
 $retorno = cuentaRetornoSeguro($_POST['retorno'] ?? null);
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !validarTokenCsrf(isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : null)) {
@@ -46,9 +47,10 @@ try {
     $campos=[];foreach($nuevos as $campo=>$valor){if((string)($perfil[$campo]??'')!==(string)($valor??''))$campos[]=$campo;}
     if (!$campos) { cuentaFlash([], 'No había cambios por guardar.'); header('Location: ' . $retorno); exit; }
     $pdo->beginTransaction();
-    $q=$pdo->prepare('UPDATE usuarios SET nombre=:nombre,apellido=:apellido,fecha_nacimiento=:fecha_nacimiento,dui=:dui,codigo_telefono=:codigo_telefono,telefono=:telefono,departamento_id=:departamento_id,municipio_id=:municipio_id,distrito_id=:distrito_id,direccion=:direccion,foto=:foto WHERE id=:id');
+    $q=$pdo->prepare('UPDATE usuarios SET nombre=:nombre,apellido=:apellido,fecha_nacimiento=:fecha_nacimiento,dui=:dui,codigo_telefono=:codigo_telefono,telefono=:telefono,departamento_id=:departamento_id,municipio_id=:municipio_id,distrito_id=:distrito_id,direccion=:direccion,foto=:foto,last_activity_at=NOW() WHERE id=:id');
     $q->execute($nuevos+['id'=>$id]);
     registrarCambioCuenta($pdo,$id,'actualizacion_perfil',$campos);
+    registrarAuditoria(['actor_user_id'=>$id,'target_user_id'=>$id,'event_type'=>'user.profile_updated','module'=>'account','entity_type'=>'user','entity_id'=>$id,'action'=>'update','result'=>'success','description'=>'El usuario actualizo su perfil.','metadata'=>['changed_fields'=>$campos]],$pdo);
     $pdo->commit();
     if ($foto !== (string)($perfil['foto'] ?? '')) eliminarFotoPerfilLocal($perfil['foto'] ?? null);
     $actualizado=obtenerPerfilUsuario($id);if(!$actualizado)throw new RuntimeException('Perfil no disponible.');

@@ -5,6 +5,8 @@ require_once dirname(__DIR__, 3) . '/includes/auth.php';
 require_once dirname(__DIR__, 3) . '/includes/conexion.php';
 require_once dirname(__DIR__, 3) . '/includes/contenido.php';
 require_once dirname(__DIR__, 3) . '/includes/perfil_modal.php';
+require_once dirname(__DIR__, 3) . '/includes/permissions.php';
+require_once dirname(__DIR__, 3) . '/includes/audit.php';
 exigirRol(['admin']);
 
 function cmsFlash(string $tipo, string $mensaje): void

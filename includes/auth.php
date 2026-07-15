@@ -15,11 +15,13 @@ function usuarioAutenticado(): bool
     static $validacion = null;
     if ($validacion !== null) return $validacion;
     try {
-        $consulta = obtenerConexion()->prepare('SELECT estado,session_version FROM usuarios WHERE id=:id LIMIT 1');
+        $consulta = obtenerConexion()->prepare('SELECT estado,rol,session_version,deleted_at FROM usuarios WHERE id=:id LIMIT 1');
         $consulta->execute(['id' => $_SESSION['usuario_id']]);
         $estado = $consulta->fetch();
         $validacion = is_array($estado)
             && ($estado['estado'] ?? '') === 'activo'
+            && empty($estado['deleted_at'])
+            && hash_equals((string) ($estado['rol'] ?? ''), (string) $_SESSION['usuario_rol'])
             && (int) $estado['session_version'] === (int) $_SESSION['usuario_session_version'];
     } catch (Throwable $e) {
         error_log('Validación de sesión Atenea: ' . $e->getMessage());

@@ -80,7 +80,7 @@ function obtenerPerfilUsuario(int $usuarioId): ?array
          LEFT JOIN departamentos d ON d.id=u.departamento_id
          LEFT JOIN municipios m ON m.id=u.municipio_id
          LEFT JOIN distritos di ON di.id=u.distrito_id
-         WHERE u.id = :id AND u.estado = \'activo\' LIMIT 1'
+         WHERE u.id = :id AND u.estado = \'activo\' AND u.deleted_at IS NULL LIMIT 1'
     );
     $consulta->execute(['id' => $usuarioId]);
     $usuario = $consulta->fetch();

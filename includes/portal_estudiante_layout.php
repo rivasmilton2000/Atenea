@@ -6,6 +6,7 @@ require_once __DIR__ . '/portal_estudiante.php';
 require_once __DIR__ . '/contenido.php';
 require_once __DIR__ . '/perfil_modal.php';
 require_once __DIR__ . '/alerts.php';
+require_once __DIR__ . '/audit.php';
 
 function datosPortalEstudiante(int $usuarioId): array
 {
@@ -15,7 +16,10 @@ function datosPortalEstudiante(int $usuarioId): array
     $resumen = $consulta->fetch() ?: ['pedidos' => 0, 'pagados' => 0, 'invertido' => 0];
     $consulta = $pdo->prepare('SELECT id,numero,total,moneda,estado,created_at FROM pedidos WHERE usuario_id=:usuario ORDER BY created_at DESC LIMIT 8');
     $consulta->execute(['usuario' => $usuarioId]);
-    return ['resumen' => $resumen, 'pedidos' => $consulta->fetchAll(), 'capacitaciones' => [], 'certificados' => []];
+    $pedidos = $consulta->fetchAll();
+    $consulta = $pdo->prepare("SELECT COUNT(*) FROM admin_notices WHERE user_id=:usuario AND status IN ('pendiente','visto')");
+    $consulta->execute(['usuario' => $usuarioId]);
+    return ['resumen' => $resumen, 'pedidos' => $pedidos, 'capacitaciones' => [], 'certificados' => [], 'avisos_pendientes' => (int) $consulta->fetchColumn()];
 }
 
 function estadoPedidoEstudiante(string $estado): string
@@ -71,6 +75,7 @@ function portalEstudianteCabecera(string $titulo, string $activo = 'inicio', str
     <li><hr class="hr-horizontal"></li><li class="nav-item static-item"><span class="nav-link static-item disabled"><span class="default-icon">Mi cuenta</span><span class="mini-icon">-</span></span></li>
     <li class="nav-item"><button class="nav-link w-100 border-0 bg-transparent text-start" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="icon"><i class="bi bi-person"></i></i><span class="item-name">Mi perfil</span></button></li>
     <li class="nav-item"><a class="<?= $enlace('pedidos','') ?>" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="icon"><i class="bi bi-receipt"></i></i><span class="item-name">Mis pedidos y pagos</span></a></li>
+    <li class="nav-item"><a class="<?= $enlace('avisos','') ?>" href="<?= atenea_url('src/estudiantes/avisos.php') ?>"><i class="icon"><i class="bi bi-bell"></i></i><span class="item-name">Avisos administrativos</span><?php if((int)$datos['avisos_pendientes']>0):?><span class="badge bg-danger ms-auto"><?= (int)$datos['avisos_pendientes'] ?></span><?php endif;?></a></li>
     <li class="nav-item"><a class="nav-link" href="<?= atenea_url('index.php') ?>"><i class="icon"><i class="bi bi-globe"></i></i><span class="item-name">Volver al sitio</span></a></li>
     <li class="nav-item"><a class="nav-link" data-atenea-confirm="logout" href="<?= atenea_url('src/login/logout.php') ?>"><i class="icon"><i class="bi bi-box-arrow-right"></i></i><span class="item-name">Cerrar sesión</span></a></li>
   </ul></div></div><div class="sidebar-footer"></div>

@@ -13,6 +13,7 @@ $configAbierta = in_array($dashboardActive, ['configuracion/index.php', 'navbar/
 $portalAbierto = str_starts_with($dashboardActive, 'portal-estudiante');
 $comercioAbierto = str_starts_with($dashboardActive, 'productos/') || str_starts_with($dashboardActive, 'categorias/') || str_starts_with($dashboardActive, 'pedidos/');
 $usuariosAbierto = str_starts_with($dashboardActive, 'usuarios/');
+$bitacoraActiva = str_starts_with($dashboardActive, 'bitacora/');
 $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'admin'], true) ? (string) $_GET['rol'] : '';
 ?>
 <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server" aria-label="Navegación administrativa">
@@ -58,6 +59,7 @@ $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'a
         <li class="nav-item"><a class="nav-link <?= $usuariosAbierto && $rolUsuarios === 'admin' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/usuarios/index.php?rol=admin') ?>">Administradores</a></li>
       </ul></div>
     </li>
+    <li class="nav-item <?= $bitacoraActiva ? 'active' : '' ?>"><a class="nav-link" href="<?= atenea_url('src/dashboard/bitacora/index.php') ?>"><i class="menu-icon mdi mdi-clipboard-text-clock-outline"></i><span class="menu-title">Bitacora</span></a></li>
     <li class="nav-item nav-category">Resumen y cuenta</li>
     <li class="nav-item"><a class="nav-link" href="<?= atenea_url('src/dashboard/index.php#resumen-sitio') ?>"><i class="menu-icon mdi mdi-chart-box-outline"></i><span class="menu-title">Resumen del sitio</span></a></li>
     <li class="nav-item"><button class="nav-link border-0 bg-transparent w-100" type="button" data-bs-toggle="modal" data-bs-target="#adminProfileModal"><i class="menu-icon mdi mdi-account-circle-outline"></i><span class="menu-title">Mi perfil</span></button></li>
