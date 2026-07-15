@@ -1,6 +1,172 @@
-<?php declare(strict_types=1);require_once dirname(__DIR__,2).'/includes/comercio.php';require_once dirname(__DIR__,2).'/includes/stripe_config.php';$cfg=configuracionStripe();$autoload=dirname(__DIR__,2).'/includes/stripe/vendor/autoload.php';if(!stripeConfigurado($cfg)||!is_file($autoload)){http_response_code(503);exit;}require $autoload;$raw=file_get_contents('php://input');$sig=$_SERVER['HTTP_STRIPE_SIGNATURE']??'';try{$evento=Stripe\Webhook::constructEvent($raw,$sig,$cfg['webhook_secret']);}catch(Throwable$e){http_response_code(400);exit;}$pdo=obtenerConexion();try{$pdo->beginTransaction();$q=$pdo->prepare('INSERT IGNORE INTO stripe_eventos(stripe_event_id,tipo)VALUES(:id,:tipo)');$q->execute(['id'=>$evento->id,'tipo'=>$evento->type]);if($q->rowCount()===0){$pdo->rollBack();http_response_code(200);exit;}$obj=$evento->data->object;$pedidoId=(int)($obj->metadata->pedido_id??0);
-if($evento->type==='checkout.session.completed'&&$pedidoId){$q=$pdo->prepare('SELECT * FROM pedidos WHERE id=:id FOR UPDATE');$q->execute(['id'=>$pedidoId]);$pedido=$q->fetch();if($pedido&&$pedido['estado']!=='pagado'){$det=$pdo->prepare('SELECT * FROM pedido_detalles WHERE pedido_id=:id');$det->execute(['id'=>$pedidoId]);foreach($det->fetchAll()as$d){$p=$pdo->prepare('SELECT stock,stock_reservado FROM productos WHERE id=:id FOR UPDATE');$p->execute(['id'=>$d['producto_id']]);$stock=$p->fetch();if(!$stock||(int)$stock['stock']<(int)$d['cantidad'])throw new RuntimeException('Stock insuficiente al confirmar pedido '.$pedidoId);$nuevo=(int)$stock['stock']-(int)$d['cantidad'];$pdo->prepare('UPDATE productos SET stock=:nuevo,stock_reservado=GREATEST(stock_reservado-:c,0) WHERE id=:id')->execute(['nuevo'=>$nuevo,'c'=>$d['cantidad'],'id'=>$d['producto_id']]);$pdo->prepare("INSERT INTO inventario_movimientos(producto_id,pedido_id,tipo,cantidad,stock_anterior,stock_nuevo,nota)VALUES(:p,:pedido,'venta',:c,:a,:n,'Venta confirmada por webhook Stripe')")->execute(['p'=>$d['producto_id'],'pedido'=>$pedidoId,'c'=>-(int)$d['cantidad'],'a'=>$stock['stock'],'n'=>$nuevo]);}$pi=(string)($obj->payment_intent??'');$pdo->prepare("UPDATE pedidos SET estado='pagado',stripe_payment_intent_id=:pi,stock_procesado=1 WHERE id=:id")->execute(['pi'=>$pi?:null,'id'=>$pedidoId]);$pdo->prepare("INSERT INTO pagos(pedido_id,stripe_payment_intent_id,importe,moneda,estado,datos_referencia)VALUES(:p,:pi,:i,:m,'pagado',:r) ON DUPLICATE KEY UPDATE estado='pagado',stripe_payment_intent_id=VALUES(stripe_payment_intent_id)")->execute(['p'=>$pedidoId,'pi'=>$pi?:null,'i'=>$pedido['total'],'m'=>$pedido['moneda'],'r'=>json_encode(['checkout_session'=>$obj->id])]);registrarHistorialPedido($pdo,$pedidoId,$pedido['estado'],'pagado','stripe',null,'Pago confirmado y stock descontado.');}}
-elseif($evento->type==='checkout.session.expired'&&$pedidoId){$q=$pdo->prepare('SELECT * FROM pedidos WHERE id=:id FOR UPDATE');$q->execute(['id'=>$pedidoId]);$p=$q->fetch();if($p&&in_array($p['estado'],['pendiente','esperando_pago'],true)){$d=$pdo->prepare('SELECT producto_id,cantidad FROM pedido_detalles WHERE pedido_id=:id');$d->execute(['id'=>$pedidoId]);foreach($d->fetchAll()as$x)$pdo->prepare('UPDATE productos SET stock_reservado=GREATEST(stock_reservado-:c,0) WHERE id=:id')->execute(['c'=>$x['cantidad'],'id'=>$x['producto_id']]);$pdo->prepare("UPDATE pedidos SET estado='cancelado' WHERE id=:id")->execute(['id'=>$pedidoId]);registrarHistorialPedido($pdo,$pedidoId,$p['estado'],'cancelado','stripe',null,'Checkout expirado; reserva liberada.');}}
-elseif($evento->type==='payment_intent.payment_failed'&&$pedidoId){$pdo->prepare("UPDATE pedidos SET estado='fallido',stripe_payment_intent_id=:pi WHERE id=:id AND estado<>'pagado'")->execute(['pi'=>$obj->id,'id'=>$pedidoId]);registrarHistorialPedido($pdo,$pedidoId,'esperando_pago','fallido','stripe',null,'Pago rechazado por Stripe.');}
-elseif($evento->type==='charge.refunded'){$pi=(string)($obj->payment_intent??'');if($pi!==''){$q=$pdo->prepare('SELECT id,estado FROM pedidos WHERE stripe_payment_intent_id=:pi FOR UPDATE');$q->execute(['pi'=>$pi]);$p=$q->fetch();if($p){$pdo->prepare("UPDATE pedidos SET estado='reembolsado' WHERE id=:id")->execute(['id'=>$p['id']]);$pdo->prepare("UPDATE pagos SET estado='reembolsado' WHERE pedido_id=:id")->execute(['id'=>$p['id']]);registrarHistorialPedido($pdo,(int)$p['id'],$p['estado'],'reembolsado','stripe',null,'Reembolso informado por Stripe; inventario no repuesto automáticamente.');}}}
-$pdo->prepare('UPDATE stripe_eventos SET procesado=1,procesado_at=NOW() WHERE stripe_event_id=:id')->execute(['id'=>$evento->id]);$pdo->commit();http_response_code(200);}catch(Throwable$e){if($pdo->inTransaction())$pdo->rollBack();error_log('Webhook Stripe: '.$e->getMessage());http_response_code(500);}
+<?php
+declare(strict_types=1);
+
+require_once dirname(__DIR__, 2) . '/includes/pedidos_pago.php';
+require_once dirname(__DIR__, 2) . '/includes/stripe_config.php';
+
+function liberarReservaPedido(PDO $pdo, array $pedido, string $estado, string $nota): void
+{
+    if (!in_array($pedido['estado'], ['pendiente', 'esperando_pago', 'fallido'], true) || (int) $pedido['stock_procesado'] === 1) return;
+    $detalles = $pdo->prepare('SELECT producto_id,cantidad FROM pedido_detalles WHERE pedido_id=:pedido');
+    $detalles->execute(['pedido' => $pedido['id']]);
+    foreach ($detalles->fetchAll() as $detalle) {
+        $pdo->prepare('UPDATE productos SET stock_reservado=GREATEST(stock_reservado-:cantidad,0) WHERE id=:producto')
+            ->execute(['cantidad' => $detalle['cantidad'], 'producto' => $detalle['producto_id']]);
+    }
+    $pdo->prepare('UPDATE pedidos SET estado=:estado,payment_status=:pago WHERE id=:id')
+        ->execute(['estado' => $estado, 'pago' => $estado === 'cancelado' ? 'expired' : 'failed', 'id' => $pedido['id']]);
+    registrarHistorialPedido($pdo, (int) $pedido['id'], (string) $pedido['estado'], $estado, 'stripe', null, $nota);
+}
+
+function datosMetodoPagoStripe(object $sesion, array $configuracion): array
+{
+    $resultado = ['payment_method_id' => null, 'brand' => null, 'last4' => null];
+    $paymentIntentId = is_string($sesion->payment_intent ?? null) ? $sesion->payment_intent : '';
+    if ($paymentIntentId === '') return $resultado;
+    try {
+        $stripe = new Stripe\StripeClient($configuracion['secret_key']);
+        $intent = $stripe->paymentIntents->retrieve($paymentIntentId, ['expand' => ['payment_method']]);
+        $metodo = $intent->payment_method ?? null;
+        if ($metodo instanceof Stripe\PaymentMethod) {
+            $resultado['payment_method_id'] = (string) $metodo->id;
+            if (($metodo->type ?? '') === 'card' && isset($metodo->card)) {
+                $resultado['brand'] = substr((string) ($metodo->card->brand ?? ''), 0, 32) ?: null;
+                $ultimos = (string) ($metodo->card->last4 ?? '');
+                $resultado['last4'] = preg_match('/^\d{4}$/', $ultimos) ? $ultimos : null;
+            }
+        } elseif (is_string($metodo) && $metodo !== '') {
+            $resultado['payment_method_id'] = substr($metodo, 0, 255);
+        }
+    } catch (Throwable $error) {
+        error_log('Método de pago Stripe no disponible: ' . $error->getMessage());
+    }
+    return $resultado;
+}
+
+$configuracion = configuracionStripe();
+$autoload = dirname(__DIR__, 2) . '/includes/stripe/vendor/autoload.php';
+if (!stripeConfigurado($configuracion) || !is_file($autoload)) {
+    http_response_code(503);
+    exit;
+}
+require_once $autoload;
+
+$raw = file_get_contents('php://input');
+$firma = (string) ($_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '');
+if (!is_string($raw) || $raw === '' || $firma === '') {
+    http_response_code(400);
+    exit;
+}
+try {
+    $evento = Stripe\Webhook::constructEvent($raw, $firma, $configuracion['webhook_secret']);
+} catch (Throwable) {
+    http_response_code(400);
+    exit;
+}
+
+$objeto = $evento->data->object;
+$pedidoId = (int) ($objeto->metadata->pedido_id ?? 0);
+$esConfirmacion = in_array($evento->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true);
+$metodoPago = $esConfirmacion ? datosMetodoPagoStripe($objeto, $configuracion) : ['payment_method_id' => null, 'brand' => null, 'last4' => null];
+$pdo = obtenerConexion();
+$enviarCorreoPedido = null;
+
+try {
+    $pdo->beginTransaction();
+    $pdo->prepare('INSERT IGNORE INTO stripe_eventos(stripe_event_id,tipo) VALUES(:id,:tipo)')->execute(['id' => $evento->id, 'tipo' => $evento->type]);
+    $consulta = $pdo->prepare('SELECT procesado FROM stripe_eventos WHERE stripe_event_id=:id FOR UPDATE');
+    $consulta->execute(['id' => $evento->id]);
+    if ((int) $consulta->fetchColumn() === 1) {
+        $pdo->commit();
+        if ($esConfirmacion && $pedidoId > 0) enviarConfirmacionCompraAtenea($pedidoId);
+        http_response_code(200);
+        exit;
+    }
+
+    if ($esConfirmacion && $pedidoId < 1) throw new RuntimeException('El evento no contiene una referencia de pedido válida.');
+
+    if ($esConfirmacion && $pedidoId > 0) {
+        $consulta = $pdo->prepare('SELECT * FROM pedidos WHERE id=:id FOR UPDATE');
+        $consulta->execute(['id' => $pedidoId]);
+        $pedido = $consulta->fetch();
+        if (!$pedido) throw new RuntimeException('Pedido de Stripe no localizado.');
+
+        $importeEsperado = (int) round((float) $pedido['total'] * 100);
+        $sesionCoincide = hash_equals((string) ($pedido['stripe_checkout_session_id'] ?? ''), (string) ($objeto->id ?? ''));
+        $referenciaCoincide = hash_equals((string) $pedidoId, (string) ($objeto->client_reference_id ?? ''));
+        $numeroCoincide = hash_equals((string) $pedido['numero'], (string) ($objeto->metadata->numero ?? ''));
+        $importeCoincide = (int) ($objeto->amount_total ?? -1) === $importeEsperado;
+        $monedaCoincide = strtolower((string) ($objeto->currency ?? '')) === strtolower((string) $pedido['moneda']);
+        $pagoConfirmado = (string) ($objeto->payment_status ?? '') === 'paid';
+
+        if (!$sesionCoincide || !$referenciaCoincide || !$numeroCoincide || !$importeCoincide || !$monedaCoincide) {
+            throw new RuntimeException('La sesión, referencia, importe o moneda no coincide con el pedido.');
+        }
+        if (!$pagoConfirmado) {
+            $pdo->prepare("UPDATE pedidos SET payment_status='pending',last_stripe_event_id=:evento WHERE id=:id")
+                ->execute(['evento' => $evento->id, 'id' => $pedidoId]);
+        } elseif ($pedido['estado'] !== 'pagado') {
+            $detalles = $pdo->prepare('SELECT * FROM pedido_detalles WHERE pedido_id=:pedido');
+            $detalles->execute(['pedido' => $pedidoId]);
+            foreach ($detalles->fetchAll() as $detalle) {
+                $producto = $pdo->prepare('SELECT stock,stock_reservado FROM productos WHERE id=:id FOR UPDATE');
+                $producto->execute(['id' => $detalle['producto_id']]);
+                $stock = $producto->fetch();
+                if (!$stock || (int) $stock['stock'] < (int) $detalle['cantidad']) throw new RuntimeException('Stock insuficiente al confirmar el pedido.');
+                $nuevoStock = (int) $stock['stock'] - (int) $detalle['cantidad'];
+                $pdo->prepare('UPDATE productos SET stock=:stock,stock_reservado=GREATEST(stock_reservado-:cantidad,0) WHERE id=:id')
+                    ->execute(['stock' => $nuevoStock, 'cantidad' => $detalle['cantidad'], 'id' => $detalle['producto_id']]);
+                $pdo->prepare("INSERT INTO inventario_movimientos(producto_id,pedido_id,tipo,cantidad,stock_anterior,stock_nuevo,nota) VALUES(:producto,:pedido,'venta',:cantidad,:anterior,:nuevo,'Venta confirmada por webhook Stripe')")
+                    ->execute(['producto' => $detalle['producto_id'], 'pedido' => $pedidoId, 'cantidad' => -(int) $detalle['cantidad'], 'anterior' => $stock['stock'], 'nuevo' => $nuevoStock]);
+            }
+            $paymentIntent = substr((string) ($objeto->payment_intent ?? ''), 0, 255);
+            $pdo->prepare("UPDATE pedidos SET estado='pagado',payment_status='paid',paid_at=COALESCE(paid_at,NOW()),stripe_payment_intent_id=:intent,payment_brand=:marca,payment_last4=:ultimos,stripe_payment_method_id=:metodo,last_stripe_event_id=:evento,receipt_generated_at=COALESCE(receipt_generated_at,NOW()),stock_procesado=1 WHERE id=:id")
+                ->execute(['intent' => $paymentIntent ?: null, 'marca' => $metodoPago['brand'], 'ultimos' => $metodoPago['last4'], 'metodo' => $metodoPago['payment_method_id'], 'evento' => $evento->id, 'id' => $pedidoId]);
+            $referencia = json_encode(['checkout_session' => (string) $objeto->id, 'stripe_event' => (string) $evento->id], JSON_THROW_ON_ERROR);
+            $pdo->prepare("INSERT INTO pagos(pedido_id,stripe_payment_intent_id,importe,moneda,estado,datos_referencia) VALUES(:pedido,:intent,:importe,:moneda,'pagado',:referencia) ON DUPLICATE KEY UPDATE estado='pagado',stripe_payment_intent_id=VALUES(stripe_payment_intent_id),importe=VALUES(importe),moneda=VALUES(moneda),datos_referencia=VALUES(datos_referencia)")
+                ->execute(['pedido' => $pedidoId, 'intent' => $paymentIntent ?: null, 'importe' => $pedido['total'], 'moneda' => $pedido['moneda'], 'referencia' => $referencia]);
+            registrarHistorialPedido($pdo, $pedidoId, (string) $pedido['estado'], 'pagado', 'stripe', null, 'Pago, importe y moneda confirmados por webhook; stock descontado.');
+            $enviarCorreoPedido = $pedidoId;
+        } else {
+            $enviarCorreoPedido = $pedidoId;
+        }
+    } elseif ($evento->type === 'checkout.session.expired' && $pedidoId > 0) {
+        $consulta = $pdo->prepare('SELECT * FROM pedidos WHERE id=:id FOR UPDATE');
+        $consulta->execute(['id' => $pedidoId]);
+        if ($pedido = $consulta->fetch()) liberarReservaPedido($pdo, $pedido, 'cancelado', 'Checkout expirado; reserva liberada.');
+    } elseif ($evento->type === 'checkout.session.async_payment_failed' && $pedidoId > 0) {
+        $consulta = $pdo->prepare('SELECT * FROM pedidos WHERE id=:id FOR UPDATE');
+        $consulta->execute(['id' => $pedidoId]);
+        if ($pedido = $consulta->fetch()) liberarReservaPedido($pdo, $pedido, 'fallido', 'Pago asíncrono rechazado; reserva liberada.');
+    } elseif ($evento->type === 'payment_intent.payment_failed' && $pedidoId > 0) {
+        $consulta = $pdo->prepare("UPDATE pedidos SET estado='fallido',payment_status='failed',stripe_payment_intent_id=:intent,last_stripe_event_id=:evento WHERE id=:id AND estado<>'pagado'");
+        $consulta->execute(['intent' => substr((string) $objeto->id, 0, 255), 'evento' => $evento->id, 'id' => $pedidoId]);
+        if ($consulta->rowCount() === 1) registrarHistorialPedido($pdo, $pedidoId, 'esperando_pago', 'fallido', 'stripe', null, 'Intento de pago rechazado por Stripe; la reserva se conserva hasta expirar el Checkout.');
+    } elseif ($evento->type === 'charge.refunded') {
+        $paymentIntent = substr((string) ($objeto->payment_intent ?? ''), 0, 255);
+        if ($paymentIntent !== '') {
+            $consulta = $pdo->prepare('SELECT id,estado FROM pedidos WHERE stripe_payment_intent_id=:intent FOR UPDATE');
+            $consulta->execute(['intent' => $paymentIntent]);
+            if ($pedido = $consulta->fetch()) {
+                $pdo->prepare("UPDATE pedidos SET estado='reembolsado',payment_status='refunded',last_stripe_event_id=:evento WHERE id=:id")
+                    ->execute(['evento' => $evento->id, 'id' => $pedido['id']]);
+                $pdo->prepare("UPDATE pagos SET estado='reembolsado' WHERE pedido_id=:id")->execute(['id' => $pedido['id']]);
+                registrarHistorialPedido($pdo, (int) $pedido['id'], (string) $pedido['estado'], 'reembolsado', 'stripe', null, 'Reembolso informado por Stripe; inventario no repuesto automáticamente.');
+            }
+        }
+    }
+
+    $pdo->prepare('UPDATE stripe_eventos SET procesado=1,error_mensaje=NULL,procesado_at=NOW() WHERE stripe_event_id=:id')->execute(['id' => $evento->id]);
+    $pdo->commit();
+    if ($enviarCorreoPedido) enviarConfirmacionCompraAtenea($enviarCorreoPedido);
+    http_response_code(200);
+} catch (Throwable $error) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    try {
+        $mensaje = mb_substr(preg_replace('/[\r\n\t]+/', ' ', $error->getMessage()) ?: 'Error de procesamiento', 0, 500);
+        $pdo->prepare('INSERT INTO stripe_eventos(stripe_event_id,tipo,procesado,error_mensaje) VALUES(:id,:tipo,0,:error) ON DUPLICATE KEY UPDATE procesado=0,error_mensaje=VALUES(error_mensaje)')
+            ->execute(['id' => $evento->id, 'tipo' => $evento->type, 'error' => $mensaje]);
+    } catch (Throwable) {}
+    error_log('Webhook Stripe: ' . $error->getMessage());
+    http_response_code(500);
+}

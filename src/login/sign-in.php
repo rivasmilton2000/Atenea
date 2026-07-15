@@ -7,7 +7,9 @@ require_once dirname(__DIR__, 2) . '/includes/alerts.php';
 
 if (usuarioAutenticado()) redirigirPorRol();
 $mensaje = (string) ($_SESSION['mensaje_auth'] ?? '');
-$tipoMensaje = ($_SESSION['mensaje_auth_tipo'] ?? 'danger') === 'success' ? 'success' : 'danger';
+$tipoMensaje = match ($_SESSION['mensaje_auth_tipo'] ?? 'danger') {
+    'success' => 'success', 'info' => 'info', 'warning' => 'warning', default => 'danger',
+};
 $correo = (string) ($_SESSION['login_correo'] ?? '');
 unset($_SESSION['mensaje_auth'], $_SESSION['mensaje_auth_tipo'], $_SESSION['login_correo']);
 $google = obtenerConfiguracionGoogle();
@@ -81,6 +83,6 @@ document.getElementById('google-login')?.addEventListener('click', function () {
   this.querySelector('.google-label').textContent = 'Redirigiendo a Google…';
 });
 </script>
-<?php ateneaAlertasScripts($mensaje !== '' ? ['type' => $tipoMensaje, 'title' => $tipoMensaje === 'success' ? 'Operación completada' : 'No fue posible iniciar sesión', 'message' => $mensaje] : null); ?>
+<?php ateneaAlertasScripts($mensaje !== '' ? ['type' => $tipoMensaje, 'title' => match ($tipoMensaje) { 'success' => 'Operación completada', 'info' => 'Inicia sesión para continuar', 'warning' => 'Atención', default => 'No fue posible iniciar sesión' }, 'message' => $mensaje] : null); ?>
 </body>
 </html>

@@ -24,12 +24,312 @@
   --atenea-negro: #171717;
   --atenea-blanco: #ffffff;
   --atenea-gris: #5f6368;
+  --atenea-verde: #173f35;
+  --atenea-verde-suave: #2f6655;
+  --atenea-crema: #f7f4ec;
+  --atenea-borde: #e2dccd;
+  --atenea-sombra: 0 18px 50px rgba(23, 63, 53, 0.12);
   --background-color: #ffffff; /* Background color for the entire website, including individual sections */
   --default-color: var(--atenea-gris); /* Main text color */
   --heading-color: var(--atenea-negro); /* Heading color */
   --accent-color: var(--atenea-dorado); /* Atenea brand accent */
   --surface-color: #ffffff; /* The surface color is used as a background of boxed elements within sections, such as cards, icon boxes, or other elements that require a visual separation from the global background. */
   --contrast-color: #ffffff; /* Contrast color for text, ensuring readability against backgrounds of accent, heading, or default colors. */
+}
+
+/*--------------------------------------------------------------
+# Product purchase experience
+--------------------------------------------------------------*/
+.product-details-page .product-page-title {
+  padding-top: 0;
+}
+
+.product-details-page {
+  overflow-x: hidden;
+}
+
+.product-details-page .product-detail {
+  background: linear-gradient(180deg, var(--atenea-crema) 0, #fff 44%);
+}
+
+.product-gallery {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.product-gallery-main {
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid var(--atenea-borde);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--atenea-sombra);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.product-gallery-main img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: min(58vh, 540px);
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.product-thumbnails {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 4px 2px;
+  overflow-x: auto;
+}
+
+.product-thumbnail {
+  flex: 0 0 84px;
+  height: 72px;
+  padding: 4px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.product-thumbnail:hover,
+.product-thumbnail:focus-visible,
+.product-thumbnail.is-active {
+  border-color: var(--atenea-dorado);
+  outline: none;
+}
+
+.product-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.product-purchase-card {
+  position: sticky;
+  top: 110px;
+  padding: clamp(24px, 4vw, 38px);
+  border: 1px solid var(--atenea-borde);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--atenea-sombra);
+}
+
+.product-purchase-card h1 {
+  margin-bottom: 12px;
+  color: var(--atenea-verde);
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+
+.product-category {
+  margin-bottom: 10px;
+  color: var(--atenea-dorado-oscuro);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.product-summary {
+  margin-bottom: 24px;
+  color: #4f5851;
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.product-price-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.product-price-row del { color: #727a73; }
+.product-price-row strong { color: var(--atenea-verde); font-size: 2rem; }
+.product-price-row strong small { font-size: .72rem; letter-spacing: .08em; }
+
+.product-offer-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: #8f2732;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.product-stock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+  font-weight: 700;
+}
+
+.product-stock.is-available { color: #246143; }
+.product-stock.is-empty { color: #9d2635; }
+
+.product-quantity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.product-quantity label { margin: 0; color: var(--atenea-verde); font-weight: 700; }
+
+.quantity-control {
+  display: grid;
+  grid-template-columns: 42px 58px 42px;
+  overflow: hidden;
+  border: 1px solid var(--atenea-borde);
+  border-radius: 9px;
+}
+
+.quantity-control button,
+.quantity-control input {
+  height: 42px;
+  border: 0;
+  background: #fff;
+  text-align: center;
+}
+
+.quantity-control button { color: var(--atenea-verde); font-size: 1.25rem; font-weight: 700; }
+.quantity-control button:hover,
+.quantity-control button:focus-visible { background: var(--atenea-crema); outline: 2px solid var(--atenea-dorado); outline-offset: -2px; }
+.quantity-control input { width: 58px; border-right: 1px solid var(--atenea-borde); border-left: 1px solid var(--atenea-borde); font-weight: 700; -moz-appearance: textfield; }
+.quantity-control input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
+
+.product-buy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 54px;
+  padding: 13px 20px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--atenea-verde);
+  box-shadow: 0 10px 24px rgba(23, 63, 53, .18);
+  font-weight: 800;
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.product-buy-button:hover:not(:disabled),
+.product-buy-button:focus-visible:not(:disabled) {
+  color: #fff;
+  background: var(--atenea-verde-suave);
+  box-shadow: 0 12px 28px rgba(23, 63, 53, .25);
+  transform: translateY(-1px);
+}
+
+.product-buy-button:focus-visible { outline: 3px solid var(--atenea-dorado); outline-offset: 3px; }
+.product-buy-button:disabled { cursor: not-allowed; opacity: .62; }
+.product-buy-loading { display: none; }
+.product-buy-button.is-loading .product-buy-label { display: none; }
+.product-buy-button.is-loading .product-buy-loading { display: inline-flex; align-items: center; gap: 8px; }
+
+.payment-trust {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--atenea-borde);
+  border-radius: 12px;
+  background: var(--atenea-crema);
+}
+
+.payment-trust-heading { display: flex; gap: 11px; color: var(--atenea-verde); }
+.payment-trust-heading > i { color: var(--atenea-dorado-oscuro); font-size: 1.45rem; }
+.payment-trust-heading strong,
+.payment-trust-heading span { display: block; }
+.payment-trust-heading span { margin-top: 3px; color: #5c645d; font-size: .82rem; line-height: 1.45; }
+
+.payment-networks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.payment-networks span {
+  padding: 5px 10px;
+  border: 1px solid #d8d8d8;
+  border-radius: 5px;
+  color: #343a36;
+  background: #fff;
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.payment-trust > p { margin: 12px 0 0; color: #246143; font-size: .78rem; }
+.product-back-link { display: inline-flex; gap: 7px; margin-top: 20px; color: var(--atenea-verde); font-weight: 700; }
+
+.product-content-card {
+  padding: clamp(24px, 4vw, 38px);
+  border: 1px solid var(--atenea-borde);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.product-content-card h2 { color: var(--atenea-verde); font-size: 1.55rem; }
+.product-description { line-height: 1.8; }
+.product-feature-list { padding: 0; list-style: none; }
+.product-feature-list li { display: flex; gap: 10px; margin-bottom: 12px; }
+.product-feature-list i { color: var(--atenea-dorado-oscuro); font-size: 1.15rem; }
+
+.related-product-card {
+  overflow: hidden;
+  border: 1px solid var(--atenea-borde);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(23, 63, 53, .08);
+}
+
+.related-product-card img { width: 100%; height: 210px; object-fit: cover; }
+.related-product-card > div { display: grid; gap: 8px; padding: 20px; }
+.related-product-card p { margin: 0; color: var(--atenea-dorado-oscuro); font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+.related-product-card h3 { margin: 0; color: var(--atenea-verde); font-size: 1.2rem; }
+.related-product-card a { margin-top: 8px; color: var(--atenea-verde); font-weight: 700; }
+
+.product-empty-state,
+.payment-result-card {
+  max-width: 700px;
+  padding: clamp(30px, 6vw, 60px);
+  border: 1px solid var(--atenea-borde);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--atenea-sombra);
+}
+
+.product-empty-state > i { color: var(--atenea-dorado); font-size: 4rem; }
+.payment-result-icon { display: inline-grid; place-items: center; width: 76px; height: 76px; margin-bottom: 18px; border-radius: 50%; font-size: 2rem; }
+.payment-result-icon.is-success { color: #fff; background: #246143; }
+.payment-result-icon.is-pending { color: var(--atenea-verde); background: #f2df9d; }
+.payment-result-icon.is-error { color: #fff; background: #9d2635; }
+
+@media (max-width: 991.98px) {
+  .product-purchase-card { position: static; }
+  .product-gallery-main img { height: min(52vh, 460px); }
+}
+
+@media (max-width: 575.98px) {
+  .product-detail .row > * { min-width: 0; }
+  .product-gallery-main { display: block; width: 100%; min-height: 0; padding: 10px; }
+  .product-gallery-main img { width: 100%; height: auto; max-height: 330px; object-fit: contain; }
+  .product-purchase-card { padding: 24px 20px; }
+  .product-quantity { align-items: flex-start; flex-direction: column; }
+  .quantity-control { width: 100%; grid-template-columns: 1fr 64px 1fr; }
+  .quantity-control input { width: 64px; }
 }
 
 /* Nav Menu Colors - The following color variables are used specifically for the navigation menu. They are separate from the global colors to allow for more customization options */

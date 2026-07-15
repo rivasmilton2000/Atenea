@@ -47,12 +47,12 @@ function notificarCambioCuenta(array $usuario, array $campos, string $destinoAlt
         $ipAproximada = 'no disponible';
     }
     try {
-        enviarCorreoAtenea(
+        enviarPlantillaCorreoAtenea(
+            'aviso_administrativo',
             $destino,
             trim((string) (($usuario['nombre'] ?? '') . ' ' . ($usuario['apellido'] ?? ''))),
-            'Confirmación de cambios en tu cuenta Atenea',
-            '<h2>Atenea</h2><p>Se modificó tu cuenta el ' . atenea_e($fecha) . '.</p><p><strong>Campos:</strong> ' . atenea_e($lista) . '</p><p><strong>Origen aproximado:</strong> ' . atenea_e($ipAproximada) . '</p><p>Si no reconoces este cambio, contacta al soporte de Atenea.</p>',
-            "Atenea\n\nSe modificó tu cuenta el {$fecha}.\nCampos: {$lista}\nOrigen aproximado: {$ipAproximada}\nSi no reconoces este cambio, contacta al soporte de Atenea."
+            ['asunto' => 'Confirmación de cambios en tu cuenta Atenea', 'resumen' => 'Se modificó información de tu cuenta.', 'mensaje' => "Se modificó tu cuenta el {$fecha}.\nCampos: {$lista}\nOrigen aproximado: {$ipAproximada}\nSi no reconoces este cambio, contacta al soporte de Atenea."],
+            ['usuario_id' => isset($usuario['id']) ? (int) $usuario['id'] : null, 'idempotency_key' => 'cambio-cuenta:' . (int) ($usuario['id'] ?? 0) . ':' . hash('sha256', $fecha . $lista . $destino)]
         );
     } catch (Throwable $e) {
         error_log('Notificación de cuenta Atenea: ' . $e->getMessage());
@@ -77,12 +77,12 @@ function crearVerificacionCuenta(PDO $pdo, int $usuarioId, string $tipo, array $
     $id = (int) $pdo->lastInsertId();
     $perfil = obtenerPerfilUsuario($usuarioId) ?? [];
     try {
-        enviarCorreoAtenea(
+        enviarPlantillaCorreoAtenea(
+            'verificacion_cuenta',
             $correo,
             trim((string) (($perfil['nombre'] ?? '') . ' ' . ($perfil['apellido'] ?? ''))),
-            'Código de verificación de Atenea',
-            '<h2>Atenea</h2><p>Tu código de verificación es:</p><p style="font-size:24px;font-weight:bold;letter-spacing:3px">' . atenea_e($codigo) . '</p><p>Vence en 15 minutos y solo puede usarse una vez. Si no solicitaste este cambio, ignora el mensaje y contacta a soporte.</p>',
-            "Atenea\n\nCódigo de verificación: {$codigo}\nVence en 15 minutos y solo puede usarse una vez."
+            ['codigo' => $codigo],
+            ['usuario_id' => $usuarioId, 'idempotency_key' => 'verificacion-cuenta:' . $id]
         );
     } catch (Throwable $e) {
         $pdo->prepare('UPDATE verificaciones_cuenta SET usado_at=NOW() WHERE id=:id')->execute(['id' => $id]);

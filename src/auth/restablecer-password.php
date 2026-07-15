@@ -49,12 +49,12 @@ try {
 
 try {
     $nombre = trim((string) ($usuario['nombre'] . ' ' . $usuario['apellido']));
-    enviarCorreoAtenea(
+    enviarPlantillaCorreoAtenea(
+        'cambio_password',
         (string) $usuario['correo'],
         $nombre,
-        'Tu contraseña de Atenea fue actualizada',
-        '<h2>Atenea</h2><p>Tu contraseña se actualizó correctamente.</p><p>Si no realizaste este cambio, contacta al equipo de Atenea de inmediato.</p>',
-        "Atenea\n\nTu contraseña se actualizó correctamente. Si no realizaste este cambio, contacta al equipo de Atenea de inmediato."
+        [],
+        ['usuario_id' => (int) $usuario['user_id'], 'idempotency_key' => 'cambio-password:token:' . (int) $usuario['token_id']]
     );
 } catch (Throwable $e) {
     error_log('Confirmación de contraseña Atenea: ' . $e->getMessage());

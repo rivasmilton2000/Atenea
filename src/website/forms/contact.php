@@ -1,12 +1,9 @@
 <?php
 declare(strict_types=1);
 
-use PHPMailer\PHPMailer\Exception as MailException;
-use PHPMailer\PHPMailer\PHPMailer;
-
 require_once dirname(__DIR__, 3) . '/includes/config.php';
 require_once dirname(__DIR__, 3) . '/includes/session.php';
-require_once dirname(__DIR__, 3) . '/includes/mail_config.php';
+require_once dirname(__DIR__, 3) . '/includes/mailer.php';
 
 const CONTACTO_MAX_INTENTOS = 5;
 const CONTACTO_VENTANA_SEGUNDOS = 600;
@@ -134,49 +131,25 @@ if (($ultimoEnvio['huella'] ?? '') === $huella && (int) ($ultimoEnvio['momento']
     volverContacto('error', 'Este mensaje ya fue enviado. Espera unos minutos antes de repetirlo.', $datos);
 }
 
-require $autoload;
-
 try {
-    $correoSmtp = new PHPMailer(true);
-    $correoSmtp->isSMTP();
-    $correoSmtp->Host = (string) $configuracion['host'];
-    $correoSmtp->Port = (int) $configuracion['port'];
-    $correoSmtp->SMTPAuth = true;
-    $encryption = strtolower((string) $configuracion['encryption']);
-    if ($encryption === 'ssl') {
-        $correoSmtp->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-    } elseif ($encryption === 'tls') {
-        $correoSmtp->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-    } else {
-        $correoSmtp->SMTPAutoTLS = false;
-        $correoSmtp->SMTPSecure = '';
-    }
-    $correoSmtp->Username = (string) $configuracion['smtp_user'];
-    $correoSmtp->Password = (string) $configuracion['smtp_app_password'];
-    $correoSmtp->Timeout = 15;
-    $correoSmtp->CharSet = PHPMailer::CHARSET_UTF8;
-    $correoSmtp->setFrom((string) $configuracion['from_email'], (string) $configuracion['from_name']);
-    $correoSmtp->addAddress((string) $configuracion['recipient']);
-    $correoSmtp->addReplyTo($correo, $nombre);
-    $correoSmtp->Subject = '[Contacto Atenea] ' . $asunto;
-
-    $nombreHtml = htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8');
-    $correoHtml = htmlspecialchars($correo, ENT_QUOTES, 'UTF-8');
-    $asuntoHtml = htmlspecialchars($asunto, ENT_QUOTES, 'UTF-8');
-    $mensajeHtml = nl2br(htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8'));
-    $fecha = date('d/m/Y H:i:s');
-    $correoSmtp->isHTML(true);
-    $correoSmtp->Body = "<h2>Nuevo mensaje desde Atenea</h2><p><strong>Nombre:</strong> {$nombreHtml}</p><p><strong>Correo:</strong> {$correoHtml}</p><p><strong>Asunto:</strong> {$asuntoHtml}</p><p><strong>Mensaje:</strong><br>{$mensajeHtml}</p><p><strong>Fecha y hora de El Salvador:</strong> {$fecha}</p><p><strong>IP:</strong> " . htmlspecialchars($ip, ENT_QUOTES, 'UTF-8') . '</p>';
-    $correoSmtp->AltBody = "Nuevo mensaje desde Atenea\nNombre: {$nombre}\nCorreo: {$correo}\nAsunto: {$asunto}\nMensaje:\n{$mensaje}\nFecha y hora de El Salvador: {$fecha}\nIP: {$ip}";
-    $correoSmtp->send();
+    enviarPlantillaCorreoAtenea('contacto_recibido', (string) $configuracion['recipient'], 'Equipo Atenea', [
+        'nombre' => $nombre,
+        'correo' => $correo,
+        'asunto' => $asunto,
+        'mensaje' => $mensaje,
+        'fecha' => date('d/m/Y H:i:s') . ' (El Salvador)',
+        'referencia' => 'Formulario web · ' . substr(hash('sha256', $ip), 0, 12),
+    ], [
+        'usuario_id' => isset($_SESSION['usuario_id']) && is_int($_SESSION['usuario_id']) ? $_SESSION['usuario_id'] : null,
+        'idempotency_key' => 'contacto:' . $huella,
+        'reply_to' => $correo,
+        'reply_to_name' => $nombre,
+    ]);
 
     $_SESSION['contacto_ultimo_envio'] = ['huella' => $huella, 'momento' => $ahora];
     unset($_SESSION['contacto_datos']);
     volverContacto('exito', 'Tu mensaje fue enviado correctamente.');
-} catch (MailException $e) {
-    registrarErrorContacto('PHPMailer: ' . $e->getMessage());
-    volverContacto('error', 'No fue posible enviar el mensaje. Inténtalo nuevamente.', $datos);
 } catch (Throwable $e) {
-    registrarErrorContacto('Contacto: ' . $e->getMessage());
+    registrarErrorContacto('Contacto: ' . sanitizarErrorCorreoAtenea($e));
     volverContacto('error', 'No fue posible enviar el mensaje. Inténtalo nuevamente.', $datos);
 }

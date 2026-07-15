@@ -50,7 +50,7 @@ function obtenerUsuarioActual(): ?array
 function iniciarSesionUsuario(array $usuario): void
 {
     session_regenerate_id(true);
-    unset($_SESSION['login_intentos'], $_SESSION['login_correo'], $_SESSION['csrf_token'], $_SESSION['url_retorno']);
+    unset($_SESSION['login_intentos'], $_SESSION['login_correo'], $_SESSION['csrf_token']);
     $_SESSION['usuario_id'] = (int) $usuario['id'];
     $_SESSION['usuario_nombre'] = (string) $usuario['nombre'];
     $_SESSION['usuario_apellido'] = (string) ($usuario['apellido'] ?? '');
@@ -85,8 +85,24 @@ function exigirPerfilCompleto(): void
 function redirigirPorRol(?string $rol = null): never
 {
     $rol ??= (string) ($_SESSION['usuario_rol'] ?? '');
+    $retorno = (string) ($_SESSION['url_retorno'] ?? '');
+    unset($_SESSION['url_retorno']);
+    if ($rol === 'usuario' && urlRetornoInternaSegura($retorno)) {
+        header('Location: ' . $retorno);
+        exit;
+    }
     header('Location: ' . rutaPanelPorRol($rol));
     exit;
+}
+
+function urlRetornoInternaSegura(string $url): bool
+{
+    if ($url === '' || str_contains($url, "\\") || preg_match('/[\x00-\x1F\x7F]/', $url)) return false;
+    $rutaBase = ATENEA_BASE_URL === '' ? '/' : ATENEA_BASE_URL . '/';
+    return str_starts_with($url, $rutaBase)
+        && !str_starts_with(substr($url, strlen(ATENEA_BASE_URL)), '//')
+        && parse_url($url, PHP_URL_HOST) === null
+        && parse_url($url, PHP_URL_SCHEME) === null;
 }
 
 function exigirAutenticacion(): void

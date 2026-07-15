@@ -57,15 +57,13 @@ try {
 if (is_array($usuario) && is_string($token)) {
     $nombre = trim((string) ($usuario['nombre'] . ' ' . $usuario['apellido']));
     $enlace = atenea_url_absoluta('src/login/reset-password.php?token=' . rawurlencode($token));
-    $enlaceHtml = atenea_e($enlace);
-    $nombreHtml = atenea_e($nombre !== '' ? $nombre : 'estudiante');
     try {
-        enviarCorreoAtenea(
+        enviarPlantillaCorreoAtenea(
+            'recuperacion_password',
             (string) $usuario['correo'],
             $nombre,
-            'Restablece tu contraseña de Atenea',
-            "<h2>Atenea</h2><p>Hola, {$nombreHtml}.</p><p>Recibimos una solicitud para restablecer tu contraseña.</p><p><a href=\"{$enlaceHtml}\">Restablecer mi contraseña</a></p><p>Este enlace vence en 30 minutos y solo puede utilizarse una vez.</p><p>Si no solicitaste este cambio, ignora este mensaje.</p>",
-            "Atenea\n\nRecibimos una solicitud para restablecer tu contraseña.\n{$enlace}\n\nEl enlace vence en 30 minutos y solo puede utilizarse una vez. Si no lo solicitaste, ignora este mensaje."
+            ['enlace' => $enlace],
+            ['usuario_id' => (int) $usuario['id'], 'idempotency_key' => 'recuperacion-password:' . hash('sha256', $token)]
         );
     } catch (Throwable $e) {
         error_log('Correo de recuperación Atenea: ' . $e->getMessage());

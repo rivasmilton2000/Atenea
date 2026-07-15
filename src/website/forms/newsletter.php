@@ -47,13 +47,12 @@ if (!configuracionSmtpCompleta($configuracion) || !filter_var($destinatario, FIL
 }
 
 try {
-    $correoSeguro = atenea_e($correo);
-    enviarCorreoAtenea(
+    enviarPlantillaCorreoAtenea(
+        'aviso_administrativo',
         $destinatario,
         (string) ($configuracion['from_name'] ?? 'Atenea'),
-        'Nueva suscripción al boletín de Atenea',
-        '<h2>Nueva suscripción al boletín</h2><p><strong>Correo:</strong> ' . $correoSeguro . '</p><p><strong>Fecha:</strong> ' . atenea_e(date('d/m/Y H:i')) . '</p>',
-        "Nueva suscripción al boletín de Atenea\nCorreo: {$correo}\nFecha: " . date('d/m/Y H:i')
+        ['asunto' => 'Nueva suscripción al boletín de Atenea', 'resumen' => 'Se recibió una nueva solicitud de suscripción.', 'mensaje' => "Correo: {$correo}\nFecha: " . date('d/m/Y H:i')],
+        ['idempotency_key' => 'boletin:' . hash('sha256', $correo . ':' . date('Y-m-d'))]
     );
 } catch (Throwable $e) {
     error_log('Boletín Atenea: ' . $e->getMessage());
