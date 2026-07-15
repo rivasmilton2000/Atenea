@@ -11,7 +11,8 @@ if ($dashboardActive === '' || $dashboardActive === 'index.php') $dashboardActiv
 $inicioAbierto = in_array($dashboardActive, ['secciones/index.php', 'secciones/editar.php', 'elementos/index.php', 'elementos/editar.php', 'hero'], true);
 $configAbierta = in_array($dashboardActive, ['configuracion/index.php', 'navbar/index.php', 'navbar/editar.php'], true);
 $portalAbierto = str_starts_with($dashboardActive, 'portal-estudiante');
-$comercioAbierto = str_starts_with($dashboardActive, 'productos/') || str_starts_with($dashboardActive, 'categorias/') || str_starts_with($dashboardActive, 'pedidos/');
+$comercioAbierto = str_starts_with($dashboardActive, 'productos/') || str_starts_with($dashboardActive, 'categorias/') || str_starts_with($dashboardActive, 'pedidos/') || str_starts_with($dashboardActive, 'facturas/');
+$operacionesAbiertas = str_starts_with($dashboardActive,'notificaciones/') || str_starts_with($dashboardActive,'comunicaciones/') || str_starts_with($dashboardActive,'errores/');
 $usuariosAbierto = str_starts_with($dashboardActive, 'usuarios/');
 $bitacoraActiva = str_starts_with($dashboardActive, 'bitacora/');
 $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'admin'], true) ? (string) $_GET['rol'] : '';
@@ -49,7 +50,13 @@ $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'a
         <li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive, 'productos/') ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/productos/index.php') ?>">Productos</a></li>
         <li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive, 'categorias/') ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/categorias/index.php') ?>">Categorías de productos</a></li>
         <li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive, 'pedidos/') ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/pedidos/index.php') ?>">Pedidos</a></li>
+        <li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive, 'facturas/') ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/facturas/index.php') ?>">Facturas / DTE</a></li>
       </ul></div>
+    </li>
+    <li class="nav-item nav-category">Operaciones</li>
+    <li class="nav-item <?= $operacionesAbiertas ? 'active' : '' ?>">
+      <a class="nav-link <?= $operacionesAbiertas?'':'collapsed' ?>" data-bs-toggle="collapse" href="#menu-operaciones" aria-expanded="<?= $operacionesAbiertas?'true':'false' ?>"><i class="menu-icon mdi mdi-message-alert-outline"></i><span class="menu-title">Comunicaciones</span><i class="menu-arrow"></i></a>
+      <div class="collapse <?= $operacionesAbiertas?'show':'' ?>" id="menu-operaciones" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/notificaciones/index.php')?>">Notificaciones</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/comunicaciones/index.php')?>">Correos y mensajes</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/errores/index.php')?>">Errores operativos</a></li></ul></div>
     </li>
     <li class="nav-item nav-category">Gestión de usuarios</li>
     <li class="nav-item <?= $usuariosAbierto ? 'active' : '' ?>">

@@ -6,6 +6,8 @@ require_once dirname(__DIR__, 2) . '/includes/stripe_config.php';
 require_once dirname(__DIR__, 2) . '/includes/audit.php';
 require_once dirname(__DIR__, 2) . '/includes/carrito.php';
 require_once dirname(__DIR__, 2) . '/includes/dte.php';
+require_once dirname(__DIR__, 2) . '/includes/notificaciones.php';
+require_once dirname(__DIR__, 2) . '/includes/errores_sistema.php';
 
 function liberarReservaPedido(PDO $pdo, array $pedido, string $estado, string $nota): void
 {
@@ -81,7 +83,7 @@ try {
     $consulta->execute(['id' => $evento->id]);
     if ((int) $consulta->fetchColumn() === 1) {
         $pdo->commit();
-        if ($esConfirmacion && $pedidoId > 0) { try { generarDtePedido($pedidoId); } catch(Throwable $e) { error_log($e->getMessage()); } enviarConfirmacionCompraAtenea($pedidoId); }
+        if ($esConfirmacion && $pedidoId > 0) { try { $dte=generarDtePedido($pedidoId); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$pedidoId.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$pedidoId,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$pedidoId]); } enviarConfirmacionCompraAtenea($pedidoId); }
         http_response_code(200);
         exit;
     }
@@ -163,7 +165,18 @@ try {
 
     $pdo->prepare('UPDATE stripe_eventos SET procesado=1,error_mensaje=NULL,procesado_at=NOW() WHERE stripe_event_id=:id')->execute(['id' => $evento->id]);
     $pdo->commit();
-    if ($enviarCorreoPedido) { try { generarDtePedido($enviarCorreoPedido); } catch(Throwable $e) { error_log($e->getMessage()); } enviarConfirmacionCompraAtenea($enviarCorreoPedido); }
+    if ($pedidoId > 0) {
+        $mapa = [
+            'checkout.session.completed'=>['pago_confirmado','Pago confirmado','exito'],
+            'checkout.session.async_payment_succeeded'=>['pago_confirmado','Pago confirmado','exito'],
+            'checkout.session.async_payment_failed'=>['pago_fallido','Pago fallido','error'],
+            'payment_intent.payment_failed'=>['pago_fallido','Pago fallido','error'],
+            'checkout.session.expired'=>['pedido_cancelado','Pedido cancelado','advertencia'],
+            'charge.refunded'=>['pedido_reembolsado','Pedido reembolsado','advertencia'],
+        ];
+        if(isset($mapa[$evento->type])){$n=$mapa[$evento->type];crearNotificacionAtenea(['rol'=>'admin','tipo'=>$n[0],'categoria'=>'pagos','nivel'=>$n[2],'titulo'=>$n[1],'descripcion'=>'Stripe procesó el evento del pedido #'.$pedidoId.'.','url'=>atenea_url('src/dashboard/pedidos/detalle.php?id='.$pedidoId),'pedido_id'=>$pedidoId,'idempotency_key'=>'stripe:notificacion:'.$evento->id]);}
+    }
+    if ($enviarCorreoPedido) { try { $dte=generarDtePedido($enviarCorreoPedido); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$enviarCorreoPedido.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$enviarCorreoPedido,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$enviarCorreoPedido]); } enviarConfirmacionCompraAtenea($enviarCorreoPedido); }
     http_response_code(200);
 } catch (Throwable $error) {
     if ($pdo->inTransaction()) $pdo->rollBack();
@@ -172,6 +185,7 @@ try {
         $pdo->prepare('INSERT INTO stripe_eventos(stripe_event_id,tipo,procesado,error_mensaje) VALUES(:id,:tipo,0,:error) ON DUPLICATE KEY UPDATE procesado=0,error_mensaje=VALUES(error_mensaje)')
             ->execute(['id' => $evento->id, 'tipo' => $evento->type, 'error' => $mensaje]);
     } catch (Throwable) {}
+    try { $categoriaError=str_contains(mb_strtolower($error->getMessage()),'stock')?'stock':'webhook';registrarErrorSistemaAtenea($categoriaError,'stripe_webhook',$error->getMessage(),['pedido_id'=>$pedidoId?:null,'stripe_event_id'=>(string)$evento->id]); } catch (Throwable) {}
     error_log('Webhook Stripe: ' . $error->getMessage());
     http_response_code(500);
 }

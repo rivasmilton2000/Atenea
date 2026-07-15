@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../_auth_guard.php';
+require_once dirname(__DIR__, 3) . '/includes/notificaciones.php';
 $usuarioAdmin ??= obtenerUsuarioActual();
 $configuracionAdmin ??= obtenerConfiguracionSitio();
 $logoAdmin = rutaImagenContenido($configuracionAdmin['logo'] ?? 'img/atenea-logo.png', 'img/atenea-logo.png');
@@ -10,6 +11,7 @@ $fotoAdmin = rutaFotoPerfil($perfilAdminNav);
 $horaLocal = (int) date('G');
 $saludoAdmin = $horaLocal < 12 ? 'Buenos días' : ($horaLocal < 18 ? 'Buenas tardes' : 'Buenas noches');
 $fechaAdmin = date('d/m/Y');
+$resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ?? 0));
 ?>
 <nav class="navbar default-layout col-lg-12 col-12 p-0 fixed-top d-flex align-items-top flex-row">
   <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-start">
@@ -73,22 +75,19 @@ $fechaAdmin = date('d/m/Y');
       <li class="nav-item dropdown">
         <a class="nav-link count-indicator" id="notificationDropdown" href="#" data-bs-toggle="dropdown">
           <i class="icon-bell"></i>
-          <span class="count"></span>
+          <span class="count<?= $resumenNotificaciones['no_leidas'] > 0 ? '' : ' d-none' ?>" id="ateneaNotificationDot"></span>
         </a>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="notificationDropdown">
           <a class="dropdown-item py-3 border-bottom">
-            <p class="mb-0 fw-medium float-start">Actividad reciente del sitio </p>
-            <span class="badge badge-pill badge-primary float-end">Ver todo</span>
+            <p class="mb-0 fw-medium float-start">Notificaciones</p>
+            <a href="<?= atenea_url('src/dashboard/notificaciones/index.php') ?>" class="badge badge-pill badge-primary float-end">Ver historial</a>
           </a>
-          <a class="dropdown-item preview-item py-3">
-            <div class="preview-thumbnail">
-              <i class="mdi mdi-alert m-auto text-primary"></i>
-            </div>
-            <div class="preview-item-content">
-              <h6 class="preview-subject fw-normal text-dark mb-1">Panel Atenea</h6>
-              <p class="fw-light small-text mb-0"> Modulos CMS activos </p>
-            </div>
-          </a>
+          <div id="ateneaNotificationList">
+            <?php foreach($resumenNotificaciones['notificaciones'] as $notificacion): ?>
+              <a class="dropdown-item preview-item py-3" href="<?= atenea_e($notificacion['action_url'] ?: atenea_url('src/dashboard/notificaciones/index.php')) ?>"><div class="preview-thumbnail"><i class="mdi mdi-bell-outline m-auto text-primary"></i></div><div class="preview-item-content"><h6 class="preview-subject fw-normal text-dark mb-1"><?= atenea_e($notificacion['title']) ?></h6><p class="fw-light small-text mb-0"><?= atenea_e(mb_substr($notificacion['message'],0,90)) ?></p></div></a>
+            <?php endforeach; ?>
+            <?php if(!$resumenNotificaciones['notificaciones']): ?><div class="dropdown-item py-3 text-muted">No hay notificaciones recientes.</div><?php endif; ?>
+          </div>
         </div>
       </li>
       <li class="nav-item dropdown">
@@ -97,11 +96,11 @@ $fechaAdmin = date('d/m/Y');
         </a>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="countDropdown">
           <a class="dropdown-item py-3">
-            <p class="mb-0 fw-medium float-start">Accesos administrativos </p>
-            <span class="badge badge-pill badge-primary float-end">CMS</span>
+            <p class="mb-0 fw-medium float-start">Comunicaciones</p>
+            <a href="<?= atenea_url('src/dashboard/comunicaciones/index.php') ?>" class="badge badge-pill badge-primary float-end">Abrir</a>
           </a>
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item preview-item" href="<?= atenea_url('src/dashboard/secciones/index.php') ?>">
+          <a class="dropdown-item preview-item" href="<?= atenea_url('src/dashboard/comunicaciones/index.php?estado=recibido') ?>">
             <div class="preview-thumbnail">
               <span class="img-sm profile-pic d-inline-flex align-items-center justify-content-center bg-primary text-white"><i class="mdi mdi-view-dashboard"></i></span>
             </div>

@@ -43,8 +43,8 @@ function reservarEnvioCorreoAtenea(array $contexto): ?int
     $destinatario = strtolower((string) $contexto['destinatario']);
     $pdo->beginTransaction();
     try {
-        $q = $pdo->prepare("INSERT IGNORE INTO correo_envios(tipo,usuario_id,pedido_id,destinatario_enmascarado,destinatario_hash,idempotency_key) VALUES(:tipo,:usuario,:pedido,:mascara,:hash,:clave)");
-        $q->execute(['tipo' => substr((string) $contexto['tipo'], 0, 80), 'usuario' => $contexto['usuario_id'] ?? null, 'pedido' => $contexto['pedido_id'] ?? null, 'mascara' => enmascararCorreoAtenea($destinatario), 'hash' => hash('sha256', $destinatario), 'clave' => $clave]);
+        $q = $pdo->prepare("INSERT IGNORE INTO correo_envios(tipo,asunto,usuario_id,pedido_id,hilo_id,destinatario_enmascarado,destinatario_hash,idempotency_key) VALUES(:tipo,:asunto,:usuario,:pedido,:hilo,:mascara,:hash,:clave)");
+        $q->execute(['tipo' => substr((string) $contexto['tipo'], 0, 80), 'asunto'=>mb_substr((string)($contexto['asunto']??''),0,190)?:null, 'usuario' => $contexto['usuario_id'] ?? null, 'pedido' => $contexto['pedido_id'] ?? null, 'hilo'=>$contexto['hilo_id']??null, 'mascara' => enmascararCorreoAtenea($destinatario), 'hash' => hash('sha256', $destinatario), 'clave' => $clave]);
         $q = $pdo->prepare('SELECT id,estado,procesando_desde FROM correo_envios WHERE idempotency_key=:clave FOR UPDATE');
         $q->execute(['clave' => $clave]);
         $registro = $q->fetch();
@@ -72,7 +72,10 @@ function finalizarEnvioCorreoAtenea(?int $registroId, bool $enviado, ?Throwable 
 
 function enviarCorreoAtenea(string $destinatario, string $nombre, string $asunto, string $html, string $texto, array $opciones = []): void
 {
-    $registroId = reservarEnvioCorreoAtenea(array_merge($opciones, ['destinatario' => $destinatario, 'tipo' => $opciones['tipo'] ?? 'general']));
+    if (!filter_var($destinatario,FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n]/',$destinatario.$nombre.$asunto)) {
+        throw new InvalidArgumentException('Los datos de cabecera del correo no son válidos.');
+    }
+    $registroId = reservarEnvioCorreoAtenea(array_merge($opciones, ['destinatario' => $destinatario, 'tipo' => $opciones['tipo'] ?? 'general', 'asunto'=>$asunto]));
     if ($registroId === null) return;
     try {
         $configuracion = configuracionCorreoAtenea();
@@ -123,6 +126,10 @@ function enviarCorreoAtenea(string $destinatario, string $nombre, string $asunto
         finalizarEnvioCorreoAtenea($registroId, true);
     } catch (Throwable $e) {
         finalizarEnvioCorreoAtenea($registroId, false, $e);
+        try {
+            require_once __DIR__.'/errores_sistema.php';
+            registrarErrorSistemaAtenea('correo','mailer',sanitizarErrorCorreoAtenea($e),['correo_envio_id'=>$registroId,'pedido_id'=>$opciones['pedido_id']??null,'usuario_id'=>$opciones['usuario_id']??null]);
+        } catch (Throwable) {}
         throw $e;
     }
 }

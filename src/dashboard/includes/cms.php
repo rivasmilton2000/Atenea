@@ -96,6 +96,7 @@ function cmsCabecera(string $titulo, string $activo, string $descripcion = 'Admi
     $dashboardDescription = $descripcion;
     $dashboardFlash = cmsObtenerFlash();
     $GLOBALS['atenea_dashboard_flash'] = $dashboardFlash;
+    $GLOBALS['atenea_dashboard_active'] = $activo;
     $usuarioAdmin = obtenerUsuarioActual();
     $configuracionAdmin = obtenerConfiguracionSitio();
     require dirname(__DIR__) . '/includes/header.php';
@@ -106,8 +107,21 @@ function cmsCabecera(string $titulo, string $activo, string $descripcion = 'Admi
     echo '<div class="d-sm-flex align-items-center justify-content-between border-bottom mb-4"><div><nav aria-label="breadcrumb"><ol class="breadcrumb mb-2"><li class="breadcrumb-item"><a href="'.atenea_url('src/dashboard/index.php').'">Panel principal</a></li><li class="breadcrumb-item active">'.atenea_e($titulo).'</li></ol></nav><h1 class="h3 mb-1">'.atenea_e($titulo).'</h1><p class="text-muted mb-3">'.atenea_e($descripcion).'</p></div></div>';
 }
 
+function cmsPaginacionSimple(int $pagina, int $paginas, array $parametros = []): string
+{
+    if ($paginas <= 1) return '';
+    $inicio=max(1,$pagina-2);$fin=min($paginas,$pagina+2);$html='<nav class="mt-4"><ul class="pagination justify-content-end">';
+    for($i=$inicio;$i<=$fin;$i++){$parametros['pagina']=$i;$html.='<li class="page-item '.($i===$pagina?'active':'').'"><a class="page-link" href="?'.atenea_e(http_build_query($parametros)).'">'.$i.'</a></li>';}
+    return $html.'</ul></nav>';
+}
+
 function cmsPie(): void
 {
+    $activo=(string)($GLOBALS['atenea_dashboard_active']??'');
+    if(in_array($activo,['comunicaciones/index.php','errores/index.php','facturas/index.php'],true)){
+        $pagina=max(1,(int)($GLOBALS['pagina']??1));$total=max(0,(int)($GLOBALS['total']??0));$limite=max(1,(int)($GLOBALS['lim']??25));
+        echo cmsPaginacionSimple($pagina,(int)ceil($total/$limite),$_GET);
+    }
     echo '</div>';
     require dirname(__DIR__) . '/partials/_footer.php';
     echo '</div></div></div>';

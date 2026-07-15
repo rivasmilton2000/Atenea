@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 3) . '/includes/config.php';
 require_once dirname(__DIR__, 3) . '/includes/session.php';
 require_once dirname(__DIR__, 3) . '/includes/mailer.php';
+require_once dirname(__DIR__, 3) . '/includes/comunicaciones.php';
+require_once dirname(__DIR__, 3) . '/includes/errores_sistema.php';
 
 const CONTACTO_MAX_INTENTOS = 5;
 const CONTACTO_VENTANA_SEGUNDOS = 600;
@@ -114,10 +116,10 @@ if (preg_match('/[\r\n]/', $nombre . $correo . $asunto)) $errores[] = 'Los datos
 if ($errores) volverContacto('error', implode(' ', $errores), $datos);
 
 $configuracion = configuracionCorreoAtenea();
-$autoload = dirname(__DIR__, 3) . '/includes/mail/vendor/autoload.php';
-if (!configuracionContactoCompleta($configuracion) || !is_file($autoload)) {
-    registrarErrorContacto('Configuración SMTP, CAPTCHA o autoload incompleta.');
-    volverContacto('error', 'No fue posible enviar el mensaje. Inténtalo nuevamente.', $datos);
+$captchaConfigurado = trim((string)($configuracion['recaptcha_secret_key']??'')) !== '' && trim((string)($configuracion['recaptcha_verify_uri']??'')) !== '';
+if (!$captchaConfigurado) {
+    registrarErrorContacto('Configuración CAPTCHA incompleta.');
+    volverContacto('error', 'No fue posible validar el mensaje. Inténtalo nuevamente.', $datos);
 }
 
 $captcha = (string) ($_POST['g-recaptcha-response'] ?? '');
@@ -129,6 +131,17 @@ $huella = hash('sha256', $correo . "\n" . $asunto . "\n" . $mensaje);
 $ultimoEnvio = is_array($_SESSION['contacto_ultimo_envio'] ?? null) ? $_SESSION['contacto_ultimo_envio'] : [];
 if (($ultimoEnvio['huella'] ?? '') === $huella && (int) ($ultimoEnvio['momento'] ?? 0) >= $ahora - 120) {
     volverContacto('error', 'Este mensaje ya fue enviado. Espera unos minutos antes de repetirlo.', $datos);
+}
+
+try {
+    $hiloId = crearHiloComunicacionAtenea([
+        'canal'=>'contacto','asunto'=>$asunto,
+        'usuario_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,
+        'nombre'=>$nombre,'correo'=>$correo,'contenido'=>$mensaje,
+    ]);
+} catch (Throwable $e) {
+    registrarErrorContacto('Persistencia contacto: '.$e->getMessage());
+    volverContacto('error','No fue posible recibir el mensaje. Inténtalo nuevamente.',$datos);
 }
 
 try {
@@ -144,6 +157,7 @@ try {
         'idempotency_key' => 'contacto:' . $huella,
         'reply_to' => $correo,
         'reply_to_name' => $nombre,
+        'hilo_id' => $hiloId,
     ]);
 
     $_SESSION['contacto_ultimo_envio'] = ['huella' => $huella, 'momento' => $ahora];
@@ -151,5 +165,6 @@ try {
     volverContacto('exito', 'Tu mensaje fue enviado correctamente.');
 } catch (Throwable $e) {
     registrarErrorContacto('Contacto: ' . sanitizarErrorCorreoAtenea($e));
-    volverContacto('error', 'No fue posible enviar el mensaje. Inténtalo nuevamente.', $datos);
+    $_SESSION['contacto_ultimo_envio'] = ['huella' => $huella, 'momento' => $ahora];
+    volverContacto('exito', 'Tu mensaje fue recibido. El equipo de Atenea lo revisará pronto.');
 }
