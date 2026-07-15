@@ -7,7 +7,7 @@ if (document.querySelectorAll('#myChart').length) {
     height: 230,
     type: 'radialBar',
   },
-  colors: ["#C49A3A", "#173F35"],
+  colors: ["#4bc7d2", "#3a57e8"],
   plotOptions: {
     radialBar: {
       hollow: {
@@ -52,7 +52,7 @@ if (document.querySelectorAll('#d-activity').length) {
             show:false
           }
       },
-      colors: ["#173F35", "#C49A3A"],
+      colors: ["#3a57e8", "#4bc7d2"],
       plotOptions: {
         bar: {
           horizontal: false,
@@ -133,7 +133,7 @@ if (document.querySelectorAll('#d-main').length) {
               enabled: false,
           },
       },
-      colors: ["#173F35", "#C49A3A"],
+      colors: ["#3a57e8", "#4bc7d2"],
       dataLabels: {
           enabled: false
       },
@@ -184,7 +184,7 @@ if (document.querySelectorAll('#d-main').length) {
               opacityFrom: .4,
               opacityTo: .1,
               stops: [0, 50, 80],
-              colors: ["#173F35", "#C49A3A"]
+              colors: ["#3a57e8", "#4bc7d2"]
           }
       },
       tooltip: {

@@ -6,11 +6,11 @@
       var graphGradient = document.getElementById("performanceLine").getContext('2d');
       var graphGradient2 = document.getElementById("performanceLine").getContext('2d');
       var saleGradientBg = graphGradient.createLinearGradient(5, 0, 5, 100);
-      saleGradientBg.addColorStop(0, 'rgba(23, 63, 53, 0.18)');
-      saleGradientBg.addColorStop(1, 'rgba(23, 63, 53, 0.02)');
+      saleGradientBg.addColorStop(0, 'rgba(26, 115, 232, 0.18)');
+      saleGradientBg.addColorStop(1, 'rgba(26, 115, 232, 0.02)');
       var saleGradientBg2 = graphGradient2.createLinearGradient(100, 0, 50, 150);
-      saleGradientBg2.addColorStop(0, 'rgba(196, 154, 58, 0.19)');
-      saleGradientBg2.addColorStop(1, 'rgba(196, 154, 58, 0.03)');
+      saleGradientBg2.addColorStop(0, 'rgba(0, 208, 255, 0.19)');
+      saleGradientBg2.addColorStop(1, 'rgba(0, 208, 255, 0.03)');
 
       new Chart(ctx, {
         type: 'line',
@@ -21,28 +21,28 @@
             data: [50, 110, 60, 290, 200, 115, 130, 170, 90, 210, 240, 280, 200],
             backgroundColor: saleGradientBg,
             borderColor: [
-                '#173F35',
+                '#1F3BB3',
             ],
             borderWidth: 1.5,
             fill: true, // 3: no fill
             pointBorderWidth: 1,
             pointRadius: [4, 4, 4, 4, 4,4, 4, 4, 4, 4,4, 4, 4],
             pointHoverRadius: [2, 2, 2, 2, 2,2, 2, 2, 2, 2,2, 2, 2],
-            pointBackgroundColor: Array(12).fill('#173F35'),
+            pointBackgroundColor: Array(13).fill('#1F3BB3'),
             pointBorderColor: ['#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff',],
         },{
           label: 'Last week',
           data: [30, 150, 190, 250, 120, 150, 130, 20, 30, 15, 40, 95, 180],
           backgroundColor: saleGradientBg2,
           borderColor: [
-              '#C49A3A',
+              '#52CDFF',
           ],
           borderWidth: 1.5,
           fill: true, // 3: no fill
           pointBorderWidth: 1,
           pointRadius: [0, 0, 0, 4, 0],
           pointHoverRadius: [0, 0, 0, 2, 0],
-          pointBackgroundColor: Array(12).fill('#C49A3A'),
+          pointBackgroundColor: Array(13).fill('#52CDFF'),
             pointBorderColor: ['#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff','#fff',],
       }]
         },
@@ -131,7 +131,7 @@
               data: [50, 68, 70, 10, 12, 80],
               backgroundColor: "#ffcc00",
               borderColor: [
-                  '#26734D',
+                  '#01B6A0',
               ],
               borderWidth: 2,
               fill: false, // 3: no fill
@@ -186,9 +186,9 @@
           datasets: [{
             label: 'Contenido',
             data: (window.ateneaDashboardData && window.ateneaDashboardData.contenidoMensual) || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            backgroundColor: "#C49A3A",
+            backgroundColor: "#52CDFF",
             borderColor: [
-                '#C49A3A',
+                '#52CDFF',
             ],
               borderWidth: 0,
               barPercentage: 0.35,
@@ -197,9 +197,9 @@
           },{
             label: 'Estudiantes',
             data: (window.ateneaDashboardData && window.ateneaDashboardData.usuariosMensuales) || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            backgroundColor: "#173F35",
+            backgroundColor: "#1F3BB3",
             borderColor: [
-                '#173F35',
+                '#1F3BB3',
             ],
             borderWidth: 0,
               barPercentage: 0.35,
@@ -295,11 +295,11 @@
           autoStyleContainer: false
         },
         from: {
-          color: '#C49A3A',
+          color: '#52CDFF',
           width: 15
         },
         to: {
-          color: '#2F6655',
+          color: '#677ae4',
           width: 15
         },
         // Set default step function for all animate calls
@@ -334,11 +334,11 @@
           autoStyleContainer: false
         },
         from: {
-          color: '#26734D',
+          color: '#34B1AA',
           width: 15
         },
         to: {
-          color: '#2F6655',
+          color: '#677ae4',
           width: 15
         },
         // Set default step function for all animate calls
@@ -369,15 +369,15 @@
           datasets: [{
             data: (window.ateneaDashboardData && window.ateneaDashboardData.rolesData) || [0, 0, 0, 0],
             backgroundColor: [
-              "#173F35",
+              "#1F3BB3",
               "#FDD0C7",
-              "#C49A3A",
+              "#52CDFF",
               "#81DADA"
             ],
             borderColor: [
-              "#173F35",
+              "#1F3BB3",
               "#FDD0C7",
-              "#C49A3A",
+              "#52CDFF",
               "#81DADA"
             ],
           }]
@@ -426,9 +426,9 @@
           datasets: [{
               label: 'Contenido',
               data: (window.ateneaDashboardData && window.ateneaDashboardData.contenidoCorto) || [0, 0, 0, 0, 0],
-              backgroundColor: "#C49A3A",
+              backgroundColor: "#52CDFF",
               borderColor: [
-                  '#C49A3A',
+                  '#52CDFF',
               ],
               borderWidth: 0,
               fill: true, // 3: no fill

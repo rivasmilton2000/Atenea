@@ -97,6 +97,24 @@ function enviarCorreoAtenea(string $destinatario, string $nombre, string $asunto
         if (!empty($opciones['reply_to']) && filter_var($opciones['reply_to'], FILTER_VALIDATE_EMAIL)) {
             $correo->addReplyTo((string) $opciones['reply_to'], (string) ($opciones['reply_to_name'] ?? ''));
         }
+        $logoEmbebido = false;
+        $logoPath = rutaFisicaLogoCorreoAtenea();
+        if ($logoPath !== null) {
+            try {
+                $mimeLogo = (new finfo(FILEINFO_MIME_TYPE))->file($logoPath) ?: 'image/png';
+                $logoEmbebido = $correo->addEmbeddedImage(
+                    $logoPath,
+                    ATENEA_EMAIL_LOGO_CID,
+                    'logo-atenea.png',
+                    PHPMailer::ENCODING_BASE64,
+                    $mimeLogo,
+                    'inline'
+                );
+            } catch (Throwable) {
+                error_log('Logo correo Atenea: no se pudo incrustar el recurso institucional.');
+            }
+        }
+        if (!$logoEmbebido) $html = reemplazarLogoCorreoPorTexto($html);
         $correo->isHTML(true);
         $correo->Subject = $asunto;
         $correo->Body = $html;
