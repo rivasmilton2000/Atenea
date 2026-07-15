@@ -7,6 +7,7 @@ require_once __DIR__ . '/contenido.php';
 require_once __DIR__ . '/perfil_modal.php';
 require_once __DIR__ . '/alerts.php';
 require_once __DIR__ . '/audit.php';
+require_once __DIR__ . '/carrito.php';
 
 function datosPortalEstudiante(int $usuarioId): array
 {
@@ -25,15 +26,15 @@ function datosPortalEstudiante(int $usuarioId): array
 function estadoPedidoEstudiante(string $estado): string
 {
     return match ($estado) {
-        'pagado' => 'Pagado', 'pendiente' => 'Pendiente', 'esperando_pago' => 'Esperando pago',
-        'fallido' => 'Fallido', 'cancelado' => 'Cancelado', 'reembolsado' => 'Reembolsado',
+        'pagado' => 'Pagado', 'pendiente_pago' => 'Pendiente de pago', 'preparando'=>'Preparando', 'enviado'=>'Enviado', 'entregado'=>'Entregado',
+        'pago_fallido' => 'Pago fallido', 'cancelado' => 'Cancelado', 'reembolsado' => 'Reembolsado',
         default => ucfirst(str_replace('_', ' ', $estado)),
     };
 }
 
 function claseEstadoPedido(string $estado): string
 {
-    return match ($estado) { 'pagado' => 'bg-success', 'fallido', 'cancelado' => 'bg-danger', 'reembolsado' => 'bg-info', default => 'bg-warning' };
+    return match ($estado) { 'pagado','entregado' => 'bg-success', 'pago_fallido', 'cancelado' => 'bg-danger', 'reembolsado' => 'bg-info', 'enviado'=>'bg-primary', default => 'bg-warning' };
 }
 
 function portalEstudianteCabecera(string $titulo, string $activo = 'inicio', string $descripcion = '', bool $permitirIncompleto = false): array
@@ -42,6 +43,7 @@ function portalEstudianteCabecera(string $titulo, string $activo = 'inicio', str
     $perfil = obtenerPerfilUsuario((int) $_SESSION['usuario_id']);
     if (!$perfil) { header('Location: ' . atenea_url('src/login/logout.php')); exit; }
     $datos = datosPortalEstudiante((int) $perfil['id']);
+    $cantidadCarrito = cantidadCarrito(obtenerConexion(),(int)$perfil['id']);
     $logo = rutaImagenContenido(obtenerConfiguracionPortalEstudiante('portal_logo'), 'img/atenea-logo.png');
     $avatar = rutaFotoPerfil($perfil);
     $hora = (int) date('G');
@@ -75,6 +77,8 @@ function portalEstudianteCabecera(string $titulo, string $activo = 'inicio', str
     <li><hr class="hr-horizontal"></li><li class="nav-item static-item"><span class="nav-link static-item disabled"><span class="default-icon">Mi cuenta</span><span class="mini-icon">-</span></span></li>
     <li class="nav-item"><button class="nav-link w-100 border-0 bg-transparent text-start" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="icon"><i class="bi bi-person"></i></i><span class="item-name">Mi perfil</span></button></li>
     <li class="nav-item"><a class="<?= $enlace('pedidos','') ?>" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="icon"><i class="bi bi-receipt"></i></i><span class="item-name">Mis pedidos y pagos</span></a></li>
+    <li class="nav-item"><a class="<?= $enlace('carrito','') ?>" href="<?= atenea_url('src/estudiantes/carrito.php') ?>"><i class="icon"><i class="bi bi-cart3"></i></i><span class="item-name">Mi carrito</span><?php if($cantidadCarrito):?><span class="badge bg-danger ms-auto"><?=$cantidadCarrito?></span><?php endif;?></a></li>
+    <li class="nav-item"><a class="<?= $enlace('direcciones','') ?>" href="<?= atenea_url('src/estudiantes/direcciones.php') ?>"><i class="icon"><i class="bi bi-geo-alt"></i></i><span class="item-name">Mis direcciones</span></a></li>
     <li class="nav-item"><a class="<?= $enlace('avisos','') ?>" href="<?= atenea_url('src/estudiantes/avisos.php') ?>"><i class="icon"><i class="bi bi-bell"></i></i><span class="item-name">Avisos administrativos</span><?php if((int)$datos['avisos_pendientes']>0):?><span class="badge bg-danger ms-auto"><?= (int)$datos['avisos_pendientes'] ?></span><?php endif;?></a></li>
     <li class="nav-item"><a class="nav-link" href="<?= atenea_url('index.php') ?>"><i class="icon"><i class="bi bi-globe"></i></i><span class="item-name">Volver al sitio</span></a></li>
     <li class="nav-item"><a class="nav-link" data-atenea-confirm="logout" href="<?= atenea_url('src/login/logout.php') ?>"><i class="icon"><i class="bi bi-box-arrow-right"></i></i><span class="item-name">Cerrar sesión</span></a></li>

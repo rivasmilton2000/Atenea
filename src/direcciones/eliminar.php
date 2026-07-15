@@ -1,0 +1,3 @@
+<?php
+declare(strict_types=1);require_once dirname(__DIR__,2).'/includes/auth.php';require_once dirname(__DIR__,2).'/includes/alerts.php';exigirRol(['usuario']);
+if(($_SERVER['REQUEST_METHOD']??'')==='POST'&&validarTokenCsrf((string)($_POST['csrf_token']??''))){$id=filter_var($_POST['id']??0,FILTER_VALIDATE_INT)?:0;$q=obtenerConexion()->prepare('UPDATE direcciones_usuario SET activa=0,predeterminada=0 WHERE id=:id AND usuario_id=:u');$q->execute(['id'=>$id,'u'=>$_SESSION['usuario_id']]);ateneaFlash('success','Dirección desactivada','Los pedidos anteriores conservan su copia.');}else ateneaFlash('error','Solicitud expirada','No se realizó ningún cambio.');header('Location:'.atenea_url('src/estudiantes/direcciones.php'));exit;

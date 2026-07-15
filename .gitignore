@@ -6,5 +6,11 @@
 /includes/mail/vendor/
 /includes/stripe/vendor/
 /logs/*.log
+/private/
+/certificates/
+*.p12
+*.pfx
+*.pem
+*.key
 /uploads/portal-estudiante/**
 !/uploads/portal-estudiante/**/index.html

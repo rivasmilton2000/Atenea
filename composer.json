@@ -3,8 +3,10 @@
   "description": "Dependencias del proyecto Atenea",
   "type": "project",
   "require": {
+    "dompdf/dompdf": "^2.0",
+    "endroid/qr-code": "^4.8",
     "php": ">=8.0",
-    "google/apiclient": "^2.18"
+    "opis/json-schema": "^2.6"
   },
   "config": {
     "sort-packages": true

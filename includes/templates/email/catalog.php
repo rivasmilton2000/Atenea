@@ -38,7 +38,10 @@ function plantillaCorreoAtenea(string $tipo, array $datos): array
                 . '<tr><td><strong>Total</strong></td><td align="right"><strong>' . $e($datos['total_formateado'] ?? '') . '</strong></td></tr>'
                 . '<tr><td>Método</td><td align="right">' . $e($metodo) . '</td></tr></table>'
                 . botonCorreoAtenea('Ver comprobante de compra', (string) ($datos['comprobante_url'] ?? atenea_url_absoluta('src/estudiantes/pedidos.php')))
-                . $parrafo('<small>El comprobante es un documento interno no fiscal y requiere iniciar sesión para consultarlo.</small>');
+                . $parrafo('<strong>Dirección:</strong> '.$e($datos['direccion']??'').'<br><strong>Código de generación:</strong> '.$e($datos['codigo_generacion']??''));
+            if(!empty($datos['pdf_url'])) $html .= botonCorreoAtenea('Descargar factura PDF',(string)$datos['pdf_url']);
+            if(!empty($datos['json_url'])) $html .= $parrafo('<a href="'.$e($datos['json_url']).'">Descargar JSON validado</a>');
+            $html .= $parrafo('<small>Los documentos requieren iniciar sesión y solo están disponibles para el propietario.</small>');
             $lineasProducto = [];
             foreach (is_array($datos['productos'] ?? null) ? $datos['productos'] : [] as $producto) $lineasProducto[] = ($producto['nombre'] ?? '') . ' · ' . (int) ($producto['cantidad'] ?? 0) . ' · ' . ($producto['subtotal'] ?? '');
             $texto = "Hola, {$nombre}.\n\nTu pago fue confirmado.\nPedido: " . ($datos['numero'] ?? '') . "\nFecha: " . ($datos['fecha'] ?? '') . "\nProductos:\n" . implode("\n", $lineasProducto) . "\nSubtotal: " . ($datos['subtotal_formateado'] ?? '') . "\nDescuento: " . ($datos['descuento_formateado'] ?? '') . "\nTotal: " . ($datos['total_formateado'] ?? '') . "\nMétodo: {$metodo}\nComprobante: " . ($datos['comprobante_url'] ?? '');

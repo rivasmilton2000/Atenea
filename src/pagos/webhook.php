@@ -4,10 +4,12 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/includes/pedidos_pago.php';
 require_once dirname(__DIR__, 2) . '/includes/stripe_config.php';
 require_once dirname(__DIR__, 2) . '/includes/audit.php';
+require_once dirname(__DIR__, 2) . '/includes/carrito.php';
+require_once dirname(__DIR__, 2) . '/includes/dte.php';
 
 function liberarReservaPedido(PDO $pdo, array $pedido, string $estado, string $nota): void
 {
-    if (!in_array($pedido['estado'], ['pendiente', 'esperando_pago', 'fallido'], true) || (int) $pedido['stock_procesado'] === 1) return;
+    if (!in_array($pedido['estado'], ['pendiente_pago', 'pago_fallido'], true) || (int) $pedido['stock_procesado'] === 1) return;
     $detalles = $pdo->prepare('SELECT producto_id,cantidad FROM pedido_detalles WHERE pedido_id=:pedido');
     $detalles->execute(['pedido' => $pedido['id']]);
     foreach ($detalles->fetchAll() as $detalle) {
@@ -79,7 +81,7 @@ try {
     $consulta->execute(['id' => $evento->id]);
     if ((int) $consulta->fetchColumn() === 1) {
         $pdo->commit();
-        if ($esConfirmacion && $pedidoId > 0) enviarConfirmacionCompraAtenea($pedidoId);
+        if ($esConfirmacion && $pedidoId > 0) { try { generarDtePedido($pedidoId); } catch(Throwable $e) { error_log($e->getMessage()); } enviarConfirmacionCompraAtenea($pedidoId); }
         http_response_code(200);
         exit;
     }
@@ -92,7 +94,7 @@ try {
         $pedido = $consulta->fetch();
         if (!$pedido) throw new RuntimeException('Pedido de Stripe no localizado.');
 
-        $importeEsperado = (int) round((float) $pedido['total'] * 100);
+        $importeEsperado = dineroCentavos((string) $pedido['total']);
         $sesionCoincide = hash_equals((string) ($pedido['stripe_checkout_session_id'] ?? ''), (string) ($objeto->id ?? ''));
         $referenciaCoincide = hash_equals((string) $pedidoId, (string) ($objeto->client_reference_id ?? ''));
         $numeroCoincide = hash_equals((string) $pedido['numero'], (string) ($objeto->metadata->numero ?? ''));
@@ -139,11 +141,11 @@ try {
     } elseif ($evento->type === 'checkout.session.async_payment_failed' && $pedidoId > 0) {
         $consulta = $pdo->prepare('SELECT * FROM pedidos WHERE id=:id FOR UPDATE');
         $consulta->execute(['id' => $pedidoId]);
-        if ($pedido = $consulta->fetch()) liberarReservaPedido($pdo, $pedido, 'fallido', 'Pago asíncrono rechazado; reserva liberada.');
+        if ($pedido = $consulta->fetch()) liberarReservaPedido($pdo, $pedido, 'pago_fallido', 'Pago asíncrono rechazado; reserva liberada.');
     } elseif ($evento->type === 'payment_intent.payment_failed' && $pedidoId > 0) {
-        $consulta = $pdo->prepare("UPDATE pedidos SET estado='fallido',payment_status='failed',stripe_payment_intent_id=:intent,last_stripe_event_id=:evento WHERE id=:id AND estado<>'pagado'");
+        $consulta = $pdo->prepare("UPDATE pedidos SET estado='pago_fallido',payment_status='failed',stripe_payment_intent_id=:intent,last_stripe_event_id=:evento WHERE id=:id AND estado<>'pagado'");
         $consulta->execute(['intent' => substr((string) $objeto->id, 0, 255), 'evento' => $evento->id, 'id' => $pedidoId]);
-        if ($consulta->rowCount() === 1) registrarHistorialPedido($pdo, $pedidoId, 'esperando_pago', 'fallido', 'stripe', null, 'Intento de pago rechazado por Stripe; la reserva se conserva hasta expirar el Checkout.');
+        if ($consulta->rowCount() === 1) registrarHistorialPedido($pdo, $pedidoId, 'pendiente_pago', 'pago_fallido', 'stripe', null, 'Intento de pago rechazado por Stripe; la reserva se conserva hasta expirar el Checkout.');
         if ($consulta->rowCount() === 1) registrarAuditoria(['event_type'=>'payment.failed','module'=>'payments','entity_type'=>'order','entity_id'=>$pedidoId,'action'=>'confirm','result'=>'failure','description'=>'Stripe informo un intento de pago fallido.'], $pdo);
     } elseif ($evento->type === 'charge.refunded') {
         $paymentIntent = substr((string) ($objeto->payment_intent ?? ''), 0, 255);
@@ -161,7 +163,7 @@ try {
 
     $pdo->prepare('UPDATE stripe_eventos SET procesado=1,error_mensaje=NULL,procesado_at=NOW() WHERE stripe_event_id=:id')->execute(['id' => $evento->id]);
     $pdo->commit();
-    if ($enviarCorreoPedido) enviarConfirmacionCompraAtenea($enviarCorreoPedido);
+    if ($enviarCorreoPedido) { try { generarDtePedido($enviarCorreoPedido); } catch(Throwable $e) { error_log($e->getMessage()); } enviarConfirmacionCompraAtenea($enviarCorreoPedido); }
     http_response_code(200);
 } catch (Throwable $error) {
     if ($pdo->inTransaction()) $pdo->rollBack();

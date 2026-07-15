@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/contenido.php';
+require_once __DIR__ . '/carrito.php';
 $usuarioNavbar = obtenerUsuarioActual();
+$cantidadNavbar = $usuarioNavbar && $usuarioNavbar['rol']==='usuario' ? cantidadCarrito(obtenerConexion(),(int)$usuarioNavbar['id']) : 0;
 $navItems = obtenerMenuSitio();
 $configuracionNavbar = $configuracionSitio ?? obtenerConfiguracionSitio();
 $logoNavbar = $configuracionNavbar['logo'] ?? 'img/atenea-logo.png';
@@ -37,6 +39,7 @@ $logoNavbar = $configuracionNavbar['logo'] ?? 'img/atenea-logo.png';
     <?php if ($usuarioNavbar === null): ?>
       <a class="btn-getstarted" href="<?= atenea_url('src/login/sign-in.php') ?>">Iniciar sesión</a>
     <?php else: ?>
+      <?php if($usuarioNavbar['rol']==='usuario'): ?><a class="btn position-relative me-2" href="<?=atenea_url('src/estudiantes/carrito.php')?>" aria-label="Carrito, <?=$cantidadNavbar?> productos"><i class="bi bi-cart3 fs-5"></i><?php if($cantidadNavbar):?><span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><?=$cantidadNavbar?></span><?php endif;?></a><?php endif;?>
       <div class="dropdown atenea-user-menu">
         <button class="btn atenea-user-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
           <?php if (!empty($usuarioNavbar['foto'])): ?>

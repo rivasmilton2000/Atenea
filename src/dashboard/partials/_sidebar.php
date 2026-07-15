@@ -34,6 +34,7 @@ $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'a
       <a class="nav-link <?= $configAbierta ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#menu-configuracion" aria-expanded="<?= $configAbierta ? 'true' : 'false' ?>" aria-controls="menu-configuracion"><i class="menu-icon mdi mdi-card-text-outline"></i><span class="menu-title">Configuración</span><i class="menu-arrow"></i></a>
       <div class="collapse <?= $configAbierta ? 'show' : '' ?>" id="menu-configuracion" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu">
         <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'configuracion/index.php' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">Configuración general</a></li>
+        <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'configuracion/dte.php' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/configuracion/dte.php') ?>">Configuración DTE</a></li>
         <li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive, 'navbar/') ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/navbar/index.php') ?>">Barra y menú</a></li>
       </ul></div>
     </li>

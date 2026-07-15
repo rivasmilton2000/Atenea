@@ -24,6 +24,7 @@ function contenidoComprobanteAtenea(array $pedido): string
     <div class="row g-3 mb-4">
       <div class="col-sm-6"><div class="border rounded p-3 h-100"><strong>Comprador</strong><br><?= atenea_e(trim((string) $pedido['nombre'] . ' ' . (string) $pedido['apellido'])) ?><br><?= atenea_e((string) $pedido['correo']) ?></div></div>
       <div class="col-sm-6"><div class="border rounded p-3 h-100"><strong>Pago</strong><br><?= atenea_e(date('d/m/Y H:i', strtotime((string) ($pedido['paid_at'] ?: $pedido['updated_at'])))) ?> (El Salvador)<br><?= atenea_e(metodoPagoPedido($pedido)) ?></div></div>
+      <?php if(!empty($pedido['direccion'])):?><div class="col-12"><div class="border rounded p-3"><strong>Dirección utilizada</strong><br><?=atenea_e((string)($pedido['direccion']['receptor']??''))?> · <?=atenea_e((string)($pedido['direccion']['telefono']??''))?><br><?=atenea_e((string)($pedido['direccion']['direccion_detallada']??''))?>, <?=atenea_e((string)($pedido['direccion']['municipio']??''))?>, <?=atenea_e((string)($pedido['direccion']['departamento']??''))?></div></div><?php endif;?>
     </div>
     <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Producto</th><th class="text-center">Cantidad</th><th class="text-end">Precio</th><th class="text-end">Subtotal</th></tr></thead><tbody>
     <?php foreach ($pedido['detalles'] as $detalle): ?>
