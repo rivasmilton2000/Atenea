@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__,3).'/_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
   <head>

@@ -29,8 +29,22 @@ function permisosPorRolAtenea(string $rol): array
             'communications.reply',
             'system_errors.manage',
             'dte.manage',
+            'academic.supervise',
+            'academic.courses.view',
+            'academic.students.view',
+            'academic.content.manage',
+            'academic.evaluations.manage',
+            'academic.grades.manage',
+            'academic.communications.send',
         ],
-        'docente' => [],
+        'docente' => [
+            'academic.courses.view',
+            'academic.students.view',
+            'academic.content.manage',
+            'academic.evaluations.manage',
+            'academic.grades.manage',
+            'academic.communications.send',
+        ],
         'usuario' => [],
     ];
 

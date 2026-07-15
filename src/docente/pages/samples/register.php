@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__,2).'/_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -61,9 +62,9 @@
                     </div>
                   </div>
                   <div class="mt-3 d-grid gap-2">
-                    <a class="btn btn-block btn-primary btn-lg fw-medium auth-form-btn" href="../../index.html">SIGN UP</a>
+                    <a class="btn btn-block btn-primary btn-lg fw-medium auth-form-btn" href="../../index.php">SIGN UP</a>
                   </div>
-                  <div class="text-center mt-4 fw-light"> Already have an account? <a href="login.html" class="text-primary">Login</a>
+                  <div class="text-center mt-4 fw-light"> Already have an account? <a href="login.php" class="text-primary">Login</a>
                   </div>
                 </form>
               </div>

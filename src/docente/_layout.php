@@ -1,0 +1,27 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__.'/_guard.php';
+require_once dirname(__DIR__,2).'/includes/docente_academico.php';
+
+function docenteFlash(string $tipo,string $mensaje): void{$_SESSION['docente_flash']=['tipo'=>$tipo,'mensaje'=>$mensaje];}
+function docenteTomarFlash():?array{$f=$_SESSION['docente_flash']??null;unset($_SESSION['docente_flash']);return is_array($f)?$f:null;}
+function docenteId(mixed $v):int{return filter_var($v,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])?:0;}
+function cmsPaginacionSimple(int $pagina,int $paginas,array $params=[]):string{if($paginas<=1)return '';$html='<nav class="mt-4"><ul class="pagination justify-content-end">';for($i=max(1,$pagina-2);$i<=min($paginas,$pagina+2);$i++){$params['pagina']=$i;$html.='<li class="page-item '.($i===$pagina?'active':'').'"><a class="page-link" href="?'.atenea_e(http_build_query($params)).'">'.$i.'</a></li>';}return $html.'</ul></nav>';}
+function docenteSelectorSupervision(PDO $pdo): void
+{
+    if(($_SESSION['usuario_rol']??'')!=='admin')return;$q=$pdo->query("SELECT id,nombre,apellido,correo FROM usuarios WHERE rol='docente' AND estado='activo' AND deleted_at IS NULL ORDER BY nombre,apellido");$lista=$q->fetchAll();
+    ?><div class="card card-rounded mb-4"><div class="card-body"><form class="row g-2 align-items-end"><div class="col-md-8"><label class="form-label">Docente supervisado</label><select class="form-select" name="docente_id" required><option value="">Selecciona un docente</option><?php foreach($lista as$d):?><option value="<?=$d['id']?>" <?=($GLOBALS['docentePortalId']??0)==$d['id']?'selected':''?>><?=atenea_e(trim($d['nombre'].' '.$d['apellido']).' · '.$d['correo'])?></option><?php endforeach;?></select></div><div class="col-md-4"><button class="btn btn-primary w-100">Abrir espacio docente</button></div></form><?php if(!$lista):?><p class="text-muted mb-0 mt-3">No hay docentes activos para supervisar.</p><?php endif;?></div></div><?php
+}
+function docenteCabecera(string $titulo,string $activo,string $descripcion=''): void
+{
+    $pdo=obtenerConexion();$actual=obtenerUsuarioActual()??[];$docentePortalId=docenteSupervisadoAtenea($pdo);$GLOBALS['docentePortalId']=$docentePortalId;$GLOBALS['docenteActivo']=$activo;
+    $docentePortal=null;if($docentePortalId){$q=$pdo->prepare('SELECT * FROM usuarios WHERE id=:id');$q->execute(['id'=>$docentePortalId]);$docentePortal=$q->fetch()?:null;}
+    $GLOBALS['docentePortal']=$docentePortal;$configuracion=obtenerConfiguracionSitio();$logo=rutaImagenContenido($configuracion['logo']??'img/atenea-logo.png','img/atenea-logo.png');$favicon=rutaImagenContenido($configuracion['favicon']??'img/atenea-logo.png','img/atenea-logo.png');$flash=docenteTomarFlash();$GLOBALS['docente_flash']=$flash;
+    ?><!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no"><title><?=atenea_e($titulo)?> | Atenea</title><link rel="stylesheet" href="<?=atenea_url('src/docente/assets/vendors/feather/feather.css')?>"><link rel="stylesheet" href="<?=atenea_url('src/docente/assets/vendors/mdi/css/materialdesignicons.min.css')?>"><link rel="stylesheet" href="<?=atenea_url('src/docente/assets/vendors/ti-icons/css/themify-icons.css')?>"><link rel="stylesheet" href="<?=atenea_url('src/docente/assets/vendors/font-awesome/css/font-awesome.min.css')?>"><link rel="stylesheet" href="<?=atenea_url('src/docente/assets/vendors/typicons/typicons.css')?>"><link rel="stylesheet" href="<?=atenea_url('src/docente/assets/vendors/simple-line-icons/css/simple-line-icons.css')?>"><link rel="stylesheet" href="<?=atenea_url('src/docente/assets/vendors/css/vendor.bundle.base.css')?>"><link rel="stylesheet" href="<?=atenea_url('src/docente/assets/css/style.css')?>"><link rel="stylesheet" href="<?=atenea_url('src/website/assets/css/perfil-modal.css')?>"><?php ateneaAlertasHead();?><link rel="icon" type="image/png" href="<?=$favicon?>"></head><body><div class="container-scroller"><?php require __DIR__.'/partials/_navbar.php';?><div class="container-fluid page-body-wrapper"><?php require __DIR__.'/partials/_sidebar.php';?><div class="main-panel"><div class="content-wrapper"><div class="row"><div class="col-sm-12"><div class="home-tab"><div class="d-sm-flex align-items-center justify-content-between border-bottom mb-4"><div><h1 class="h3 mb-1"><?=atenea_e($titulo)?></h1><?php if($descripcion!==''):?><p class="text-muted mb-3"><?=atenea_e($descripcion)?></p><?php endif;?></div></div><?php
+}
+function docentePie(): void
+{
+    echo '</div></div></div></div>';require __DIR__.'/partials/_footer.php';echo '</div></div></div>';
+    renderizarModalPerfil(($_SESSION['usuario_rol']??'')==='admin'?'dashboard':'docente');
+    ?><script src="<?=atenea_url('src/docente/assets/vendors/js/vendor.bundle.base.js')?>"></script><script src="<?=atenea_url('src/docente/assets/js/off-canvas.js')?>"></script><script src="<?=atenea_url('src/docente/assets/js/hoverable-collapse.js')?>"></script><script src="<?=atenea_url('src/docente/assets/js/template.js')?>"></script><script src="<?=atenea_url('src/docente/assets/js/settings.js')?>"></script><script src="<?=atenea_url('src/docente/assets/js/todolist.js')?>"></script><script src="<?=atenea_url('src/website/assets/js/perfil-modal.js')?>"></script><?php ateneaAlertasScripts($GLOBALS['docente_flash']??null);?></body></html><?php
+}

@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__,2).'/_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -39,7 +40,7 @@
               </div>
               <div class="row mt-5">
                 <div class="col-12 text-center mt-xl-2">
-                  <a class="text-white fw-medium" href="../../index.html">Back to home</a>
+                  <a class="text-white fw-medium" href="../../index.php">Back to home</a>
                 </div>
               </div>
               <div class="row mt-5">

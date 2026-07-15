@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__).'/_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -20,7 +21,7 @@
       <div class="row">
         <div class="col-md-3 col-xl-2 left-sidebar">
           <div class="logo-wrapper">
-            <a href="../index.html">
+            <a href="../index.php">
               <img src="../assets/images/logo.svg" alt="logo">
             </a>
           </div>
@@ -69,7 +70,7 @@
             <li><a href="#editors"> Editors </a></li>
           </ul>
           <h5 class="left-menu-title"><a class="text-body" href="#credits"> Credits </a></h5>
-          <a class="d-block mt-4 text-muted" target="_blank" href="../index.html">Go to Home</a>
+          <a class="d-block mt-4 text-muted" target="_blank" href="../index.php">Go to Home</a>
         </div>
         <div class="col-md-9 col-xl-10 main-panel bg-white">
           <div class="main-panel-wrapper">
@@ -132,7 +133,7 @@
                                   </details>
                                 </li>
                               </ul>
-                          <li><i class="fa fa-html5 me-1"></i> <span>index.html</span></li>
+                          <li><i class="fa fa-html5 me-1"></i> <span>index.php</span></li>
                       </details>
                       </li>
                       </ul>
@@ -193,7 +194,7 @@
                           </li>
                           <li><i class="fa fa-file-code-o me-1"></i> gulpfile.js - <span class="text-body">main gulpfile used to run the tasks</span>
                           </li>
-                          <li><i class="fa fa-html5 me-1"></i> index.html</li>
+                          <li><i class="fa fa-html5 me-1"></i> index.php</li>
                           <details open>
                             <summary>
                               <i class="fa fa-folder-open-o text-body me-1"></i>
@@ -214,7 +215,7 @@
                                     <i class="fa fa-folder-open-o text-body me-1"></i>
                                     <strong> partials </strong>
                                   </li>
-                                  <li><i class="fa fa-html5 me-1"></i> index.html</li>
+                                  <li><i class="fa fa-html5 me-1"></i> index.php</li>
                                 </ul>
                               </details>
                             </ul>

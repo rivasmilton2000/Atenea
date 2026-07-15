@@ -15,6 +15,7 @@ $comercioAbierto = str_starts_with($dashboardActive, 'productos/') || str_starts
 $operacionesAbiertas = str_starts_with($dashboardActive,'notificaciones/') || str_starts_with($dashboardActive,'comunicaciones/') || str_starts_with($dashboardActive,'errores/');
 $usuariosAbierto = str_starts_with($dashboardActive, 'usuarios/');
 $bitacoraActiva = str_starts_with($dashboardActive, 'bitacora/');
+$academicoActivo = str_starts_with($dashboardActive, 'academico/');
 $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'admin'], true) ? (string) $_GET['rol'] : '';
 ?>
 <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server" aria-label="Navegación administrativa">
@@ -59,6 +60,7 @@ $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'a
       <div class="collapse <?= $operacionesAbiertas?'show':'' ?>" id="menu-operaciones" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu"><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/notificaciones/index.php')?>">Notificaciones</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/comunicaciones/index.php')?>">Correos y mensajes</a></li><li class="nav-item"><a class="nav-link" href="<?=atenea_url('src/dashboard/errores/index.php')?>">Errores operativos</a></li></ul></div>
     </li>
     <li class="nav-item nav-category">Gestión de usuarios</li>
+    <li class="nav-item <?= $academicoActivo ? 'active' : '' ?>"><a class="nav-link" href="<?= atenea_url('src/dashboard/academico/index.php') ?>"><i class="menu-icon mdi mdi-school-outline"></i><span class="menu-title">Gestión académica</span></a></li>
     <li class="nav-item <?= $usuariosAbierto ? 'active' : '' ?>">
       <a class="nav-link <?= $usuariosAbierto ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#menu-usuarios" aria-expanded="<?= $usuariosAbierto ? 'true' : 'false' ?>" aria-controls="menu-usuarios"><i class="menu-icon mdi mdi-account-multiple-outline"></i><span class="menu-title">Usuarios</span><i class="menu-arrow"></i></a>
       <div class="collapse <?= $usuariosAbierto ? 'show' : '' ?>" id="menu-usuarios" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu">

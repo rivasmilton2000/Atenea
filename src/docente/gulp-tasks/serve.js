@@ -40,7 +40,7 @@ gulp.task('serve', gulp.series('sass', function () {
     });
 
     gulp.watch('./assets/scss/**/*.scss', gulp.series('sass'));
-    gulp.watch(['./assets/js/**/*.js', './**/*.html', './assets/css/**/*.css']).on('change', browserSync.reload);
+    gulp.watch(['./assets/js/**/*.js', './**/*.php', './assets/css/**/*.css']).on('change', browserSync.reload);
 
 }));
 
@@ -58,7 +58,7 @@ gulp.task('serve:lite', function () {
     });
 
     // gulp.watch('**/*.css').on('change', browserSync.reload);
-    // gulp.watch('**/*.html').on('change', browserSync.reload);
+    // gulp.watch('**/*.php').on('change', browserSync.reload);
     // gulp.watch('**/*.js').on('change', browserSync.reload);
 
 });
