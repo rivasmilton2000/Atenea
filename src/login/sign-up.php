@@ -62,7 +62,7 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
               <label><input type="checkbox" name="terminos" value="1" required> Acepto los términos y condiciones</label>
               <div class="text-center mt-3"><button class="btn btn-primary" type="submit"><?= atenea_e(obtenerConfiguracionPortalEstudiante('registro_texto_boton')) ?></button></div>
               <p class="text-center my-3">O continúa con</p>
-              <div class="text-center"><?php if ($googleDisponible): ?><a class="btn btn-google w-100" href="<?= atenea_url('src/auth/google.php') ?>">Continuar con Google</a><?php else: ?><div class="alert alert-warning mb-0">El acceso con Google no está disponible porque falta completar su configuración.</div><?php endif; ?></div>
+              <div class="text-center"><?php if ($googleDisponible): ?><a class="btn btn-google w-100" href="<?= atenea_url('src/auth/google.php?accion=registro') ?>">Registrarme con Google</a><?php else: ?><div class="alert alert-warning mb-0">El acceso con Google no está disponible porque falta completar su configuración.</div><?php endif; ?></div>
               <p class="text-center mt-3">¿Ya tienes una cuenta? <a href="<?= atenea_url('src/login/sign-in.php') ?>">Inicia sesión</a></p>
             </form>
           </div></div>

@@ -12,7 +12,7 @@ function falloCallbackGoogle(string $mensaje, string $accion = 'login'): never
     } else {
         $_SESSION['mensaje_auth'] = $mensaje;
         $_SESSION['mensaje_auth_tipo'] = 'danger';
-        header('Location: ' . atenea_url('src/login/sign-in.php'));
+        header('Location: ' . atenea_url($accion === 'registro' ? 'src/login/sign-up.php' : 'src/login/sign-in.php'));
     }
     exit;
 }
@@ -22,14 +22,17 @@ $estados = is_array($_SESSION['google_oauth_states'] ?? null) ? $_SESSION['googl
 $datosEstado = $state !== '' && isset($estados[$state]) && is_array($estados[$state]) ? $estados[$state] : null;
 if ($state !== '') unset($estados[$state]);
 $_SESSION['google_oauth_states'] = $estados;
-$accion = is_array($datosEstado) && ($datosEstado['accion'] ?? '') === 'vincular' ? 'vincular' : 'login';
+$accionEstado = is_array($datosEstado) ? (string) ($datosEstado['accion'] ?? 'login') : 'login';
+$accion = in_array($accionEstado, ['login', 'registro', 'vincular'], true) ? $accionEstado : 'login';
 $retornoVinculacion = is_array($datosEstado) ? cuentaRetornoSeguro($datosEstado['retorno'] ?? null) : rutaPanelPorRol((string)($_SESSION['usuario_rol'] ?? ''));
 
 if (!is_array($datosEstado)
     || !isset($datosEstado['valor'])
     || !is_string($datosEstado['valor'])
     || !hash_equals($datosEstado['valor'], $state)
-    || (int) ($datosEstado['expira'] ?? 0) < time()) {
+    || (int) ($datosEstado['expira'] ?? 0) < time()
+    || !is_string($datosEstado['nonce'] ?? null)
+    || !is_string($datosEstado['code_verifier'] ?? null)) {
     registrarAuditoria(['event_type'=>'auth.google_state_failed','module'=>'auth','action'=>'google_callback','result'=>'blocked','description'=>'Se bloqueo un callback de Google por state invalido o vencido.']);
     falloCallbackGoogle('La verificación de seguridad de Google expiró o no es válida.', $accion);
 }
@@ -52,7 +55,7 @@ if ($codigo === '' || strlen($codigo) > 4096) falloCallbackGoogle('Google no dev
 try {
     $configuracion = obtenerConfiguracionGoogle();
     if (!googleDisponible($configuracion)) throw new RuntimeException('Configuración incompleta.');
-    $perfil = obtenerPerfilGoogle($codigo, $configuracion);
+    $perfil = obtenerPerfilGoogle($codigo, $configuracion, $datosEstado['nonce'], $datosEstado['code_verifier']);
     if ($accion === 'vincular') {
         exigirAutenticacion();
         $actual = obtenerPerfilUsuario((int)$_SESSION['usuario_id']);

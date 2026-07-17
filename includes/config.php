@@ -32,14 +32,20 @@ function atenea_url(string $path = ''): string
     return ATENEA_BASE_URL . ($path !== '' ? '/' . ltrim($path, '/') : '');
 }
 
+function atenea_app_url_configurada(): string
+{
+    $environment = strtolower(entornoAtenea('APP_ENV', entornoAtenea('ATENEA_ENV', 'production')));
+    $local = in_array($environment, ['dev', 'development', 'local'], true);
+    $specific = entornoAtenea($local ? 'APP_URL_LOCAL' : 'APP_URL_PRODUCTION');
+    $legacy = entornoAtenea('APP_URL', entornoAtenea('ATENEA_APP_URL'));
+    return rtrim($specific !== '' ? $specific : $legacy, '/');
+}
+
 function atenea_url_absoluta(string $path = ''): string
 {
-    $baseConfigurada = getenv('APP_URL');
-    if ($baseConfigurada === false || trim((string) $baseConfigurada) === '') {
-        $baseConfigurada = getenv('ATENEA_APP_URL');
-    }
-    if ($baseConfigurada !== false && trim((string) $baseConfigurada) !== '') {
-        return rtrim(trim((string) $baseConfigurada), '/') . ($path !== '' ? '/' . ltrim($path, '/') : '');
+    $baseConfigurada = atenea_app_url_configurada();
+    if ($baseConfigurada !== '') {
+        return $baseConfigurada . ($path !== '' ? '/' . ltrim($path, '/') : '');
     }
 
     $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')

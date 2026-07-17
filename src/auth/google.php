@@ -21,22 +21,33 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
     volverDesdeGoogle('La solicitud de Google no es válida.');
 }
 
-$accion = ($_GET['accion'] ?? '') === 'vincular' ? 'vincular' : 'login';
+$accionSolicitada = (string) ($_GET['accion'] ?? 'login');
+$accion = in_array($accionSolicitada, ['login', 'registro', 'vincular'], true) ? $accionSolicitada : 'login';
 if ($accion === 'vincular' && !usuarioAutenticado()) {
     volverDesdeGoogle('Inicia sesión antes de vincular una cuenta de Google.');
 }
-if ($accion === 'login' && usuarioAutenticado()) redirigirPorRol();
+if (in_array($accion, ['login', 'registro'], true) && usuarioAutenticado()) redirigirPorRol();
 
 $configuracion = obtenerConfiguracionGoogle();
 if (!googleDisponible($configuracion)) {
-    volverDesdeGoogle('El acceso con Google no está disponible porque falta completar su configuración.', $accion === 'vincular' ? 'src/estudiantes/perfil.php' : 'src/login/sign-in.php');
+    $destino = $accion === 'vincular' ? 'src/estudiantes/perfil.php' : ($accion === 'registro' ? 'src/login/sign-up.php' : 'src/login/sign-in.php');
+    volverDesdeGoogle('El acceso con Google no está disponible porque falta completar su configuración.', $destino);
 }
 
 $estados = is_array($_SESSION['google_oauth_states'] ?? null) ? $_SESSION['google_oauth_states'] : [];
 $ahora = time();
 $estados = array_filter($estados, static fn ($dato): bool => is_array($dato) && (int) ($dato['expira'] ?? 0) >= $ahora);
 $state = bin2hex(random_bytes(32));
-$estados[$state] = ['valor' => $state, 'expira' => $ahora + 600, 'accion' => $accion, 'retorno' => $accion === 'vincular' ? cuentaRetornoSeguro($_GET['retorno'] ?? null) : ''];
+$nonce = bin2hex(random_bytes(32));
+$codeVerifier = rtrim(strtr(base64_encode(random_bytes(64)), '+/', '-_'), '=');
+$estados[$state] = [
+    'valor' => $state,
+    'expira' => $ahora + 600,
+    'accion' => $accion,
+    'nonce' => $nonce,
+    'code_verifier' => $codeVerifier,
+    'retorno' => $accion === 'vincular' ? cuentaRetornoSeguro($_GET['retorno'] ?? null) : '',
+];
 $_SESSION['google_oauth_states'] = array_slice($estados, -5, null, true);
 
 $parametros = [
@@ -45,6 +56,9 @@ $parametros = [
     'response_type' => 'code',
     'scope' => (string) ($configuracion['scopes'] ?? GoogleConfig::scopes()),
     'state' => $state,
+    'nonce' => $nonce,
+    'code_challenge' => rtrim(strtr(base64_encode(hash('sha256', $codeVerifier, true)), '+/', '-_'), '='),
+    'code_challenge_method' => 'S256',
     'prompt' => 'select_account',
     'include_granted_scopes' => 'true',
 ];

@@ -13,9 +13,10 @@ function obtenerConfiguracionGoogle(): array
 function googleDisponible(?array $configuracion = null): bool
 {
     $configuracion ??= obtenerConfiguracionGoogle();
-    $esperada = rtrim((string)($configuracion['app_url'] ?? ''), '/') . '/src/auth/google-callback.php';
+    $esperada = rtrim((string) ($configuracion['app_url'] ?? ''), '/') . '/' . GoogleConfig::callbackPath();
     return trim((string) ($configuracion['client_id'] ?? '')) !== ''
         && trim((string) ($configuracion['client_secret'] ?? '')) !== ''
+        && GoogleConfig::isConfigured()
         && filter_var($configuracion['redirect_uri'] ?? '', FILTER_VALIDATE_URL) !== false
         && filter_var($configuracion['app_url'] ?? '', FILTER_VALIDATE_URL) !== false
         && hash_equals($esperada, (string)($configuracion['redirect_uri'] ?? ''))
@@ -34,9 +35,10 @@ function diagnosticoGoogle(?array $configuracion = null): array
     $faltantes = [];
     if (trim((string) ($configuracion['client_id'] ?? '')) === '') $faltantes[] = 'GOOGLE_CLIENT_ID';
     if (trim((string) ($configuracion['client_secret'] ?? '')) === '') $faltantes[] = 'GOOGLE_CLIENT_SECRET';
-    if (filter_var($configuracion['redirect_uri'] ?? '', FILTER_VALIDATE_URL) === false) $faltantes[] = 'GOOGLE_REDIRECT_URI';
-    if (filter_var($configuracion['app_url'] ?? '', FILTER_VALIDATE_URL) === false) $faltantes[] = 'APP_URL';
-    elseif (rtrim((string)$configuracion['app_url'], '/') . '/src/auth/google-callback.php' !== (string)($configuracion['redirect_uri'] ?? '')) $faltantes[] = 'GOOGLE_REDIRECT_URI debe coincidir con APP_URL';
+    if (filter_var($configuracion['app_url'] ?? '', FILTER_VALIDATE_URL) === false) {
+        $faltantes[] = 'URL base del entorno (APP_URL_LOCAL/APP_URL_PRODUCTION o APP_URL)';
+    }
+    if (filter_var($configuracion['redirect_uri'] ?? '', FILTER_VALIDATE_URL) === false) $faltantes[] = 'callback generado desde la URL base';
     if (!extension_loaded('curl')) $faltantes[] = 'extensión cURL de PHP';
     return $faltantes;
 }
@@ -69,7 +71,7 @@ function solicitudGoogle(string $url, array $opciones = []): array
     return $datos;
 }
 
-function obtenerPerfilGoogle(string $codigo, array $configuracion): array
+function obtenerPerfilGoogle(string $codigo, array $configuracion, string $nonce, string $codeVerifier): array
 {
     $token = solicitudGoogle((string) ($configuracion['token_uri'] ?? GoogleConfig::tokenUri()), ['post' => [
         'code' => $codigo,
@@ -77,6 +79,7 @@ function obtenerPerfilGoogle(string $codigo, array $configuracion): array
         'client_secret' => (string) $configuracion['client_secret'],
         'redirect_uri' => (string) $configuracion['redirect_uri'],
         'grant_type' => 'authorization_code',
+        'code_verifier' => $codeVerifier,
     ]]);
     $accessToken = (string) ($token['access_token'] ?? '');
     $idToken = (string) ($token['id_token'] ?? '');
@@ -91,6 +94,8 @@ function obtenerPerfilGoogle(string $codigo, array $configuracion): array
         || $expiracion <= time()
         || empty($verificacion['sub'])
         || empty($verificacion['email'])
+        || empty($verificacion['nonce'])
+        || !hash_equals($nonce, (string) $verificacion['nonce'])
         || !in_array($verificacion['email_verified'] ?? false, [true, 'true', '1', 1], true)) {
         throw new RuntimeException('La identidad devuelta por Google no pudo validarse.');
     }

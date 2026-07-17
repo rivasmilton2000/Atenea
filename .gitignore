@@ -6,6 +6,7 @@
 /includes/mail/vendor/
 /includes/stripe/vendor/
 /logs/*.log
+/artifacts/db_atenea_pre_correcciones6_etapa1_*.sql
 /private/
 /certificates/
 *.p12

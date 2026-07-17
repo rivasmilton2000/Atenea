@@ -49,7 +49,6 @@ final class AppConfig
         self::map($legacy, self::loadArray(ATENEA_ROOT . '/config/google.local.php'), [
             'GOOGLE_CLIENT_ID' => 'client_id',
             'GOOGLE_CLIENT_SECRET' => 'client_secret',
-            'GOOGLE_REDIRECT_URI' => 'redirect_uri',
         ]);
         self::map($legacy, self::loadArray(dirname(__DIR__) . '/config/mail.php'), [
             'SMTP_HOST' => 'host', 'SMTP_PORT' => 'port', 'SMTP_USERNAME' => 'smtp_user',
@@ -79,12 +78,14 @@ final class AppConfig
 
 final class GoogleConfig
 {
+    private const CALLBACK_PATH = 'src/auth/google-callback.php';
+
     private function __construct() {}
     public static function clientId(): string { return AppConfig::value('GOOGLE_CLIENT_ID'); }
     public static function clientSecret(): string { return AppConfig::value('GOOGLE_CLIENT_SECRET'); }
     public static function appUrl(): string
     {
-        return rtrim(AppConfig::value('APP_URL', '', ['ATENEA_APP_URL']), '/');
+        return atenea_app_url_configurada();
     }
     public static function environment(): string
     {
@@ -92,8 +93,16 @@ final class GoogleConfig
     }
     public static function redirectUri(): string
     {
-        $configured = AppConfig::value('GOOGLE_REDIRECT_URI');
-        return $configured !== '' ? $configured : atenea_url_absoluta('src/auth/google-callback.php');
+        $base = self::appUrl();
+        return $base === '' ? '' : $base . '/' . self::CALLBACK_PATH;
+    }
+    public static function callbackPath(): string { return self::CALLBACK_PATH; }
+    public static function javascriptOrigin(): string
+    {
+        $parts = parse_url(self::appUrl());
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) return '';
+        return strtolower((string) $parts['scheme']) . '://' . (string) $parts['host']
+            . (isset($parts['port']) ? ':' . (int) $parts['port'] : '');
     }
     public static function authorizationUri(): string { return AppConfig::value('GOOGLE_AUTH_URI', 'https://accounts.google.com/o/oauth2/v2/auth'); }
     public static function tokenUri(): string { return AppConfig::value('GOOGLE_TOKEN_URI', 'https://oauth2.googleapis.com/token'); }
@@ -107,10 +116,14 @@ final class GoogleConfig
         $missing = [];
         if (self::clientId() === '') $missing[] = 'GOOGLE_CLIENT_ID';
         if (self::clientSecret() === '') $missing[] = 'GOOGLE_CLIENT_SECRET';
-        if (!self::validHttpUrl(self::appUrl())) $missing[] = 'APP_URL';
-        if (!self::validHttpUrl(self::redirectUri())) $missing[] = 'GOOGLE_REDIRECT_URI';
-        $esperada = self::appUrl() !== '' ? self::appUrl() . '/src/auth/google-callback.php' : '';
-        if ($esperada !== '' && self::redirectUri() !== $esperada) $missing[] = 'GOOGLE_REDIRECT_URI (debe coincidir con APP_URL)';
+        if (!self::validBaseUrl(self::appUrl())) {
+            $local = in_array(strtolower(self::environment()), ['dev', 'development', 'local'], true);
+            $missing[] = $local ? 'APP_URL_LOCAL (o APP_URL)' : 'APP_URL_PRODUCTION (o APP_URL)';
+        }
+        if (strtolower(self::environment()) === 'production'
+            && strtolower((string) parse_url(self::appUrl(), PHP_URL_SCHEME)) !== 'https') {
+            $missing[] = 'APP_URL_PRODUCTION debe usar HTTPS';
+        }
         return $missing;
     }
 
@@ -120,13 +133,18 @@ final class GoogleConfig
             'redirect_uri' => self::redirectUri(), 'authorization_uri' => self::authorizationUri(),
             'token_uri' => self::tokenUri(), 'tokeninfo_uri' => self::tokenInfoUri(),
             'userinfo_uri' => self::userInfoUri(), 'scopes' => self::scopes(),
-            'app_url' => self::appUrl(), 'app_env' => self::environment()];
+            'app_url' => self::appUrl(), 'app_env' => self::environment(),
+            'callback_path' => self::callbackPath(), 'javascript_origin' => self::javascriptOrigin()];
     }
 
-    private static function validHttpUrl(string $url): bool
+    private static function validBaseUrl(string $url): bool
     {
-        return filter_var($url, FILTER_VALIDATE_URL) !== false
-            && in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true);
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) return false;
+        $parts = parse_url($url);
+        return is_array($parts)
+            && in_array(strtolower((string) ($parts['scheme'] ?? '')), ['http', 'https'], true)
+            && !empty($parts['host'])
+            && !isset($parts['query'], $parts['fragment'], $parts['user'], $parts['pass']);
     }
 }
 
