@@ -1,0 +1,7 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__) . '/includes/cms.php';
+$id=cmsId($_GET['id']??0);$q=obtenerConexion()->prepare('SELECT * FROM noticias WHERE id=:id AND deleted_at IS NULL');$q->execute(['id'=>$id]);$noticia=$q->fetch();if(!$noticia){http_response_code(404);exit('Noticia no encontrada.');}
+$pageTitle='Previsualización: '.$noticia['titulo'];$pageDescription=$noticia['resumen'];$pageClass='news-detail-page';$activePage='noticias';require dirname(__DIR__,3).'/includes/header.php';
+?>
+<main class="main"><div class="alert alert-warning text-center rounded-0 mb-0"><strong>Previsualización administrativa.</strong> Estado: <?=atenea_e($noticia['estado'])?> · <?=$noticia['activo']?'Activa':'Inactiva'?></div><article class="section"><div class="container news-detail"><p class="news-date"><?=atenea_e($noticia['fecha_publicacion']?date('d/m/Y H:i',strtotime($noticia['fecha_publicacion'])):'Sin fecha de publicación')?><?php if($noticia['autor']):?> · <?=atenea_e($noticia['autor'])?><?php endif;?></p><h1><?=atenea_e($noticia['titulo'])?></h1><p class="lead"><?=atenea_e($noticia['resumen'])?></p><?php if($noticia['imagen_portada']):?><img class="news-detail-cover" src="<?=rutaImagenContenido($noticia['imagen_portada'])?>" alt="<?=atenea_e($noticia['titulo'])?>"><?php endif;?><div class="news-detail-content"><?=atenea_e($noticia['contenido'])?></div></div></article></main><?php require dirname(__DIR__,3).'/includes/footer.php'; ?>

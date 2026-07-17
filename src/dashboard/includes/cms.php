@@ -46,6 +46,11 @@ function cmsSubirImagen(string $campo): ?string
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($archivo['tmp_name']);
     $extensiones = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
     if (!isset($extensiones[$mime])) throw new RuntimeException('Solo se permiten imágenes JPG, PNG o WEBP.');
+    $extensionOriginal = strtolower(pathinfo((string) $archivo['name'], PATHINFO_EXTENSION));
+    $extensionesPermitidas = $mime === 'image/jpeg' ? ['jpg','jpeg'] : [$extensiones[$mime]];
+    if (!in_array($extensionOriginal, $extensionesPermitidas, true)) throw new RuntimeException('La extensión no coincide con el tipo real de la imagen.');
+    $dimensiones = getimagesize($archivo['tmp_name']);
+    if (!$dimensiones || $dimensiones[0] < 1 || $dimensiones[1] < 1 || $dimensiones[0] > 8000 || $dimensiones[1] > 8000) throw new RuntimeException('Las dimensiones de la imagen no son válidas.');
     if (preg_match('/\.(?:php\d*|phtml|phar|html?|svg)(?:\.|$)/i', (string) $archivo['name'])) throw new RuntimeException('El nombre del archivo no es seguro.');
     $directorio = ATENEA_ROOT . '/uploads/contenido';
     if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) throw new RuntimeException('No se pudo preparar la carpeta de imágenes.');
@@ -59,8 +64,8 @@ function cmsEliminarImagenSiNoSeUsa(?string $ruta): void
     $ruta = (string) $ruta;
     if (!str_starts_with($ruta, 'uploads/contenido/') || str_contains($ruta, '..')) return;
     $pdo = obtenerConexion();
-    $consulta = $pdo->prepare('SELECT (SELECT COUNT(*) FROM secciones WHERE imagen=:ruta1)+(SELECT COUNT(*) FROM elementos_seccion WHERE imagen=:ruta2)+(SELECT COUNT(*) FROM configuracion_sitio WHERE valor=:ruta3)+(SELECT COUNT(*) FROM productos WHERE imagen_principal=:ruta4)+(SELECT COUNT(*) FROM producto_imagenes WHERE ruta=:ruta5)+(SELECT COUNT(*) FROM categorias_producto WHERE imagen=:ruta6 AND eliminado_at IS NULL)');
-    $consulta->execute(['ruta1'=>$ruta,'ruta2'=>$ruta,'ruta3'=>$ruta,'ruta4'=>$ruta,'ruta5'=>$ruta,'ruta6'=>$ruta]);
+    $consulta = $pdo->prepare('SELECT (SELECT COUNT(*) FROM secciones WHERE imagen=:ruta1)+(SELECT COUNT(*) FROM elementos_seccion WHERE imagen=:ruta2)+(SELECT COUNT(*) FROM configuracion_sitio WHERE valor=:ruta3)+(SELECT COUNT(*) FROM productos WHERE imagen_principal=:ruta4)+(SELECT COUNT(*) FROM producto_imagenes WHERE ruta=:ruta5)+(SELECT COUNT(*) FROM categorias_producto WHERE imagen=:ruta6 AND eliminado_at IS NULL)+(SELECT COUNT(*) FROM noticias WHERE imagen_portada=:ruta7)');
+    $consulta->execute(['ruta1'=>$ruta,'ruta2'=>$ruta,'ruta3'=>$ruta,'ruta4'=>$ruta,'ruta5'=>$ruta,'ruta6'=>$ruta,'ruta7'=>$ruta]);
     if ((int) $consulta->fetchColumn() === 0) {
         $archivo = ATENEA_ROOT . '/' . $ruta;
         if (is_file($archivo)) unlink($archivo);
@@ -80,6 +85,18 @@ function cmsSubirGaleria(string $campo): array
         unset($_FILES['_galeria_temporal']);
     }
     return array_values(array_filter($rutas));
+}
+
+function cmsValidarLimiteAreas(PDO $pdo, int $seccionId, int $elementoExcluir = 0): void
+{
+    $seccion = $pdo->prepare('SELECT clave FROM secciones WHERE id=:id FOR UPDATE');
+    $seccion->execute(['id' => $seccionId]);
+    if ($seccion->fetchColumn() !== 'areas') return;
+    $conteo = $pdo->prepare('SELECT COUNT(*) FROM elementos_seccion WHERE seccion_id=:seccion AND activo=1 AND id<>:excluir');
+    $conteo->execute(['seccion' => $seccionId, 'excluir' => $elementoExcluir]);
+    if ((int) $conteo->fetchColumn() >= 4) {
+        throw new DomainException('La sección Áreas admite como máximo 4 elementos activos. Desactiva uno antes de activar otro.');
+    }
 }
 
 function fechaAdminActual(): string

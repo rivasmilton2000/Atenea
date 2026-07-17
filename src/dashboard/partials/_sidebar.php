@@ -16,6 +16,7 @@ $operacionesAbiertas = str_starts_with($dashboardActive,'notificaciones/') || st
 $usuariosAbierto = str_starts_with($dashboardActive, 'usuarios/');
 $bitacoraActiva = str_starts_with($dashboardActive, 'bitacora/');
 $academicoActivo = str_starts_with($dashboardActive, 'academico/');
+$noticiasActivo = str_starts_with($dashboardActive, 'noticias/');
 $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'admin'], true) ? (string) $_GET['rol'] : '';
 ?>
 <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server" aria-label="Navegación administrativa">
@@ -32,6 +33,7 @@ $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'a
         <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'hero' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/secciones/index.php') ?>">Hero principal</a></li>
       </ul></div>
     </li>
+    <li class="nav-item <?= $noticiasActivo ? 'active' : '' ?>"><a class="nav-link" href="<?= atenea_url('src/dashboard/noticias/index.php') ?>"><i class="menu-icon mdi mdi-newspaper-variant-outline"></i><span class="menu-title">Noticias</span></a></li>
     <li class="nav-item <?= $configAbierta ? 'active' : '' ?>">
       <a class="nav-link <?= $configAbierta ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#menu-configuracion" aria-expanded="<?= $configAbierta ? 'true' : 'false' ?>" aria-controls="menu-configuracion"><i class="menu-icon mdi mdi-card-text-outline"></i><span class="menu-title">Configuración</span><i class="menu-arrow"></i></a>
       <div class="collapse <?= $configAbierta ? 'show' : '' ?>" id="menu-configuracion" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu">

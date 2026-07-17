@@ -25,7 +25,7 @@ $logoNavbar = $configuracionNavbar['logo'] ?? 'img/atenea-logo.png';
               'src/website/trainers.php' => 'docentes',
               'src/website/events.php' => 'eventos',
               'src/website/pricing.php' => 'productos',
-              'index.php#noticias' => 'noticias',
+              'src/website/noticias.php' => 'noticias',
               'src/website/contact.php' => 'contacto',
           ];
           $esActivo = ($paginaPorUrl[$item['url']] ?? '') === $activePage;

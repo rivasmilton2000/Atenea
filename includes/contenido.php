@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/conexion.php';
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/noticias.php';
 
 function urlContenidoSegura(?string $url, string $fallback = '#'): string
 {
@@ -35,9 +36,12 @@ function cargarContenidoInicio(): array
     $elementos = $pdo->query('SELECT e.* FROM elementos_seccion e INNER JOIN secciones s ON s.id=e.seccion_id WHERE s.activo=1 AND e.activo=1 ORDER BY e.seccion_id,e.orden,e.id')->fetchAll();
     $porSeccion = [];
     foreach ($elementos as $elemento) $porSeccion[(int) $elemento['seccion_id']][] = $elemento;
-    foreach ($secciones as &$seccion) $seccion['elementos'] = $porSeccion[(int) $seccion['id']] ?? [];
+    foreach ($secciones as &$seccion) {
+        $seccion['elementos'] = $porSeccion[(int) $seccion['id']] ?? [];
+        if ($seccion['clave'] === 'areas') $seccion['elementos'] = array_slice($seccion['elementos'], 0, 4);
+    }
     unset($seccion);
-    return ['configuracion' => $config, 'secciones' => $secciones];
+    return ['configuracion' => $config, 'secciones' => $secciones, 'noticias' => obtenerNoticiasPublicadas(3)];
 }
 
 function obtenerConfiguracionSitio(): array
@@ -53,6 +57,15 @@ function obtenerConfiguracionSitio(): array
     }
 }
 
+function obtenerSeccionPublica(string $clave): ?array
+{
+    if (preg_match('/^[a-z0-9_-]{1,100}$/', $clave) !== 1) return null;
+    $consulta = obtenerConexion()->prepare('SELECT * FROM secciones WHERE clave=:clave AND activo=1 LIMIT 1');
+    $consulta->execute(['clave' => $clave]);
+    $seccion = $consulta->fetch();
+    return is_array($seccion) ? $seccion : null;
+}
+
 function obtenerMenuSitio(): array
 {
     $menuPredeterminado = [
@@ -62,7 +75,7 @@ function obtenerMenuSitio(): array
         ['texto' => 'Docentes', 'url' => 'src/website/trainers.php', 'nueva_pestana' => 0],
         ['texto' => 'Eventos', 'url' => 'src/website/events.php', 'nueva_pestana' => 0],
         ['texto' => 'Productos', 'url' => 'src/website/pricing.php', 'nueva_pestana' => 0],
-        ['texto' => 'Noticias', 'url' => 'index.php#noticias', 'nueva_pestana' => 0],
+        ['texto' => 'Noticias', 'url' => 'src/website/noticias.php', 'nueva_pestana' => 0],
         ['texto' => 'Contacto', 'url' => 'src/website/contact.php', 'nueva_pestana' => 0],
     ];
 
