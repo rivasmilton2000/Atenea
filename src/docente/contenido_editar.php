@@ -1,31 +1,4 @@
 <?php
 declare(strict_types=1);
-
-require_once __DIR__ . '/_layout.php';
-
-$pdo = obtenerConexion();
-$id = docenteId($_GET['id'] ?? 0);
-$docenteId = docenteSupervisadoAtenea($pdo);
-$consulta = $pdo->prepare('SELECT c.*,a.nombre asignatura FROM contenidos c JOIN asignaturas a ON a.id=c.asignatura_id WHERE c.id=:id AND c.docente_id=:docente LIMIT 1');
-$consulta->execute(['id' => $id, 'docente' => $docenteId]);
-$contenido = $consulta->fetch();
-if (!$contenido || !docentePuedeCurso($pdo, $docenteId, (int) $contenido['asignatura_id'])) {
-    http_response_code(403);
-    exit('No tienes acceso a este contenido.');
-}
-
-docenteCabecera('Editar contenido', 'contenidos', 'Actualiza información de un contenido de tu curso.');
-?>
-<div class="card card-rounded"><div class="card-body">
-  <p class="text-muted">Curso: <?= atenea_e($contenido['asignatura']) ?></p>
-  <form method="post" action="contenido_actualizar.php" class="row g-3">
-    <input type="hidden" name="csrf_token" value="<?= atenea_e(obtenerTokenCsrf()) ?>">
-    <input type="hidden" name="docente_id" value="<?= $docenteId ?>">
-    <input type="hidden" name="id" value="<?= (int) $contenido['id'] ?>">
-    <div class="col-md-9"><label class="form-label">Título</label><input class="form-control" name="titulo" maxlength="190" value="<?= atenea_e($contenido['titulo']) ?>" required></div>
-    <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" name="estado"><?php foreach (['borrador','activo','inactivo'] as $estado): ?><option value="<?= $estado ?>" <?= $contenido['estado'] === $estado ? 'selected' : '' ?>><?= atenea_e($estado) ?></option><?php endforeach; ?></select></div>
-    <div class="col-12"><label class="form-label">Descripción</label><textarea class="form-control" name="descripcion" maxlength="5000" rows="6"><?= atenea_e((string) $contenido['descripcion']) ?></textarea></div>
-    <div class="col-12 d-flex gap-2"><button class="btn btn-primary">Guardar cambios</button><a class="btn btn-outline-secondary" href="<?= docenteUrl('contenidos.php',['curso'=>$contenido['asignatura_id']]) ?>">Cancelar</a></div>
-  </form>
-</div></div>
-<?php docentePie();
+require_once __DIR__.'/_layout.php';require_once dirname(__DIR__,2).'/includes/academico_flujo.php';$pdo=obtenerConexion();$docenteId=docenteSupervisadoAtenea($pdo);$id=docenteId($_GET['id']??0);$q=$pdo->prepare('SELECT c.*,a.nombre capacitacion,s.codigo seccion FROM contenidos c JOIN asignaturas a ON a.id=c.asignatura_id JOIN capacitacion_secciones s ON s.id=c.seccion_id WHERE c.id=:id AND c.docente_id=:d');$q->execute(['id'=>$id,'d'=>$docenteId]);$c=$q->fetch();if(!$c||!docentePoseeSeccion($pdo,$docenteId,(int)$c['seccion_id'])){http_response_code(403);exit('No tienes acceso a este contenido.');}docenteCabecera('Editar contenido','contenidos','Reemplaza archivos, fechas, orden y reglas de progreso.');
+?><form class="card card-rounded" method="post" action="contenido_actualizar.php" enctype="multipart/form-data"><div class="card-body"><input type="hidden" name="csrf_token" value="<?=atenea_e(obtenerTokenCsrf())?>"><input type="hidden" name="docente_id" value="<?=$docenteId?>"><input type="hidden" name="id" value="<?=$id?>"><p class="text-muted"><?=atenea_e($c['capacitacion'].' · '.$c['seccion'])?></p><div class="row g-3"><div class="col-md-4"><label class="form-label">Módulo</label><input class="form-control" name="modulo" maxlength="120" value="<?=atenea_e($c['modulo'])?>" required></div><div class="col-md-4"><label class="form-label">Tipo</label><select class="form-select" name="tipo"><?php foreach(['video','texto','documento','enlace','actividad','evaluacion','recurso_descargable'] as$t):?><option value="<?=$t?>" <?=$c['tipo']===$t?'selected':''?>><?=atenea_e($t)?></option><?php endforeach;?></select></div><div class="col-md-4"><label class="form-label">Orden</label><input class="form-control" type="number" name="orden" value="<?=$c['orden']?>"></div><div class="col-12"><label class="form-label">Título</label><input class="form-control" name="titulo" maxlength="190" value="<?=atenea_e($c['titulo'])?>" required></div><div class="col-12"><label class="form-label">Descripción</label><textarea class="form-control" name="descripcion" rows="5" maxlength="10000"><?=atenea_e($c['descripcion'])?></textarea></div><div class="col-md-6"><label class="form-label">Reemplazar archivo/video</label><input class="form-control" type="file" name="archivo"><?php if($c['archivo_nombre']):?><small>Actual: <?=atenea_e($c['archivo_nombre'])?></small><?php endif;?></div><div class="col-md-6"><label class="form-label">URL video YouTube/Vimeo</label><input class="form-control" type="url" name="video_url" value="<?=atenea_e($c['video_url'])?>"></div><div class="col-md-3"><label class="form-label">Publicación</label><input class="form-control" type="datetime-local" name="fecha_publicacion" value="<?=atenea_e($c['fecha_publicacion']?date('Y-m-d\TH:i',strtotime($c['fecha_publicacion'])):'')?>"></div><div class="col-md-3"><label class="form-label">Límite</label><input class="form-control" type="datetime-local" name="fecha_limite" value="<?=atenea_e($c['fecha_limite']?date('Y-m-d\TH:i',strtotime($c['fecha_limite'])):'')?>"></div><div class="col-md-3"><label class="form-label">Peso %</label><input class="form-control" type="number" min="0" max="100" step="0.01" name="peso_progreso" value="<?=atenea_e($c['peso_progreso'])?>"></div><div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" name="estado"><?php foreach(['borrador','activo','inactivo'] as$e):?><option value="<?=$e?>" <?=$c['estado']===$e?'selected':''?>><?=atenea_e($e)?></option><?php endforeach;?></select></div><div class="col-12"><label><input type="checkbox" name="obligatorio" <?=$c['obligatorio']?'checked':''?>> Obligatorio</label></div></div><div class="mt-4"><button class="btn btn-primary">Guardar cambios</button> <a class="btn btn-light" href="<?=docenteUrl('contenidos.php',['seccion'=>$c['seccion_id']])?>">Cancelar</a></div></div></form><?php docentePie();

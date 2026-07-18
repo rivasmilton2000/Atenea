@@ -64,8 +64,8 @@ function cmsEliminarImagenSiNoSeUsa(?string $ruta): void
     $ruta = (string) $ruta;
     if (!str_starts_with($ruta, 'uploads/contenido/') || str_contains($ruta, '..')) return;
     $pdo = obtenerConexion();
-    $consulta = $pdo->prepare('SELECT (SELECT COUNT(*) FROM secciones WHERE imagen=:ruta1)+(SELECT COUNT(*) FROM elementos_seccion WHERE imagen=:ruta2)+(SELECT COUNT(*) FROM configuracion_sitio WHERE valor=:ruta3)+(SELECT COUNT(*) FROM productos WHERE imagen_principal=:ruta4)+(SELECT COUNT(*) FROM producto_imagenes WHERE ruta=:ruta5)+(SELECT COUNT(*) FROM categorias_producto WHERE imagen=:ruta6 AND eliminado_at IS NULL)+(SELECT COUNT(*) FROM noticias WHERE imagen_portada=:ruta7)');
-    $consulta->execute(['ruta1'=>$ruta,'ruta2'=>$ruta,'ruta3'=>$ruta,'ruta4'=>$ruta,'ruta5'=>$ruta,'ruta6'=>$ruta,'ruta7'=>$ruta]);
+    $consulta = $pdo->prepare('SELECT (SELECT COUNT(*) FROM secciones WHERE imagen=:ruta1)+(SELECT COUNT(*) FROM elementos_seccion WHERE imagen=:ruta2)+(SELECT COUNT(*) FROM configuracion_sitio WHERE valor=:ruta3)+(SELECT COUNT(*) FROM productos WHERE imagen_principal=:ruta4)+(SELECT COUNT(*) FROM producto_imagenes WHERE ruta=:ruta5)+(SELECT COUNT(*) FROM categorias_producto WHERE imagen=:ruta6 AND eliminado_at IS NULL)+(SELECT COUNT(*) FROM noticias WHERE imagen_portada=:ruta7)+(SELECT COUNT(*) FROM asignaturas WHERE imagen=:ruta8)');
+    $consulta->execute(['ruta1'=>$ruta,'ruta2'=>$ruta,'ruta3'=>$ruta,'ruta4'=>$ruta,'ruta5'=>$ruta,'ruta6'=>$ruta,'ruta7'=>$ruta,'ruta8'=>$ruta]);
     if ((int) $consulta->fetchColumn() === 0) {
         $archivo = ATENEA_ROOT . '/' . $ruta;
         if (is_file($archivo)) unlink($archivo);

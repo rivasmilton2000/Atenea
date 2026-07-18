@@ -1,21 +1,6 @@
 <?php
-$pageTitle = 'Capacitaciones | Atenea';
-$pageDescription = 'Explora las capacitaciones de Atenea en naturopatía y bienestar holístico.';
-$pageClass = 'courses-page';
-$activePage = 'capacitaciones';
-require dirname(__DIR__, 2) . '/includes/header.php';
-?>
-<main class="main">
-  <div class="page-title" data-aos="fade"><div class="heading"><div class="container"><div class="row justify-content-center text-center"><div class="col-lg-8"><h1>Capacitaciones</h1><p class="mb-0">Programas creados para fortalecer tus conocimientos y llevar el bienestar holístico a la práctica.</p></div></div></div></div><nav class="breadcrumbs"><div class="container"><ol><li><a href="<?= atenea_url('index.php') ?>">Inicio</a></li><li class="current">Capacitaciones</li></ol></div></nav></div>
-  <section class="courses section"><div class="container"><div class="row gy-4">
-  <?php $items = [
-    ['course-1.jpg','Naturopatía','Fundamentos de Naturopatía','Comprende los principios del cuidado natural y su aplicación responsable.'],
-    ['course-2.jpg','Bienestar','Hábitos para el Equilibrio Integral','Desarrolla rutinas conscientes que apoyen el bienestar cotidiano.'],
-    ['course-3.jpg','Especialización','Recursos Naturales Aplicados','Profundiza en el conocimiento y uso informado de recursos naturales.']
-  ]; foreach ($items as $i => [$img,$category,$title,$text]): ?>
-    <div class="col-lg-4 col-md-6 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="<?= ($i + 1) * 100 ?>"><article class="course-item"><img src="<?= atenea_url('src/website/assets/img/' . $img) ?>" class="img-fluid" alt="<?= atenea_e($title) ?>"><div class="course-content"><p class="category"><?= atenea_e($category) ?></p><h2><a href="<?= atenea_url('src/website/course-details.php') ?>"><?= atenea_e($title) ?></a></h2><p class="description"><?= atenea_e($text) ?></p><a href="<?= atenea_url('src/website/course-details.php') ?>">Ver detalles <i class="bi bi-arrow-right"></i></a></div></article></div>
-  <?php endforeach; ?>
-  </div></div></section>
-</main>
-<?php require dirname(__DIR__, 2) . '/includes/footer.php'; ?>
-
+declare(strict_types=1);
+require_once dirname(__DIR__,2).'/includes/capacitaciones.php';
+$q=obtenerConexion()->query("SELECT * FROM asignaturas WHERE estado_capacitacion='publicada' AND activo=1 AND estado='activo' AND deleted_at IS NULL ORDER BY orden,nombre");$items=$q->fetchAll();
+$pageTitle='Capacitaciones | Atenea';$pageDescription='Explora las capacitaciones de Atenea en naturopatía y bienestar holístico.';$pageClass='courses-page';$activePage='capacitaciones';require dirname(__DIR__,2).'/includes/header.php';
+?><main class="main"><div class="page-title" data-aos="fade"><div class="heading"><div class="container"><div class="row justify-content-center text-center"><div class="col-lg-8"><h1>Capacitaciones</h1><p class="mb-0">Programas creados para fortalecer tus conocimientos y llevar el bienestar holístico a la práctica.</p></div></div></div></div><nav class="breadcrumbs"><div class="container"><ol><li><a href="<?=atenea_url('index.php')?>">Inicio</a></li><li class="current">Capacitaciones</li></ol></div></nav></div><section class="courses section"><div class="container"><div class="row gy-4"><?php foreach($items as$i=>$c):?><div class="col-lg-4 col-md-6 d-flex" data-aos="zoom-in" data-aos-delay="<?=min(($i+1)*100,400)?>"><article class="course-item d-flex flex-column w-100"><div class="course-cover"><img src="<?=rutaImagenContenido($c['imagen'],'src/website/assets/img/course-1.jpg')?>" alt="<?=atenea_e($c['nombre'])?>"></div><div class="course-content d-flex flex-column flex-grow-1"><div class="course-badges"><span><?=atenea_e(ucfirst($c['tipo']))?></span><?php if($c['nivel']):?><span><?=atenea_e($c['nivel'])?></span><?php endif;?></div><div class="d-flex justify-content-between gap-3"><h2 class="h4"><a href="<?=atenea_url('src/website/capacitacion.php?slug='.rawurlencode($c['slug']))?>"><?=atenea_e($c['nombre'])?></a></h2><p class="price">$<?=number_format((float)$c['precio'],2)?></p></div><p class="description"><?=atenea_e($c['descripcion_corta'])?></p><a class="course-action mt-auto" href="<?=atenea_url('src/website/capacitacion.php?slug='.rawurlencode($c['slug']))?>">Ver detalles y pagar <i class="bi bi-arrow-right"></i></a></div></article></div><?php endforeach;?><?php if(!$items):?><div class="col-12 text-center py-5"><h2>No hay capacitaciones publicadas</h2></div><?php endif;?></div></div></section></main><?php require dirname(__DIR__,2).'/includes/footer.php';

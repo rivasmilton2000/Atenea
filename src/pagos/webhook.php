@@ -70,6 +70,19 @@ try {
 }
 
 $objeto = $evento->data->object;
+$esPagoCapacitacion = (string) ($objeto->metadata->tipo ?? '') === 'capacitacion';
+if ($esPagoCapacitacion) {
+    require_once dirname(__DIR__, 2) . '/includes/capacitaciones.php';
+    try {
+        if (in_array($evento->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true)) procesarWebhookCapacitacion($evento, $objeto);
+        else procesarEstadoWebhookCapacitacion($evento, $objeto);
+        http_response_code(200);
+    } catch (Throwable $error) {
+        error_log('Webhook capacitación: ' . $error->getMessage());
+        http_response_code(500);
+    }
+    exit;
+}
 $pedidoId = (int) ($objeto->metadata->pedido_id ?? 0);
 $esConfirmacion = in_array($evento->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true);
 $metodoPago = $esConfirmacion ? datosMetodoPagoStripe($objeto, $configuracion) : ['payment_method_id' => null, 'brand' => null, 'last4' => null];

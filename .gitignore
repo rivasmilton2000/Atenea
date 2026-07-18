@@ -8,6 +8,9 @@
 /logs/*.log
 /artifacts/db_atenea_pre_correcciones6_etapa1_*.sql
 /artifacts/db_atenea_pre_correcciones6_etapa2_*.sql
+/artifacts/db_atenea_pre_correcciones6_etapa3_*.sql
+/artifacts/db_atenea_pre_correcciones6_etapa4_*.sql
+/artifacts/db_atenea_pre_correcciones6_etapa5_*.sql
 /private/
 /certificates/
 *.p12

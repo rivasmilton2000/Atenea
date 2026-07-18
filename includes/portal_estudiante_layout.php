@@ -49,6 +49,8 @@ function portalEstudianteCabecera(string $titulo, string $activo = 'inicio', str
     $hora = (int) date('G');
     $saludo = $hora < 12 ? 'Buenos días' : ($hora < 18 ? 'Buenas tardes' : 'Buenas noches');
     $enlace = static fn(string $clave, string $ruta): string => 'nav-link' . ($activo === $clave ? ' active' : '');
+    $GLOBALS['portal_estudiante_flash'] = is_array($_SESSION['portal_flash'] ?? null) ? $_SESSION['portal_flash'] : null;
+    unset($_SESSION['portal_flash']);
     ?>
 <!doctype html>
 <html lang="es" dir="ltr"><head>
@@ -79,6 +81,7 @@ function portalEstudianteCabecera(string $titulo, string $activo = 'inicio', str
     <li class="nav-item"><a class="<?= $enlace('pedidos','') ?>" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="icon"><i class="bi bi-receipt"></i></i><span class="item-name">Mis pedidos y pagos</span></a></li>
     <li class="nav-item"><a class="<?= $enlace('carrito','') ?>" href="<?= atenea_url('src/estudiantes/carrito.php') ?>"><i class="icon"><i class="bi bi-cart3"></i></i><span class="item-name">Mi carrito</span><?php if($cantidadCarrito):?><span class="badge bg-danger ms-auto"><?=$cantidadCarrito?></span><?php endif;?></a></li>
     <li class="nav-item"><a class="<?= $enlace('direcciones','') ?>" href="<?= atenea_url('src/estudiantes/direcciones.php') ?>"><i class="icon"><i class="bi bi-geo-alt"></i></i><span class="item-name">Mis direcciones</span></a></li>
+    <li class="nav-item"><a class="<?= $enlace('comunicaciones','') ?>" href="<?= atenea_url('src/comunicaciones/agenda.php') ?>"><i class="icon"><i class="bi bi-chat-dots"></i></i><span class="item-name">Comunicación</span></a></li>
     <li class="nav-item"><a class="<?= $enlace('avisos','') ?>" href="<?= atenea_url('src/estudiantes/avisos.php') ?>"><i class="icon"><i class="bi bi-bell"></i></i><span class="item-name">Avisos administrativos</span><?php if((int)$datos['avisos_pendientes']>0):?><span class="badge bg-danger ms-auto"><?= (int)$datos['avisos_pendientes'] ?></span><?php endif;?></a></li>
     <li class="nav-item"><a class="nav-link" href="<?= atenea_url('index.php') ?>"><i class="icon"><i class="bi bi-globe"></i></i><span class="item-name">Volver al sitio</span></a></li>
     <li class="nav-item"><a class="nav-link" data-atenea-confirm="logout" href="<?= atenea_url('src/login/logout.php') ?>"><i class="icon"><i class="bi bi-box-arrow-right"></i></i><span class="item-name">Cerrar sesión</span></a></li>
@@ -109,6 +112,6 @@ function portalEstudiantePie(): void
 <script src="<?= atenea_url('src/estudiantes/assets/vendor/aos/dist/aos.js') ?>"></script>
 <script src="<?= atenea_url('src/estudiantes/assets/js/hope-ui.js') ?>" defer></script>
 <script src="<?= atenea_url('src/website/assets/js/perfil-modal.js') ?>"></script>
-<?php ateneaAlertasScripts(); ?>
+<?php ateneaAlertasScripts($GLOBALS['portal_estudiante_flash'] ?? null); ?>
 </body></html><?php
 }

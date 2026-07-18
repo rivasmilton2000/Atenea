@@ -1,0 +1,5 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__).'/includes/cms.php';require_once dirname(__DIR__,3).'/includes/capacitaciones.php';
+if(($_SERVER['REQUEST_METHOD']??'')!=='POST'||!validarTokenCsrf((string)($_POST['csrf_token']??''))){http_response_code(400);exit;}$id=cmsId($_POST['inscripcion_id']??0);$seccion=cmsId($_POST['seccion_id']??0);$motivo=(string)($_POST['motivo']??'');$pdo=obtenerConexion();
+try{$pdo->beginTransaction();moverInscripcionCapacitacion($pdo,$id,$seccion,(int)$_SESSION['usuario_id'],$motivo);registrarAuditoria(['actor_user_id'=>$_SESSION['usuario_id'],'event_type'=>'enrollment.moved','module'=>'academic','entity_type'=>'enrollment','entity_id'=>$id,'action'=>'move','result'=>'success','description'=>'Inscripción movida; progreso y notas conservados.','metadata'=>['seccion_destino'=>$seccion]],$pdo);$pdo->commit();cmsFlash('exito','Estudiante asignado; el movimiento quedó en el historial.');}catch(Throwable$e){if($pdo->inTransaction())$pdo->rollBack();cmsFlash('error',$e instanceof DomainException?$e->getMessage():'No fue posible mover la inscripción.');}header('Location:inscripciones.php');
