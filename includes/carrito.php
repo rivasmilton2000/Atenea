@@ -51,6 +51,9 @@ function resumenCarrito(PDO $pdo, int $usuarioId, bool $bloquear = false): array
     if ($bloquear) $sql .= ' FOR UPDATE';
     $q=$pdo->prepare($sql); $q->execute(['carrito'=>$carrito['id']]); $items=[]; $subtotal=0; $descuento=0; $cantidad=0;
     foreach($q->fetchAll() as $producto){
+        $publicado=productoPublico((int)$producto['id']);
+        if(!$publicado)continue;
+        foreach(['nombre','descripcion_corta','precio','imagen_principal'] as$campo)$producto[$campo]=$publicado[$campo]??$producto[$campo];
         $promo=$producto['promo_id']?['id'=>$producto['promo_id'],'precio_promocional'=>$producto['promo_precio'],'etiqueta'=>$producto['promo_etiqueta']]:null;
         $precio=precioProductoCentavos($producto,$promo);
         $producto['disponible_real']=max(0,(int)$producto['stock']-(int)$producto['stock_reservado']);

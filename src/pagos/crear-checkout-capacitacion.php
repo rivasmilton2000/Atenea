@@ -27,9 +27,9 @@ $pdo = obtenerConexion();
 $pagoId = 0;
 try {
     $pdo->beginTransaction();
-    $q = $pdo->prepare("SELECT * FROM asignaturas WHERE id=:id AND estado_capacitacion='publicada' AND estado='activo' AND activo=1 AND deleted_at IS NULL FOR UPDATE");
+    $q = $pdo->prepare("SELECT id FROM asignaturas WHERE id=:id FOR UPDATE");
     $q->execute(['id' => $asignaturaId]);
-    $capacitacion = $q->fetch();
+    if(!$q->fetchColumn())throw new DomainException('La capacitación no está disponible.');$capacitacion=null;foreach(capacitacionesPublicasWebsite() as$publicada)if((int)$publicada['id']===$asignaturaId){$capacitacion=$publicada;break;}
     if (!$capacitacion) throw new DomainException('La capacitación no está disponible.');
     if ((float) $capacitacion['precio'] <= 0) throw new DomainException('Esta capacitación no tiene un precio válido para Checkout.');
     $q = $pdo->prepare("SELECT cp.estado FROM capacitacion_pagos cp WHERE cp.usuario_id=:u AND cp.asignatura_id=:a AND cp.estado IN('pendiente','pagado') ORDER BY cp.id DESC LIMIT 1 FOR UPDATE");

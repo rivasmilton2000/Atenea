@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/conexion.php';
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/website_versionado.php';
 
 function normalizarSlugNoticia(string $valor): string
 {
@@ -21,28 +22,13 @@ function slugNoticiaValido(string $slug): bool
 function obtenerNoticiasPublicadas(int $limite = 0): array
 {
     $limite = max(0, min($limite, 100));
-    $sql = "SELECT id,titulo,slug,resumen,contenido,imagen_portada,fecha_publicacion,autor,destacado,created_at,updated_at
-            FROM noticias
-            WHERE estado='publicado' AND activo=1 AND deleted_at IS NULL
-              AND fecha_publicacion IS NOT NULL AND fecha_publicacion<=NOW()
-            ORDER BY destacado DESC,fecha_publicacion DESC,id DESC";
-    if ($limite > 0) $sql .= ' LIMIT ' . $limite;
-    return obtenerConexion()->query($sql)->fetchAll();
+    $filas=array_values(array_filter(filasEstadoWebsite('noticias'),fn($n)=>$n['estado']==='publicado'&&(int)$n['activo']===1&&empty($n['deleted_at'])&&!empty($n['fecha_publicacion'])&&strtotime($n['fecha_publicacion'])<=time()));usort($filas,fn($a,$b)=>[(int)$b['destacado'],strtotime($b['fecha_publicacion']),(int)$b['id']]<=>[(int)$a['destacado'],strtotime($a['fecha_publicacion']),(int)$a['id']]);return$limite>0?array_slice($filas,0,$limite):$filas;
 }
 
 function obtenerNoticiaPublicada(string $slug): ?array
 {
     if (!slugNoticiaValido($slug)) return null;
-    $consulta = obtenerConexion()->prepare(
-        "SELECT id,titulo,slug,resumen,contenido,imagen_portada,fecha_publicacion,autor,destacado,created_at,updated_at
-         FROM noticias
-         WHERE slug=:slug AND estado='publicado' AND activo=1 AND deleted_at IS NULL
-           AND fecha_publicacion IS NOT NULL AND fecha_publicacion<=NOW()
-         LIMIT 1"
-    );
-    $consulta->execute(['slug' => $slug]);
-    $noticia = $consulta->fetch();
-    return is_array($noticia) ? $noticia : null;
+    foreach(obtenerNoticiasPublicadas() as$noticia)if($noticia['slug']===$slug)return$noticia;return null;
 }
 
 function urlNoticia(array $noticia): string

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/conexion.php';
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/noticias.php';
+require_once __DIR__ . '/website_versionado.php';
 
 function urlContenidoSegura(?string $url, string $fallback = '#'): string
 {
@@ -27,13 +28,13 @@ function rutaImagenContenido(?string $ruta, string $fallback = 'src/website/asse
 
 function cargarContenidoInicio(): array
 {
-    $pdo = obtenerConexion();
+    $estado = estadoFuenteWebsite();
     $config = [];
-    foreach ($pdo->query('SELECT clave, valor FROM configuracion_sitio')->fetchAll() as $fila) {
+    foreach (($estado['configuracion_sitio'] ?? []) as $fila) {
         $config[$fila['clave']] = $fila['valor'];
     }
-    $secciones = $pdo->query('SELECT * FROM secciones WHERE activo = 1 ORDER BY orden, id')->fetchAll();
-    $elementos = $pdo->query('SELECT e.* FROM elementos_seccion e INNER JOIN secciones s ON s.id=e.seccion_id WHERE s.activo=1 AND e.activo=1 ORDER BY e.seccion_id,e.orden,e.id')->fetchAll();
+    $secciones = array_values(array_filter($estado['secciones'] ?? [],fn($s)=>(int)$s['activo']===1));usort($secciones,fn($a,$b)=>[(int)$a['orden'],(int)$a['id']]<=>[(int)$b['orden'],(int)$b['id']]);$seccionesActivas=array_fill_keys(array_map(fn($s)=>(int)$s['id'],$secciones),true);
+    $elementos = array_values(array_filter($estado['elementos_seccion'] ?? [],fn($e)=>(int)$e['activo']===1&&isset($seccionesActivas[(int)$e['seccion_id']])));usort($elementos,fn($a,$b)=>[(int)$a['seccion_id'],(int)$a['orden'],(int)$a['id']]<=>[(int)$b['seccion_id'],(int)$b['orden'],(int)$b['id']]);
     $porSeccion = [];
     foreach ($elementos as $elemento) $porSeccion[(int) $elemento['seccion_id']][] = $elemento;
     foreach ($secciones as &$seccion) {
@@ -47,7 +48,7 @@ function cargarContenidoInicio(): array
 function obtenerConfiguracionSitio(): array
 {
     try {
-        $filas = obtenerConexion()->query('SELECT clave, valor FROM configuracion_sitio')->fetchAll();
+        $filas = filasEstadoWebsite('configuracion_sitio');
         $config = [];
         foreach ($filas as $fila) $config[$fila['clave']] = $fila['valor'];
         return $config;
@@ -60,10 +61,7 @@ function obtenerConfiguracionSitio(): array
 function obtenerSeccionPublica(string $clave): ?array
 {
     if (preg_match('/^[a-z0-9_-]{1,100}$/', $clave) !== 1) return null;
-    $consulta = obtenerConexion()->prepare('SELECT * FROM secciones WHERE clave=:clave AND activo=1 LIMIT 1');
-    $consulta->execute(['clave' => $clave]);
-    $seccion = $consulta->fetch();
-    return is_array($seccion) ? $seccion : null;
+    foreach(filasEstadoWebsite('secciones') as$seccion)if($seccion['clave']===$clave&&(int)$seccion['activo']===1)return$seccion;return null;
 }
 
 function obtenerMenuSitio(): array
@@ -80,7 +78,7 @@ function obtenerMenuSitio(): array
     ];
 
     try {
-        $menu = obtenerConexion()->query('SELECT texto,url,nueva_pestana FROM menu_sitio WHERE activo=1 ORDER BY orden,id')->fetchAll();
+        $menu = array_values(array_filter(filasEstadoWebsite('menu_sitio'),fn($m)=>(int)$m['activo']===1));usort($menu,fn($a,$b)=>[(int)$a['orden'],(int)$a['id']]<=>[(int)$b['orden'],(int)$b['id']]);$menu=array_map(fn($m)=>['texto'=>$m['texto'],'url'=>$m['url'],'nueva_pestana'=>$m['nueva_pestana']],$menu);
         return count($menu) === count($menuPredeterminado) ? $menu : $menuPredeterminado;
     } catch (Throwable $e) {
         error_log('Menú Atenea: ' . $e->getMessage());

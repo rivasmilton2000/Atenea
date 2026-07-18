@@ -5,6 +5,7 @@ require_once __DIR__ . '/conexion.php';
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/notificaciones.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/website_versionado.php';
 
 function slugCapacitacion(string $valor): string
 {
@@ -17,10 +18,10 @@ function slugCapacitacion(string $valor): string
 function capacitacionPublicaPorSlug(string $slug): ?array
 {
     if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) return null;
-    $q = obtenerConexion()->prepare("SELECT * FROM asignaturas WHERE slug=:slug AND estado_capacitacion='publicada' AND activo=1 AND estado='activo' AND deleted_at IS NULL LIMIT 1");
-    $q->execute(['slug' => $slug]);
-    return $q->fetch() ?: null;
+    foreach(filasEstadoWebsite('asignaturas') as$a)if($a['slug']===$slug&&$a['estado_capacitacion']==='publicada'&&(int)$a['activo']===1&&$a['estado']==='activo'&&empty($a['deleted_at']))return$a;return null;
 }
+
+function capacitacionesPublicasWebsite():array{$filas=array_values(array_filter(filasEstadoWebsite('asignaturas'),fn($a)=>$a['estado_capacitacion']==='publicada'&&(int)$a['activo']===1&&$a['estado']==='activo'&&empty($a['deleted_at'])));usort($filas,fn($a,$b)=>[(int)$a['orden'],$a['nombre']]<=>[(int)$b['orden'],$b['nombre']]);return$filas;}
 
 function docentePuedeAsumirCapacitacion(PDO $pdo, int $docenteId, int $asignaturaId, ?int $excluirRelacion = null): bool
 {

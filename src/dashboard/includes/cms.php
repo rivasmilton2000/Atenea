@@ -7,7 +7,9 @@ require_once dirname(__DIR__, 3) . '/includes/contenido.php';
 require_once dirname(__DIR__, 3) . '/includes/perfil_modal.php';
 require_once dirname(__DIR__, 3) . '/includes/permissions.php';
 require_once dirname(__DIR__, 3) . '/includes/audit.php';
+require_once dirname(__DIR__, 3) . '/includes/website_versionado.php';
 exigirRol(['admin']);
+registrarCapturaAutomaticaCms();
 
 function cmsFlash(string $tipo, string $mensaje): void
 {

@@ -19,9 +19,7 @@ if (!$producto):
 <?php require dirname(__DIR__, 2) . '/includes/footer.php'; exit; endif;
 
 $pdo = obtenerConexion();
-$consulta = $pdo->prepare('SELECT ruta FROM producto_imagenes WHERE producto_id=:id ORDER BY orden,id');
-$consulta->execute(['id' => $id]);
-$galeria = array_values(array_unique(array_filter(array_merge([(string) ($producto['imagen_principal'] ?? '')], array_column($consulta->fetchAll(), 'ruta')))));
+$galeria = array_values(array_unique(array_filter(array_merge([(string) ($producto['imagen_principal'] ?? '')], galeriaProductoPublica($id)))));
 if (!$galeria) $galeria = [''];
 $precio = $producto['precio_calculado'];
 $disponibles = max(0, (int) $producto['stock'] - (int) $producto['stock_reservado']);
@@ -32,12 +30,9 @@ $porcentaje = $precio['promocion_valida'] ? (float) ($precio['promocion']['porce
 if ($precio['promocion_valida'] && $porcentaje <= 0 && $precio['normal'] > 0) $porcentaje = round(($precio['descuento'] / $precio['normal']) * 100);
 
 $relacionados = [];
-if (!empty($producto['categoria_id'])) {
-    $consulta = $pdo->prepare('SELECT p.*,c.nombre categoria FROM productos p LEFT JOIN categorias_producto c ON c.id=p.categoria_id WHERE p.categoria_id=:categoria AND p.id<>:id AND p.activo=1 AND p.disponible=1 AND p.eliminado_at IS NULL ORDER BY p.created_at DESC LIMIT 3');
-    $consulta->execute(['categoria' => $producto['categoria_id'], 'id' => $id]);
-    $relacionados = $consulta->fetchAll();
-    foreach ($relacionados as &$relacionado) $relacionado['precio_calculado'] = precioProducto($relacionado, promocionVigente($pdo, (int) $relacionado['id']));
-    unset($relacionado);
+if (!empty($producto['categoria_id'])) foreach (catalogoProductos() as $candidato) {
+    if ((int) $candidato['id'] !== $id && (int) ($candidato['categoria_id'] ?? 0) === (int) $producto['categoria_id'] && !empty($candidato['disponible'])) $relacionados[] = $candidato;
+    if (count($relacionados) === 3) break;
 }
 $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 ?>

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/contenido.php';
+$previewToken=(string)($_GET['preview_token']??'');if($previewToken!==''){if(!validarTokenPreviewWebsite(obtenerConexion(),$previewToken)){http_response_code(403);exit('Vista previa no autorizada o expirada.');}$GLOBALS['ATENEA_WEBSITE_PREVIEW']=true;header('Cache-Control: private, no-store');header("Content-Security-Policy: frame-ancestors 'self'");}
 $pageTitle = 'Atenea | Escuela de Naturopatía Holística';
 $pageDescription = 'Formación integral en naturopatía, terapias naturales y bienestar holístico.';
 $pageClass = 'index-page';

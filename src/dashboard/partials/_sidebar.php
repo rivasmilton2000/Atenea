@@ -25,6 +25,7 @@ $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'a
       <a class="nav-link" href="<?= atenea_url('src/dashboard/index.php') ?>"><i class="mdi mdi-grid-large menu-icon"></i><span class="menu-title">Panel principal</span></a>
     </li>
     <li class="nav-item nav-category">Gestión del sitio web</li>
+    <li class="nav-item <?= str_starts_with($dashboardActive,'website/') ? 'active' : '' ?>"><a class="nav-link" href="<?=atenea_url('src/dashboard/website/editor.php')?>"><i class="menu-icon mdi mdi-monitor-edit"></i><span class="menu-title">Editor y vista previa</span></a></li>
     <li class="nav-item <?= $inicioAbierto ? 'active' : '' ?>">
       <a class="nav-link <?= $inicioAbierto ? '' : 'collapsed' ?>" data-bs-toggle="collapse" href="#menu-inicio" aria-expanded="<?= $inicioAbierto ? 'true' : 'false' ?>" aria-controls="menu-inicio"><i class="menu-icon mdi mdi-floor-plan"></i><span class="menu-title">Página de inicio</span><i class="menu-arrow"></i></a>
       <div class="collapse <?= $inicioAbierto ? 'show' : '' ?>" id="menu-inicio" data-bs-parent="#sidebar"><ul class="nav flex-column sub-menu">
