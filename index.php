@@ -75,6 +75,7 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 <?php endforeach; ?>
 </main>
+
 <?php require __DIR__ . '/includes/footer.php'; ?>
 
 
