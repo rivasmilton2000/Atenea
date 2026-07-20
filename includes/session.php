@@ -42,4 +42,12 @@ function validarTokenCsrf(?string $token): bool
         && hash_equals($_SESSION['csrf_token'], $token);
 }
 
+function exigirTokenCsrf(?string $token): void
+{
+    if (validarTokenCsrf($token)) return;
+    require_once __DIR__ . '/config.php';
+    registrarFalloGlobalAtenea('Token CSRF ausente o vencido.', 419);
+    mostrarPaginaErrorAtenea(419);
+}
+
 iniciarSesionSegura();

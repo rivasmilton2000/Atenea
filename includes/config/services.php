@@ -243,3 +243,45 @@ final class MailConfig
             'recaptcha_secret_key' => RecaptchaConfig::secretKey(), 'recaptcha_verify_uri' => RecaptchaConfig::verifyUri()];
     }
 }
+
+final class ImapConfig
+{
+    private function __construct() {}
+    public static function host(): string { return AppConfig::value('IMAP_HOST'); }
+    public static function port(): int
+    {
+        $port = filter_var(AppConfig::value('IMAP_PORT', '993'), FILTER_VALIDATE_INT, ['options'=>['min_range'=>1,'max_range'=>65535]]);
+        return $port === false ? 0 : (int)$port;
+    }
+    public static function encryption(): string
+    {
+        return match(strtolower(AppConfig::value('IMAP_ENCRYPTION','ssl'))) {
+            'ssl','imaps' => 'ssl', 'tls','starttls' => 'tls', 'none','' => 'none', default => '',
+        };
+    }
+    public static function username(): string { return AppConfig::value('IMAP_USERNAME'); }
+    public static function password(): string { return AppConfig::value('IMAP_PASSWORD'); }
+    public static function folder(): string
+    {
+        $folder = AppConfig::value('IMAP_FOLDER','INBOX');
+        return preg_match('/^[A-Za-z0-9 _.-]{1,120}$/',$folder) ? $folder : '';
+    }
+    public static function extensionAvailable(): bool { return extension_loaded('imap') && function_exists('imap_open'); }
+    public static function missing(): array
+    {
+        $missing=[];
+        if(self::host()==='')$missing[]='IMAP_HOST';
+        if(self::port()===0)$missing[]='IMAP_PORT';
+        if(self::encryption()==='')$missing[]='IMAP_ENCRYPTION';
+        if(self::username()==='')$missing[]='IMAP_USERNAME';
+        if(self::password()==='')$missing[]='IMAP_PASSWORD';
+        if(self::folder()==='')$missing[]='IMAP_FOLDER';
+        return $missing;
+    }
+    public static function isConfigured(): bool { return self::missing()===[]; }
+    public static function isAvailable(): bool { return self::extensionAvailable() && self::isConfigured(); }
+    public static function toArray(): array
+    {
+        return ['host'=>self::host(),'port'=>self::port(),'encryption'=>self::encryption(),'user'=>self::username(),'password'=>self::password(),'folder'=>self::folder()];
+    }
+}

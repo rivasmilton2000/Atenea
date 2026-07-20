@@ -24,118 +24,209 @@ function sanitizarErrorCorreoAtenea(Throwable $error): string
 
 function tablaCorreoDisponible(PDO $pdo): bool
 {
-    static $disponible = null;
-    if ($disponible !== null) return $disponible;
-    try {
-        $disponible = (bool) $pdo->query("SHOW TABLES LIKE 'correo_envios'")->fetchColumn();
-    } catch (Throwable) {
-        $disponible = false;
-    }
-    return $disponible;
+    try { return (bool) $pdo->query("SHOW TABLES LIKE 'correo_envios'")->fetchColumn(); }
+    catch (Throwable) { return false; }
 }
 
-function reservarEnvioCorreoAtenea(array $contexto): ?int
+function correoModoPruebaAtenea(): bool
 {
+    return filter_var(AppConfig::value('MAIL_TEST_MODE', 'true'), FILTER_VALIDATE_BOOL);
+}
+
+function correoEnteroConfiguradoAtenea(string $clave, int $predeterminado, int $minimo, int $maximo): int
+{
+    $valor = filter_var(AppConfig::value($clave, (string) $predeterminado), FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]);
+    return $valor === false ? $predeterminado : (int) $valor;
+}
+
+function correoDestinatarioPruebaAtenea(): string
+{
+    $correo = strtolower(AppConfig::value('MAIL_TEST_RECIPIENT'));
+    return filter_var($correo, FILTER_VALIDATE_EMAIL) ? $correo : '';
+}
+
+function correoPreferenciaHabilitadaAtenea(PDO $pdo, ?int $usuarioId, string $categoria): bool
+{
+    if (!$usuarioId || in_array($categoria, ['seguridad', 'cuenta', 'transaccional'], true)) return true;
+    $q = $pdo->prepare('SELECT correo_habilitado FROM notificacion_preferencias WHERE usuario_id=:u AND categoria=:c');
+    try { $q->execute(['u' => $usuarioId, 'c' => mb_substr($categoria, 0, 80)]); }
+    catch (Throwable) { return true; }
+    $valor = $q->fetchColumn();
+    return $valor === false || (int) $valor === 1;
+}
+
+function categoriaCorreoAtenea(string $tipo): string
+{
+    if (preg_match('/(recuper|restable|password|verific|codigo|cuenta_|cambio_rol|inactividad)/i',$tipo)) return 'seguridad';
+    if (preg_match('/(compra|comprobante|pedido|pago)/i',$tipo)) return 'comercio';
+    if (preg_match('/(academic|docente|capacit|certificado|inscripcion|seccion)/i',$tipo)) return 'academico';
+    if (preg_match('/(newsletter|noticia|novedad)/i',$tipo)) return 'novedades';
+    if (preg_match('/(mensaje|respuesta|comunicacion|contacto|correo|aviso)/i',$tipo)) return 'comunicaciones';
+    return $tipo;
+}
+
+function encolarCorreoAtenea(string $destinatario, string $nombre, string $asunto, string $html, string $texto, array $opciones = []): ?int
+{
+    if (!filter_var($destinatario, FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n]/', $destinatario . $nombre . $asunto)) {
+        throw new InvalidArgumentException('Los datos de cabecera del correo no son válidos.');
+    }
     $pdo = obtenerConexion();
-    if (!tablaCorreoDisponible($pdo)) return 0;
-    $clave = substr((string) ($contexto['idempotency_key'] ?? ''), 0, 190);
-    if ($clave === '') $clave = 'correo:' . bin2hex(random_bytes(20));
-    $destinatario = strtolower((string) $contexto['destinatario']);
+    if (!tablaCorreoDisponible($pdo)) throw new RuntimeException('La cola de correo no está disponible.');
+
+    $destinatario = strtolower(trim($destinatario));
+    $tipo = mb_substr((string) ($opciones['tipo'] ?? 'general'), 0, 80);
+    $categoria = mb_substr((string) ($opciones['categoria'] ?? categoriaCorreoAtenea($tipo)), 0, 80);
+    $evento = mb_substr((string) ($opciones['evento_id'] ?? $opciones['idempotency_key'] ?? ''), 0, 190);
+    if ($evento === '') $evento = 'correo:' . bin2hex(random_bytes(20));
+    $clave = mb_substr((string) ($opciones['idempotency_key'] ?? $evento), 0, 190);
+    $grupo = mb_substr(trim((string) ($opciones['grupo_clave'] ?? '')), 0, 190) ?: null;
+    $usuarioId = !empty($opciones['usuario_id']) ? (int) $opciones['usuario_id'] : null;
+    $permitirPrueba = !empty($opciones['permitir_envio_prueba']);
+    $modoPrueba = correoModoPruebaAtenea();
+    $destinoPrueba = correoDestinatarioPruebaAtenea();
+    if ($permitirPrueba && ($destinoPrueba === '' || !hash_equals($destinoPrueba, $destinatario))) {
+        throw new DomainException('La dirección no está autorizada para pruebas.');
+    }
+    $habilitado = correoPreferenciaHabilitadaAtenea($pdo, $usuarioId, $categoria);
+    $cancelado = !$habilitado || ($modoPrueba && !$permitirPrueba);
+    $motivo = !$habilitado ? 'Cancelado por las preferencias del usuario.' : ($cancelado ? 'Conservado sin envío por MAIL_TEST_MODE.' : null);
+    $maxIntentos = correoEnteroConfiguradoAtenea('MAIL_MAX_RETRIES', 3, 1, 10);
+    $opcionesSeguras = $opciones;
+    unset($opcionesSeguras['permitir_envio_prueba']);
+
     $pdo->beginTransaction();
     try {
-        $q = $pdo->prepare("INSERT IGNORE INTO correo_envios(tipo,asunto,usuario_id,pedido_id,hilo_id,destinatario_enmascarado,destinatario_hash,idempotency_key) VALUES(:tipo,:asunto,:usuario,:pedido,:hilo,:mascara,:hash,:clave)");
-        $q->execute(['tipo' => substr((string) $contexto['tipo'], 0, 80), 'asunto'=>mb_substr((string)($contexto['asunto']??''),0,190)?:null, 'usuario' => $contexto['usuario_id'] ?? null, 'pedido' => $contexto['pedido_id'] ?? null, 'hilo'=>$contexto['hilo_id']??null, 'mascara' => enmascararCorreoAtenea($destinatario), 'hash' => hash('sha256', $destinatario), 'clave' => $clave]);
-        $q = $pdo->prepare('SELECT id,estado,procesando_desde FROM correo_envios WHERE idempotency_key=:clave FOR UPDATE');
-        $q->execute(['clave' => $clave]);
-        $registro = $q->fetch();
-        if (!$registro || $registro['estado'] === 'enviado' || ($registro['estado'] === 'procesando' && strtotime((string) $registro['procesando_desde']) > time() - 600)) {
-            $pdo->commit();
-            return null;
+        if ($grupo && !$cancelado && !empty($opciones['agrupar'])) {
+            $q = $pdo->prepare("SELECT id FROM correo_envios WHERE usuario_id=:u AND grupo_clave=:g AND estado='pendiente' AND created_at>=DATE_SUB(NOW(),INTERVAL 15 MINUTE) ORDER BY id DESC LIMIT 1 FOR UPDATE");
+            $q->execute(['u' => $usuarioId, 'g' => $grupo]);
+            $principal = (int) $q->fetchColumn();
+            if ($principal) {
+                $q = $pdo->prepare("INSERT IGNORE INTO correo_envios(tipo,asunto,usuario_id,pedido_id,hilo_id,destinatario_enmascarado,destinatario_hash,destinatario_email,destinatario_nombre,contenido_html,contenido_texto,opciones_json,idempotency_key,evento_id,grupo_clave,estado,cancelado_at,cancelado_motivo,max_intentos,es_modo_prueba) VALUES(:tipo,:asunto,:usuario,:pedido,:hilo,:mascara,:hash,:email,:nombre,:html,:texto,:opciones,:clave,:evento,:grupo,'cancelado',NOW(),'Agrupado en otro correo pendiente.',:maximo,:prueba)");
+                $q->execute(['tipo'=>$tipo,'asunto'=>mb_substr($asunto,0,190),'usuario'=>$usuarioId,'pedido'=>$opciones['pedido_id']??null,'hilo'=>$opciones['hilo_id']??null,'mascara'=>enmascararCorreoAtenea($destinatario),'hash'=>hash('sha256',$destinatario),'email'=>$destinatario,'nombre'=>mb_substr($nombre,0,190),'html'=>$html,'texto'=>$texto,'opciones'=>json_encode($opcionesSeguras,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'clave'=>$clave,'evento'=>$evento,'grupo'=>$grupo,'maximo'=>$maxIntentos,'prueba'=>$modoPrueba?1:0]);
+                $pdo->prepare('UPDATE correo_envios SET agrupados=agrupados+1 WHERE id=:id')->execute(['id'=>$principal]);
+                $pdo->commit();
+                return $principal;
+            }
         }
-        $pdo->prepare("UPDATE correo_envios SET estado='procesando',intento=intento+1,procesando_desde=NOW(),error_sanitizado=NULL WHERE id=:id")->execute(['id' => $registro['id']]);
+        $q = $pdo->prepare("INSERT IGNORE INTO correo_envios(tipo,asunto,usuario_id,pedido_id,hilo_id,destinatario_enmascarado,destinatario_hash,destinatario_email,destinatario_nombre,contenido_html,contenido_texto,opciones_json,idempotency_key,evento_id,grupo_clave,estado,max_intentos,es_modo_prueba,permitir_envio_prueba,cancelado_at,cancelado_motivo) VALUES(:tipo,:asunto,:usuario,:pedido,:hilo,:mascara,:hash,:email,:nombre,:html,:texto,:opciones,:clave,:evento,:grupo,:estado,:maximo,:prueba,:permitir,:cancelado_at,:motivo)");
+        $q->execute(['tipo'=>$tipo,'asunto'=>mb_substr($asunto,0,190),'usuario'=>$usuarioId,'pedido'=>$opciones['pedido_id']??null,'hilo'=>$opciones['hilo_id']??null,'mascara'=>enmascararCorreoAtenea($destinatario),'hash'=>hash('sha256',$destinatario),'email'=>$destinatario,'nombre'=>mb_substr($nombre,0,190),'html'=>$html,'texto'=>$texto,'opciones'=>json_encode($opcionesSeguras,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'clave'=>$clave,'evento'=>$evento,'grupo'=>$grupo,'estado'=>$cancelado?'cancelado':'pendiente','maximo'=>$maxIntentos,'prueba'=>$modoPrueba?1:0,'permitir'=>$permitirPrueba?1:0,'cancelado_at'=>$cancelado?date('Y-m-d H:i:s'):null,'motivo'=>$motivo]);
+        $q = $pdo->prepare('SELECT id FROM correo_envios WHERE idempotency_key=:clave');
+        $q->execute(['clave'=>$clave]);
+        $id = (int) $q->fetchColumn();
         $pdo->commit();
-        return (int) $registro['id'];
+        return $id ?: null;
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;
     }
 }
 
-function finalizarEnvioCorreoAtenea(?int $registroId, bool $enviado, ?Throwable $error = null): void
-{
-    if (!$registroId) return;
-    $pdo = obtenerConexion();
-    if (!tablaCorreoDisponible($pdo)) return;
-    $q = $pdo->prepare("UPDATE correo_envios SET estado=:estado,enviado_at=IF(:enviado=1,NOW(),enviado_at),procesando_desde=NULL,error_sanitizado=:error WHERE id=:id");
-    $q->execute(['estado' => $enviado ? 'enviado' : 'fallido', 'enviado' => $enviado ? 1 : 0, 'error' => $error ? sanitizarErrorCorreoAtenea($error) : null, 'id' => $registroId]);
-}
-
 function enviarCorreoAtenea(string $destinatario, string $nombre, string $asunto, string $html, string $texto, array $opciones = []): void
 {
-    if (!filter_var($destinatario,FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n]/',$destinatario.$nombre.$asunto)) {
-        throw new InvalidArgumentException('Los datos de cabecera del correo no son válidos.');
+    encolarCorreoAtenea($destinatario, $nombre, $asunto, $html, $texto, $opciones);
+}
+
+function entregarCorreoSmtpAtenea(array $registro): void
+{
+    $configuracion = configuracionCorreoAtenea();
+    $autoload = __DIR__ . '/mail/vendor/autoload.php';
+    if (!configuracionSmtpCompleta($configuracion) || !is_file($autoload)) throw new RuntimeException('La configuración SMTP no está completa.');
+    require_once $autoload;
+    $correo = new PHPMailer(true);
+    $correo->isSMTP();
+    $correo->Host = (string) $configuracion['host'];
+    $correo->Port = (int) $configuracion['port'];
+    $correo->SMTPAuth = true;
+    $encryption = strtolower((string) $configuracion['encryption']);
+    if ($encryption === 'ssl') $correo->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    elseif ($encryption === 'tls') $correo->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    else { $correo->SMTPAutoTLS = false; $correo->SMTPSecure = ''; }
+    $correo->Username = (string) $configuracion['smtp_user'];
+    $correo->Password = (string) $configuracion['smtp_app_password'];
+    $correo->Timeout = 15;
+    $correo->CharSet = PHPMailer::CHARSET_UTF8;
+    $correo->setFrom((string) $configuracion['from_email'], (string) $configuracion['from_name']);
+    $correo->addAddress((string) $registro['destinatario_email'], (string) $registro['destinatario_nombre']);
+    $opciones = json_decode((string) ($registro['opciones_json'] ?? ''), true) ?: [];
+    if (!empty($opciones['reply_to']) && filter_var($opciones['reply_to'], FILTER_VALIDATE_EMAIL)) $correo->addReplyTo((string)$opciones['reply_to'], (string)($opciones['reply_to_name']??''));
+    foreach (($opciones['attachments'] ?? []) as $adjunto) {
+        $ruta = (string)($adjunto['path'] ?? '');
+        if ($ruta !== '' && is_file($ruta)) $correo->addAttachment($ruta, (string)($adjunto['name'] ?? basename($ruta)));
     }
-    $registroId = reservarEnvioCorreoAtenea(array_merge($opciones, ['destinatario' => $destinatario, 'tipo' => $opciones['tipo'] ?? 'general', 'asunto'=>$asunto]));
-    if ($registroId === null) return;
+    $html = (string) $registro['contenido_html'];
+    $logo = rutaFisicaLogoCorreoAtenea();
+    $embebido = false;
+    if ($logo !== null) {
+        try { $embebido = $correo->addEmbeddedImage($logo, ATENEA_EMAIL_LOGO_CID, 'logo-atenea.png'); }
+        catch (Throwable) { $embebido = false; }
+    }
+    if (!$embebido) $html = reemplazarLogoCorreoPorTexto($html);
+    $correo->isHTML(true);
+    $correo->Subject = (string) $registro['asunto'];
+    $correo->Body = $html;
+    $correo->AltBody = (string) $registro['contenido_texto'];
+    $correo->send();
+}
+
+function procesarCorreoEnColaAtenea(int $id): string
+{
+    $pdo = obtenerConexion();
+    $pdo->beginTransaction();
     try {
-        $configuracion = configuracionCorreoAtenea();
-        $autoload = __DIR__ . '/mail/vendor/autoload.php';
-        if (!configuracionSmtpCompleta($configuracion) || !is_file($autoload)) throw new RuntimeException('La configuración SMTP no está completa.');
-        require_once $autoload;
-        $correo = new PHPMailer(true);
-        $correo->isSMTP();
-        $correo->Host = (string) $configuracion['host'];
-        $correo->Port = (int) ($configuracion['port'] ?? 587);
-        $correo->SMTPAuth = true;
-        $encryption = strtolower((string) ($configuracion['encryption'] ?? 'tls'));
-        if ($encryption === 'ssl') $correo->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        elseif ($encryption === 'tls') $correo->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        else { $correo->SMTPAutoTLS = false; $correo->SMTPSecure = ''; }
-        $correo->Username = (string) $configuracion['smtp_user'];
-        $correo->Password = (string) $configuracion['smtp_app_password'];
-        $correo->Timeout = 15;
-        $correo->CharSet = PHPMailer::CHARSET_UTF8;
-        $correo->setFrom((string) $configuracion['from_email'], (string) $configuracion['from_name']);
-        $correo->addAddress($destinatario, $nombre);
-        if (!empty($opciones['reply_to']) && filter_var($opciones['reply_to'], FILTER_VALIDATE_EMAIL)) {
-            $correo->addReplyTo((string) $opciones['reply_to'], (string) ($opciones['reply_to_name'] ?? ''));
+        $q = $pdo->prepare("SELECT * FROM correo_envios WHERE id=:id AND estado IN('pendiente','fallido') AND disponible_at<=NOW() FOR UPDATE");
+        $q->execute(['id'=>$id]);
+        $r = $q->fetch();
+        if (!$r) { $pdo->commit(); return 'omitido'; }
+        if ((int)$r['intento'] >= (int)$r['max_intentos']) { $pdo->commit(); return 'agotado'; }
+        $autorizadoPrueba = (int)$r['permitir_envio_prueba'] === 1 && correoDestinatarioPruebaAtenea() !== '' && hash_equals(correoDestinatarioPruebaAtenea(), strtolower((string)$r['destinatario_email']));
+        if ((correoModoPruebaAtenea() || (int)$r['es_modo_prueba'] === 1) && !$autorizadoPrueba) {
+            $pdo->prepare("UPDATE correo_envios SET estado='cancelado',cancelado_at=NOW(),cancelado_motivo='Bloqueado por el modo de pruebas.' WHERE id=:id")->execute(['id'=>$id]);
+            $pdo->commit(); return 'cancelado';
         }
-        foreach (($opciones['attachments'] ?? []) as $adjunto) {
-            $ruta = (string)($adjunto['path'] ?? '');
-            if ($ruta !== '' && is_file($ruta)) $correo->addAttachment($ruta, (string)($adjunto['name'] ?? basename($ruta)));
+        $limiteGlobal = correoEnteroConfiguradoAtenea('MAIL_MAX_PER_MINUTE',3,1,1000);
+        $q = $pdo->query("SELECT COUNT(*) FROM correo_envios WHERE estado='enviado' AND enviado_at>=DATE_SUB(NOW(),INTERVAL 1 MINUTE)");
+        if ((int)$q->fetchColumn() >= $limiteGlobal) {
+            $pdo->prepare('UPDATE correo_envios SET disponible_at=DATE_ADD(NOW(),INTERVAL 1 MINUTE) WHERE id=:id')->execute(['id'=>$id]);
+            $pdo->commit(); return 'limitado';
         }
-        $logoEmbebido = false;
-        $logoPath = rutaFisicaLogoCorreoAtenea();
-        if ($logoPath !== null) {
-            try {
-                $mimeLogo = (new finfo(FILEINFO_MIME_TYPE))->file($logoPath) ?: 'image/png';
-                $logoEmbebido = $correo->addEmbeddedImage(
-                    $logoPath,
-                    ATENEA_EMAIL_LOGO_CID,
-                    'logo-atenea.png',
-                    PHPMailer::ENCODING_BASE64,
-                    $mimeLogo,
-                    'inline'
-                );
-            } catch (Throwable) {
-                error_log('Logo correo Atenea: no se pudo incrustar el recurso institucional.');
+        if (!empty($r['usuario_id'])) {
+            $limiteUsuario = correoEnteroConfiguradoAtenea('MAIL_MAX_PER_USER_PER_HOUR',5,1,1000);
+            $q = $pdo->prepare("SELECT COUNT(*) FROM correo_envios WHERE usuario_id=:u AND estado='enviado' AND enviado_at>=DATE_SUB(NOW(),INTERVAL 1 HOUR)");
+            $q->execute(['u'=>$r['usuario_id']]);
+            if ((int)$q->fetchColumn() >= $limiteUsuario) {
+                $pdo->prepare('UPDATE correo_envios SET disponible_at=DATE_ADD(NOW(),INTERVAL 1 HOUR) WHERE id=:id')->execute(['id'=>$id]);
+                $pdo->commit(); return 'limitado';
             }
         }
-        if (!$logoEmbebido) $html = reemplazarLogoCorreoPorTexto($html);
-        $correo->isHTML(true);
-        $correo->Subject = $asunto;
-        $correo->Body = $html;
-        $correo->AltBody = $texto;
-        $correo->send();
-        finalizarEnvioCorreoAtenea($registroId, true);
+        $pdo->prepare("UPDATE correo_envios SET estado='procesando',intento=intento+1,procesando_desde=NOW(),error_sanitizado=NULL WHERE id=:id")->execute(['id'=>$id]);
+        $pdo->commit();
+        entregarCorreoSmtpAtenea($r);
+        $pdo->prepare("UPDATE correo_envios SET estado='enviado',enviado_at=NOW(),procesando_desde=NULL,error_sanitizado=NULL WHERE id=:id")->execute(['id'=>$id]);
+        return 'enviado';
     } catch (Throwable $e) {
-        finalizarEnvioCorreoAtenea($registroId, false, $e);
-        try {
-            require_once __DIR__.'/errores_sistema.php';
-            registrarErrorSistemaAtenea('correo','mailer',sanitizarErrorCorreoAtenea($e),['correo_envio_id'=>$registroId,'pedido_id'=>$opciones['pedido_id']??null,'usuario_id'=>$opciones['usuario_id']??null]);
-        } catch (Throwable) {}
-        throw $e;
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $q = $pdo->prepare("UPDATE correo_envios SET estado='fallido',procesando_desde=NULL,error_sanitizado=:error,disponible_at=TIMESTAMPADD(MINUTE,LEAST(60,POW(2,intento)),NOW()) WHERE id=:id");
+        $q->execute(['error'=>sanitizarErrorCorreoAtenea($e),'id'=>$id]);
+        try { require_once __DIR__.'/errores_sistema.php'; registrarErrorSistemaAtenea('correo','cola',sanitizarErrorCorreoAtenea($e),['correo_envio_id'=>$id]); } catch (Throwable) {}
+        return 'fallido';
     }
+}
+
+function procesarColaCorreoAtenea(int $limite = 25): array
+{
+    $pdo = obtenerConexion();
+    $limite = max(1, min(100, $limite));
+    $pdo->exec("UPDATE correo_envios SET estado='fallido',procesando_desde=NULL,error_sanitizado='El procesamiento anterior no concluyó.',disponible_at=NOW() WHERE estado='procesando' AND procesando_desde<DATE_SUB(NOW(),INTERVAL 10 MINUTE) AND intento<max_intentos");
+    $ids = $pdo->query("SELECT id FROM correo_envios WHERE estado IN('pendiente','fallido') AND disponible_at<=NOW() AND intento<max_intentos ORDER BY disponible_at,id LIMIT {$limite}")->fetchAll(PDO::FETCH_COLUMN);
+    $resultado = ['revisados'=>0,'enviados'=>0,'fallidos'=>0,'cancelados'=>0,'limitados'=>0];
+    foreach ($ids as $id) {
+        $resultado['revisados']++;
+        $estado = procesarCorreoEnColaAtenea((int)$id);
+        if (isset($resultado[$estado.'s'])) $resultado[$estado.'s']++;
+        elseif ($estado === 'enviado') $resultado['enviados']++;
+    }
+    return $resultado;
 }
 
 function enviarPlantillaCorreoAtenea(string $tipo, string $destinatario, string $nombre, array $datos, array $opciones = []): void

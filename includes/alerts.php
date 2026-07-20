@@ -40,9 +40,10 @@ function ateneaNormalizarAlerta(?array $flash): ?array
         'info' => 'Información',
     ];
 
+    $title = trim((string) ($flash['title'] ?? $flash['titulo'] ?? ''));
     return [
         'type' => $type,
-        'title' => trim((string) ($flash['title'] ?? $flash['titulo'] ?? $defaultTitles[$type])),
+        'title' => $title !== '' ? $title : $defaultTitles[$type],
         'message' => $message,
     ];
 }
@@ -64,6 +65,7 @@ function ateneaAlertasScripts(?array $flash = null): void
 <script type="application/json" id="atenea-flash-data"><?= $json ?></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script src="<?= atenea_url('src/shared/assets/js/atenea-alerts.js') ?>"></script>
+<?php if(function_exists('usuarioAutenticado')&&usuarioAutenticado()):?><script src="<?=atenea_url('src/shared/assets/js/notificaciones-globales.js')?>" data-atenea-base="<?=atenea_e(ATENEA_BASE_URL)?>" defer></script><?php endif;?>
 <?php
 }
 

@@ -27,6 +27,7 @@ function permisosPorRolAtenea(string $rol): array
             'notifications.view',
             'communications.view',
             'communications.reply',
+            'mail.manage',
             'system_errors.manage',
             'dte.manage',
             'academic.supervise',
@@ -65,8 +66,8 @@ function exigirPermiso(string $permiso): void
 {
     exigirAutenticacion();
     if (!usuarioTienePermiso($permiso)) {
-        $_SESSION['mensaje_auth'] = 'No tienes permiso para realizar esa accion.';
-        redirigirPorRol();
+        registrarFalloGlobalAtenea('Permiso denegado: ' . $permiso, 403);
+        mostrarPaginaErrorAtenea(403);
     }
 }
 

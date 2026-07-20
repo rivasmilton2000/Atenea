@@ -131,8 +131,8 @@ function exigirRol(array $roles): void
     $permitidos = array_values(array_intersect($roles, ['admin', 'usuario', 'docente']));
 
     if (!in_array((string) $_SESSION['usuario_rol'], $permitidos, true)) {
-        $_SESSION['mensaje_auth'] = 'No tienes permiso para acceder a esa sección.';
-        redirigirPorRol();
+        registrarFalloGlobalAtenea('Intento de acceso a una ruta no autorizada.', 403);
+        mostrarPaginaErrorAtenea(403);
     }
 }
 

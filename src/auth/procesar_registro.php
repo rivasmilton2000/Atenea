@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/audit.php';
+require_once dirname(__DIR__, 2) . '/includes/carrito.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Location: ' . atenea_url('src/login/sign-up.php'));
@@ -85,6 +86,11 @@ try {
             'codigo_telefono' => $codigoTelefono, 'telefono' => $telefono,
             'departamento_id' => $departamentoId, 'municipio_id' => $municipioId, 'distrito_id' => $distritoId,
         ]);
+        try {
+            sincronizarCarritoInvitadoAtenea($pdo, $usuarioId);
+        } catch (Throwable $syncError) {
+            error_log('Sincronización de carrito Atenea: ' . $syncError->getMessage());
+        }
         unset($_SESSION['registro_datos']);
         redirigirPorRol('usuario');
     }

@@ -1,3 +1,8 @@
 <FilesMatch "^\.env(?:\..*)?$">
   Require all denied
 </FilesMatch>
+
+Options -Indexes
+ErrorDocument 403 /Atenea/src/errors/403.php
+ErrorDocument 404 /Atenea/src/errors/404.php
+ErrorDocument 500 /Atenea/src/errors/500.php

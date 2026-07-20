@@ -32,6 +32,8 @@ $faviconSitio = $configuracionSitio['favicon'] ?? 'img/atenea-logo.png';
   <link href="<?= atenea_url('src/website/assets/vendor/swiper/swiper-bundle.min.css') ?>" rel="stylesheet">
   <link href="<?= atenea_url('src/website/assets/css/main.css') ?>" rel="stylesheet">
   <link href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>" rel="stylesheet">
+  <?php if ($pageClass === 'cart-page'): ?><link href="<?= atenea_url('src/website/assets/css/cart.css') ?>" rel="stylesheet"><?php endif; ?>
+  <?php if ($pageClass === 'dynamic-section-page'): ?><link href="<?= atenea_url('src/website/assets/css/dynamic-section.css') ?>" rel="stylesheet"><?php endif; ?>
   <?php ateneaAlertasHead(); ?>
 </head>
 <body class="<?= atenea_e($pageClass) ?>">

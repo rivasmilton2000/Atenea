@@ -38,7 +38,7 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
     </ul>
     <ul class="navbar-nav ms-auto">
       <li class="nav-item dropdown d-none d-lg-block">
-        <a class="nav-link dropdown-bordered dropdown-toggle dropdown-toggle-split" id="messageDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false"> Accesos rápidos </a>
+        <button class="nav-link dropdown-bordered dropdown-toggle dropdown-toggle-split border-0" id="messageDropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"> Accesos rápidos </button>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="messageDropdown">
           <a class="dropdown-item py-3">
             <p class="mb-0 fw-medium float-start">Administración de Atenea</p>
@@ -67,21 +67,22 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
         </div>
       </li>
       <li class="nav-item">
-        <form class="search-form" action="#">
+        <form class="search-form" action="<?= atenea_url('src/dashboard/usuarios/index.php') ?>" method="get" role="search">
           <i class="icon-search"></i>
-          <input type="search" class="form-control" placeholder="Buscar aquí" title="Buscar aquí">
+          <label class="visually-hidden" for="adminGlobalSearch">Buscar usuarios</label>
+          <input id="adminGlobalSearch" name="q" type="search" class="form-control" placeholder="Buscar usuarios" title="Buscar usuarios">
         </form>
       </li>
       <li class="nav-item dropdown">
-        <a class="nav-link count-indicator" id="notificationDropdown" href="#" data-bs-toggle="dropdown">
+        <button class="nav-link count-indicator border-0 bg-transparent" id="notificationDropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir notificaciones">
           <i class="icon-bell"></i>
           <span class="count<?= $resumenNotificaciones['no_leidas'] > 0 ? '' : ' d-none' ?>" id="ateneaNotificationDot"></span>
-        </a>
+        </button>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="notificationDropdown">
-          <a class="dropdown-item py-3 border-bottom">
+          <div class="dropdown-item py-3 border-bottom">
             <p class="mb-0 fw-medium float-start">Notificaciones</p>
             <a href="<?= atenea_url('src/dashboard/notificaciones/index.php') ?>" class="badge badge-pill badge-primary float-end">Ver historial</a>
-          </a>
+          </div>
           <div id="ateneaNotificationList">
             <?php foreach($resumenNotificaciones['notificaciones'] as $notificacion): ?>
               <a class="dropdown-item preview-item py-3" href="<?= atenea_e($notificacion['action_url'] ?: atenea_url('src/dashboard/notificaciones/index.php')) ?>"><div class="preview-thumbnail"><i class="mdi mdi-bell-outline m-auto text-primary"></i></div><div class="preview-item-content"><h6 class="preview-subject fw-normal text-dark mb-1"><?= atenea_e($notificacion['title']) ?></h6><p class="fw-light small-text mb-0"><?= atenea_e(mb_substr($notificacion['message'],0,90)) ?></p></div></a>
@@ -91,14 +92,14 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
         </div>
       </li>
       <li class="nav-item dropdown">
-        <a class="nav-link count-indicator" id="countDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+        <button class="nav-link count-indicator border-0 bg-transparent" id="countDropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir comunicaciones">
           <i class="icon-mail icon-lg"></i>
-        </a>
+        </button>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="countDropdown">
-          <a class="dropdown-item py-3">
+          <div class="dropdown-item py-3">
             <p class="mb-0 fw-medium float-start">Comunicaciones</p>
             <a href="<?= atenea_url('src/dashboard/comunicaciones/index.php') ?>" class="badge badge-pill badge-primary float-end">Abrir</a>
-          </a>
+          </div>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item preview-item" href="<?= atenea_url('src/dashboard/comunicaciones/index.php?estado=recibido') ?>">
             <div class="preview-thumbnail">
@@ -127,8 +128,8 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
           </div>
           <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#adminProfileModal"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>
           <a class="dropdown-item" href="<?= atenea_url('index.php') ?>"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
-          <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Actividad</a>
-          <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> Soporte</a>
+          <a class="dropdown-item" href="<?= atenea_url('src/dashboard/bitacora/index.php') ?>"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Actividad</a>
+          <a class="dropdown-item" href="<?= atenea_url('src/dashboard/docs/documentation.php') ?>"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> Ayuda</a>
           <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Cerrar sesión</a>
         </div>
       </li>

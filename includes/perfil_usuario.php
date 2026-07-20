@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/conexion.php';
+require_once __DIR__ . '/avatar.php';
 
 function normalizarDui(?string $dui): ?string
 {
@@ -98,12 +99,7 @@ function etiquetaRol(string $rol): string
 
 function rutaFotoPerfil(array $usuario): string
 {
-    $foto = trim((string) ($usuario['foto'] ?? ''));
-    if ($foto !== '') {
-        if (preg_match('#^https://#i', $foto)) return $foto;
-        return atenea_url(ltrim($foto, '/'));
-    }
-    return atenea_url('src/estudiantes/assets/images/avatars/01.png');
+    return urlAvatarAtenea($usuario);
 }
 
 function obtenerDepartamentos(): array

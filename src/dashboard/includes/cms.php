@@ -8,19 +8,20 @@ require_once dirname(__DIR__, 3) . '/includes/perfil_modal.php';
 require_once dirname(__DIR__, 3) . '/includes/permissions.php';
 require_once dirname(__DIR__, 3) . '/includes/audit.php';
 require_once dirname(__DIR__, 3) . '/includes/website_versionado.php';
+require_once dirname(__DIR__, 3) . '/includes/alerts.php';
 exigirRol(['admin']);
 registrarCapturaAutomaticaCms();
 
 function cmsFlash(string $tipo, string $mensaje): void
 {
-    $_SESSION['cms_flash'] = ['tipo' => $tipo, 'mensaje' => $mensaje];
+    ateneaFlash($tipo, '', $mensaje);
 }
 
 function cmsObtenerFlash(): ?array
 {
-    $flash = $_SESSION['cms_flash'] ?? null;
+    $legacy = $_SESSION['cms_flash'] ?? null;
     unset($_SESSION['cms_flash']);
-    return is_array($flash) ? $flash : null;
+    return is_array($legacy) ? ateneaNormalizarAlerta($legacy) : ateneaObtenerFlash();
 }
 
 function cmsId(mixed $valor): int
@@ -87,6 +88,23 @@ function cmsSubirGaleria(string $campo): array
         unset($_FILES['_galeria_temporal']);
     }
     return array_values(array_filter($rutas));
+}
+
+function cmsSubirArchivoContenido(string $campo): ?string
+{
+    if (!isset($_FILES[$campo]) || $_FILES[$campo]['error'] === UPLOAD_ERR_NO_FILE) return null;
+    $archivo = $_FILES[$campo];
+    if ($archivo['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('No fue posible recibir el archivo.');
+    if ((int)$archivo['size'] > 12 * 1024 * 1024) throw new RuntimeException('El archivo no puede superar 12 MB.');
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($archivo['tmp_name']);
+    $permitidos = ['application/pdf'=>'pdf','application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx','application/vnd.ms-excel'=>'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'=>'xlsx','text/plain'=>'txt'];
+    $extension = strtolower(pathinfo((string)$archivo['name'], PATHINFO_EXTENSION));
+    if (!isset($permitidos[$mime]) || $extension !== $permitidos[$mime] || preg_match('/\.(?:php\d*|phtml|phar|html?|js)(?:\.|$)/i', (string)$archivo['name'])) throw new RuntimeException('Solo se permiten PDF, Word, Excel o TXT válidos.');
+    $directorio = ATENEA_ROOT . '/uploads/contenido/archivos';
+    if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) throw new RuntimeException('No se pudo preparar la carpeta de archivos.');
+    $nombre = bin2hex(random_bytes(16)) . '.' . $extension;
+    if (!move_uploaded_file($archivo['tmp_name'], $directorio . '/' . $nombre)) throw new RuntimeException('No se pudo guardar el archivo.');
+    return 'uploads/contenido/archivos/' . $nombre;
 }
 
 function cmsValidarLimiteAreas(PDO $pdo, int $seccionId, int $elementoExcluir = 0): void

@@ -5,6 +5,7 @@ require_once __DIR__ . '/conexion.php';
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/noticias.php';
 require_once __DIR__ . '/website_versionado.php';
+require_once __DIR__ . '/navbar_contenido.php';
 
 function urlContenidoSegura(?string $url, string $fallback = '#'): string
 {
@@ -78,8 +79,23 @@ function obtenerMenuSitio(): array
     ];
 
     try {
-        $menu = array_values(array_filter(filasEstadoWebsite('menu_sitio'),fn($m)=>(int)$m['activo']===1));usort($menu,fn($a,$b)=>[(int)$a['orden'],(int)$a['id']]<=>[(int)$b['orden'],(int)$b['id']]);$menu=array_map(fn($m)=>['texto'=>$m['texto'],'url'=>$m['url'],'nueva_pestana'=>$m['nueva_pestana']],$menu);
-        return count($menu) === count($menuPredeterminado) ? $menu : $menuPredeterminado;
+        $autenticado = function_exists('usuarioAutenticado') ? usuarioAutenticado() : !empty($_SESSION['usuario_id']);
+        $rol = $autenticado ? (string)($_SESSION['usuario_rol'] ?? '') : '';
+        $filasMenu = filasEstadoWebsite('menu_sitio');
+        if (!$filasMenu) return $menuPredeterminado;
+        $menu = array_values(array_filter($filasMenu, static function($m) use ($autenticado, $rol): bool {
+            if ((int)($m['activo'] ?? 0) !== 1 || !empty($m['eliminado_at'])) return false;
+            if (($m['visibilidad'] ?? 'publica') === 'autenticada' && !$autenticado) return false;
+            $roles = datosContenidoNavbarAtenea($m['roles_json'] ?? null);
+            return !$roles || ($autenticado && in_array($rol, $roles, true));
+        }));
+        usort($menu,fn($a,$b)=>[(int)$a['orden'],(int)$a['id']]<=>[(int)$b['orden'],(int)$b['id']]);
+        if (!$menu) return [];
+        $porPadre=[]; foreach($menu as $m)$porPadre[(int)($m['padre_id']??0)][]=$m;
+        $armar = function(int $padre) use (&$armar, &$porPadre): array {
+            $salida=[]; foreach($porPadre[$padre]??[] as$m){$m['nueva_pestana']=(int)$m['nueva_pestana'];$m['icono']=iconoNavbarValidoAtenea((string)($m['icono']??''))?(string)$m['icono']:'';$m['hijos']=$armar((int)$m['id']);$salida[]=$m;} return$salida;
+        };
+        return $armar(0);
     } catch (Throwable $e) {
         error_log('Menú Atenea: ' . $e->getMessage());
         return $menuPredeterminado;

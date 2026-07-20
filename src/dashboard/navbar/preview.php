@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);require_once dirname(__DIR__).'/includes/cms.php';$id=cmsId($_GET['id']??0);$q=obtenerConexion()->prepare('SELECT slug FROM menu_sitio WHERE id=:id AND eliminado_at IS NULL');$q->execute(['id'=>$id]);$slug=(string)$q->fetchColumn();if($slug===''){mostrarPaginaErrorAtenea(404);} $token=crearTokenPreviewWebsite(obtenerConexion(),(int)$_SESSION['usuario_id']);header('Location:'.atenea_url('src/website/seccion.php?slug='.rawurlencode($slug).'&preview_token='.$token));exit;

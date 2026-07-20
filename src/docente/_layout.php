@@ -3,8 +3,8 @@ declare(strict_types=1);
 require_once __DIR__.'/_guard.php';
 require_once dirname(__DIR__,2).'/includes/docente_academico.php';
 
-function docenteFlash(string $tipo,string $mensaje): void{$_SESSION['docente_flash']=['tipo'=>$tipo,'mensaje'=>$mensaje];}
-function docenteTomarFlash():?array{$f=$_SESSION['docente_flash']??null;unset($_SESSION['docente_flash']);return is_array($f)?$f:null;}
+function docenteFlash(string $tipo,string $mensaje): void{ateneaFlash($tipo,'',$mensaje);}
+function docenteTomarFlash():?array{$legacy=$_SESSION['docente_flash']??null;unset($_SESSION['docente_flash']);return is_array($legacy)?ateneaNormalizarAlerta($legacy):ateneaObtenerFlash();}
 function docenteId(mixed $v):int{return filter_var($v,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])?:0;}
 function cmsPaginacionSimple(int $pagina,int $paginas,array $params=[]):string{if($paginas<=1)return '';$html='<nav class="mt-4"><ul class="pagination justify-content-end">';for($i=max(1,$pagina-2);$i<=min($paginas,$pagina+2);$i++){$params['pagina']=$i;$html.='<li class="page-item '.($i===$pagina?'active':'').'"><a class="page-link" href="?'.atenea_e(http_build_query($params)).'">'.$i.'</a></li>';}return $html.'</ul></nav>';}
 function docenteSelectorSupervision(PDO $pdo): void

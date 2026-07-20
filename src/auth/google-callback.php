@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/google_oauth.php';
 require_once dirname(__DIR__, 2) . '/includes/cuenta.php';
+require_once dirname(__DIR__, 2) . '/includes/carrito.php';
 
 function falloCallbackGoogle(string $mensaje, string $accion = 'login'): never
 {
@@ -71,6 +72,11 @@ try {
     }
     $usuario = autenticarConPerfilGoogle($perfil);
     iniciarSesionUsuario($usuario);
+    if ((string)$usuario['rol'] === 'usuario') try {
+        sincronizarCarritoInvitadoAtenea(obtenerConexion(), (int)$usuario['id']);
+    } catch (Throwable $syncError) {
+        error_log('Sincronización de carrito Atenea: ' . $syncError->getMessage());
+    }
     redirigirPorRol((string) $usuario['rol']);
 } catch (Throwable $e) {
     error_log('OAuth Google Atenea: ' . $e->getMessage());

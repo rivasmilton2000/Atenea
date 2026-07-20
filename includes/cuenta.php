@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/notificaciones.php';
 
 function cuentaRetornoSeguro(?string $retorno): string
 {
@@ -36,6 +37,7 @@ function notificarCambioCuenta(array $usuario, array $campos, string $destinoAlt
     if (!filter_var($destino, FILTER_VALIDATE_EMAIL)) return;
     $fecha = date('d/m/Y H:i');
     $lista = implode(', ', $campos);
+    $evento = 'cambio-cuenta:' . (int) ($usuario['id'] ?? 0) . ':' . hash('sha256', $fecha . $lista . $destino);
     $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? 'no disponible');
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
         $partes = explode('.', $ip);
@@ -47,12 +49,13 @@ function notificarCambioCuenta(array $usuario, array $campos, string $destinoAlt
         $ipAproximada = 'no disponible';
     }
     try {
+        if(!empty($usuario['id']))crearNotificacionAtenea(['usuario_id'=>(int)$usuario['id'],'tipo'=>'cambio_cuenta','categoria'=>'seguridad','nivel'=>'informacion','titulo'=>'Tu cuenta fue actualizada','descripcion'=>'Se modificaron estos datos: '.$lista.'. Si no reconoces el cambio, contacta a soporte.','url'=>atenea_url('src/notificaciones/index.php'),'idempotency_key'=>$evento]);
         enviarPlantillaCorreoAtenea(
             'aviso_administrativo',
             $destino,
             trim((string) (($usuario['nombre'] ?? '') . ' ' . ($usuario['apellido'] ?? ''))),
             ['asunto' => 'Confirmación de cambios en tu cuenta Atenea', 'resumen' => 'Se modificó información de tu cuenta.', 'mensaje' => "Se modificó tu cuenta el {$fecha}.\nCampos: {$lista}\nOrigen aproximado: {$ipAproximada}\nSi no reconoces este cambio, contacta al soporte de Atenea."],
-            ['usuario_id' => isset($usuario['id']) ? (int) $usuario['id'] : null, 'idempotency_key' => 'cambio-cuenta:' . (int) ($usuario['id'] ?? 0) . ':' . hash('sha256', $fecha . $lista . $destino)]
+            ['usuario_id' => isset($usuario['id']) ? (int) $usuario['id'] : null, 'categoria'=>'seguridad','evento_id'=>$evento,'idempotency_key' => $evento]
         );
     } catch (Throwable $e) {
         error_log('Notificación de cuenta Atenea: ' . $e->getMessage());
@@ -114,10 +117,9 @@ function guardarFotoPerfil(array $archivo, ?string $anterior): string
 
 function eliminarFotoPerfilLocal(?string $ruta): void
 {
-    $ruta = (string) $ruta;
-    if (str_starts_with($ruta, 'uploads/perfiles/') && !str_contains($ruta, '..')) {
-        $archivo = ATENEA_ROOT . '/' . $ruta;
-        if (is_file($archivo)) {
+    require_once __DIR__ . '/avatar.php';
+    $archivo = rutaFisicaAvatarAtenea($ruta);
+    if ($archivo !== null) {
             $detalle = '';
             set_error_handler(static function (int $nivel, string $mensaje) use (&$detalle): bool {
                 $detalle = $mensaje;
@@ -131,7 +133,6 @@ function eliminarFotoPerfilLocal(?string $ruta): void
             if (!$eliminada) {
                 error_log('Atenea no pudo eliminar una fotografía de perfil local: ' . ($detalle !== '' ? $detalle : 'error desconocido'));
             }
-        }
     }
 }
 

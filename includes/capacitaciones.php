@@ -128,7 +128,29 @@ function enviarConfirmacionInscripcion(int $pagoId): bool
     }
 }
 
+function errorTransitorioMysqlAtenea(Throwable $error): bool
+{
+    if (!$error instanceof PDOException) return false;
+    $codigoDriver = (int) ($error->errorInfo[1] ?? 0);
+    return in_array($codigoDriver, [1205, 1213], true) || (string) $error->getCode() === '40001';
+}
+
 function procesarWebhookCapacitacion(object $evento, object $sesion): int
+{
+    $ultimoError = null;
+    for ($intento = 1; $intento <= 3; $intento++) {
+        try {
+            return procesarWebhookCapacitacionUnaVez($evento, $sesion);
+        } catch (Throwable $error) {
+            $ultimoError = $error;
+            if (!errorTransitorioMysqlAtenea($error) || $intento === 3) throw $error;
+            usleep(random_int(20000, 80000) * $intento);
+        }
+    }
+    throw $ultimoError ?? new RuntimeException('No fue posible procesar el webhook académico.');
+}
+
+function procesarWebhookCapacitacionUnaVez(object $evento, object $sesion): int
 {
     $pagoId = (int) ($sesion->metadata->capacitacion_pago_id ?? 0);
     if ($pagoId < 1) throw new RuntimeException('Referencia de pago académico inválida.');

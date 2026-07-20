@@ -8,7 +8,7 @@ if (PHP_SAPI !== 'cli') {
 
 require_once dirname(__DIR__, 2) . '/includes/conexion.php';
 
-$passwordTemporal = trim((string) (getenv('ATENEA_ADMIN_PASSWORD') ?: ''));
+$passwordTemporal = entornoAtenea('ATENEA_ADMIN_PASSWORD');
 $crearPruebas = in_array('--crear-pruebas', $argv, true);
 
 if (strlen($passwordTemporal) < 12) {

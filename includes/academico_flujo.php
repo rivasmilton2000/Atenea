@@ -8,7 +8,7 @@ require_once __DIR__.'/audit.php';
 
 function almacenamientoAcademicoBase(): string
 {
-    return rtrim(getenv('ACADEMIC_STORAGE_PATH')?:dirname(ATENEA_ROOT).'/atenea-private/academico','/\\');
+    return rtrim(entornoAtenea('ACADEMIC_STORAGE_PATH', dirname(ATENEA_ROOT).'/atenea-private/academico'),'/\\');
 }
 
 function rutaPrivadaAcademica(string $relpath): ?string
@@ -23,7 +23,7 @@ function guardarArchivoAcademico(string $campo,string $carpeta,string $categoria
     if(!isset($_FILES[$campo])||($_FILES[$campo]['error']??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)return null;
     $f=$_FILES[$campo];if(($f['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK)throw new DomainException('No fue posible recibir el archivo.');
     $mapas=[
-      'video'=>['max'=>(int)(getenv('ACADEMIC_VIDEO_MAX_MB')?:250)*1024*1024,'mimes'=>['video/mp4'=>'mp4','video/webm'=>'webm','video/ogg'=>'ogv']],
+      'video'=>['max'=>(int)entornoAtenea('ACADEMIC_VIDEO_MAX_MB', '250')*1024*1024,'mimes'=>['video/mp4'=>'mp4','video/webm'=>'webm','video/ogg'=>'ogv']],
       'contenido'=>['max'=>20*1024*1024,'mimes'=>['application/pdf'=>'pdf','application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx','application/vnd.ms-powerpoint'=>'ppt','application/vnd.openxmlformats-officedocument.presentationml.presentation'=>'pptx','application/vnd.ms-excel'=>'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'=>'xlsx','image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','text/plain'=>'txt']],
       'evidencia'=>['max'=>10*1024*1024,'mimes'=>['application/pdf'=>'pdf','application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx','image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp']],
     ];$regla=$mapas[$categoria]??null;if(!$regla||(int)$f['size']<1||(int)$f['size']>$regla['max'])throw new DomainException('El archivo está vacío o supera el tamaño permitido.');

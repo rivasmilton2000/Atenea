@@ -11,6 +11,28 @@
   const hasSweetAlert = () => typeof window.Swal !== 'undefined' && typeof window.Swal.fire === 'function';
   const text = (value, fallback) => typeof value === 'string' && value.trim() ? value.trim() : fallback;
 
+  function fallbackConfirm(config) {
+    return new Promise(resolve => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'atenea-confirm-backdrop';
+      backdrop.innerHTML = '<div class="atenea-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="atenea-confirm-title"><h2 id="atenea-confirm-title"></h2><p></p><div class="atenea-confirm-actions"><button type="button" class="atenea-confirm-cancel"></button><button type="button" class="atenea-confirm-ok"></button></div></div>';
+      const titleNode = backdrop.querySelector('h2');
+      const messageNode = backdrop.querySelector('p');
+      const cancel = backdrop.querySelector('.atenea-confirm-cancel');
+      const confirm = backdrop.querySelector('.atenea-confirm-ok');
+      titleNode.textContent = text(config.title, '¿Deseas continuar?');
+      messageNode.textContent = text(config.text, 'Confirma esta acción para continuar.');
+      cancel.textContent = text(config.cancelButtonText, 'Cancelar');
+      confirm.textContent = text(config.confirmButtonText, 'Continuar');
+      const close = result => { backdrop.remove(); resolve({ isConfirmed: result }); };
+      cancel.addEventListener('click', () => close(false));
+      confirm.addEventListener('click', () => close(true));
+      backdrop.addEventListener('keydown', event => { if (event.key === 'Escape') close(false); });
+      document.body.appendChild(backdrop);
+      cancel.focus();
+    });
+  }
+
   function fire(options) {
     const config = Object.assign({
       customClass: { popup: 'atenea-alert-popup' },
@@ -24,21 +46,32 @@
 
     if (hasSweetAlert()) return window.Swal.fire(config);
 
-    if (config.showCancelButton) {
-      return Promise.resolve({ isConfirmed: window.confirm([config.title, config.text].filter(Boolean).join('\n\n')) });
-    }
-    window.alert([config.title, config.text].filter(Boolean).join('\n\n'));
+    if (config.showCancelButton) return fallbackConfirm(config);
+    notify(config.icon || 'info', config.title || 'Atenea', config.text || '');
     return Promise.resolve({ isConfirmed: true });
   }
 
   function notify(type, title, message) {
-    return fire({
-      icon: type,
-      title: text(title, 'Atenea'),
-      text: text(message, ''),
-      confirmButtonText: 'Aceptar',
-      confirmButtonColor: type === 'error' ? colors.danger : (type === 'success' ? colors.green : colors.gold)
-    });
+    let region = document.getElementById('atenea-toast-region');
+    if (!region) {
+      region = document.createElement('div');
+      region.id = 'atenea-toast-region';
+      region.className = 'atenea-toast-region';
+      region.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+      region.setAttribute('aria-atomic', 'true');
+      document.body.appendChild(region);
+    }
+    const toast = document.createElement('div');
+    toast.className = `atenea-toast atenea-toast-${type}`;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.innerHTML = '<div class="atenea-toast-copy"><strong></strong><p></p></div><button type="button" aria-label="Cerrar notificación">×</button>';
+    toast.querySelector('strong').textContent = text(title, 'Atenea');
+    toast.querySelector('p').textContent = text(message, '');
+    const remove = () => { toast.classList.add('is-leaving'); window.setTimeout(() => toast.remove(), 180); };
+    toast.querySelector('button').addEventListener('click', remove);
+    region.appendChild(toast);
+    window.setTimeout(remove, type === 'error' ? 8000 : 5000);
+    return Promise.resolve({ isConfirmed: true });
   }
 
   function confirmAction(options) {

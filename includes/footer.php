@@ -62,7 +62,7 @@ require_once __DIR__ . '/perfil_modal.php';
 renderizarModalPerfil('website');
 ?>
 
-<a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center" aria-label="Volver arriba"><i class="bi bi-arrow-up-short"></i></a>
+<button type="button" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center border-0" aria-label="Volver arriba"><i class="bi bi-arrow-up-short"></i></button>
 <div id="preloader"></div>
 
 <script src="<?= atenea_url('src/website/assets/vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>

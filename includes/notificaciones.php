@@ -51,3 +51,8 @@ function notificacionesAdminResumen(int $usuarioId, int $limite = 5, ?PDO $pdo =
     $q->bindValue(':u',$usuarioId,PDO::PARAM_INT);$q->bindValue(':lim',$limite,PDO::PARAM_INT);$q->execute();
     return ['no_leidas'=>$total,'notificaciones'=>$q->fetchAll()];
 }
+
+function notificacionesUsuarioResumen(int $usuarioId, int $limite = 5, ?PDO $pdo = null): array
+{
+    return notificacionesAdminResumen($usuarioId,$limite,$pdo);
+}
