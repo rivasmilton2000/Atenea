@@ -77,6 +77,7 @@ require __DIR__ . '/includes/header.php';
 
 </main>
 
+
 <?php require __DIR__ . '/includes/footer.php'; ?>
 
 
