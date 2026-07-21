@@ -74,6 +74,7 @@ require __DIR__ . '/includes/header.php';
     <section id="<?=atenea_e($clave)?>" class="section"><div class="container" data-aos="fade-up"><div class="section-title"><h2><?=atenea_e((string)$seccion['titulo'])?></h2><p><?=atenea_e((string)$seccion['subtitulo'])?></p></div><p><?=atenea_e((string)$seccion['descripcion'])?></p></div></section>
   <?php endif; ?>
 <?php endforeach; ?>
+
 </main>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
