@@ -59,14 +59,22 @@ test.describe.serial('Etapa 4: layout docente unificado', () => {
       await expect(page.locator('link[href*="hope-ui"]')).toHaveCount(0);
       await expect(page.locator('#sidebar .nav-item.active .menu-title')).toHaveText(activeLabel);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2), route).toBeTruthy();
+
+      const reloadResponse = await page.reload({waitUntil: 'domcontentloaded'});
+      expect(reloadResponse.status(), `${route} tras recarga`).toBeLessThan(400);
+      await expect(page.locator('#sidebar .nav-item.active .menu-title')).toHaveText(activeLabel);
     }
     expect(failures).toEqual([]);
 
     const direct = await context.newPage();
-    const directResponse = await direct.goto(app('/src/notificaciones/index.php'));
-    expect(directResponse.status()).toBeLessThan(400);
-    await expect(direct.locator('#sidebar .nav-item.active .menu-title')).toHaveText('Notificaciones');
-    await expect(direct.locator('link[href*="src/docente/assets/css/style.css"]')).toHaveCount(1);
+    for (const [route, activeLabel] of routes) {
+      const separator = route.includes('?') ? '&' : '?';
+      const routeWithParameter = `${route}${separator}prueba_layout=1`;
+      const directResponse = await direct.goto(app(routeWithParameter), {waitUntil: 'domcontentloaded'});
+      expect(directResponse.status(), `${route} en pestaña nueva y con parámetros`).toBeLessThan(400);
+      await expect(direct.locator('#sidebar .nav-item.active .menu-title')).toHaveText(activeLabel);
+      await expect(direct.locator('link[href*="src/docente/assets/css/style.css"]')).toHaveCount(1);
+    }
     await direct.close();
   });
 
