@@ -1,6 +1,13 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/auth.php';
+require_once __DIR__.'/error_handler.php';
+
+function denegarAccesoDocente(string $motivo='Recurso académico fuera de la asignación del docente.'): never
+{
+    $id=registrarFalloGlobalAtenea($motivo,403);
+    mostrarPaginaErrorAtenea(403,$id);
+}
 
 function docenteSupervisadoAtenea(PDO $pdo): int
 {
@@ -16,7 +23,23 @@ function docentePuedeCurso(PDO $pdo,int $docenteId,int $asignaturaId): bool
 
 function exigirCursoDocente(PDO $pdo,int $docenteId,int $asignaturaId): void
 {
-    if(!docentePuedeCurso($pdo,$docenteId,$asignaturaId)){http_response_code(403);exit('No tienes acceso a este curso.');}
+    if(!docentePuedeCurso($pdo,$docenteId,$asignaturaId))denegarAccesoDocente('Intento de acceso a un curso no asignado.');
+}
+
+function exigirSeccionDocente(PDO $pdo,int $docenteId,int $seccionId): void
+{
+    if($docenteId<1||$seccionId<1)denegarAccesoDocente('Sección docente inválida.');
+    $q=$pdo->prepare("SELECT 1 FROM capacitacion_secciones s JOIN docentes_asignaturas da ON da.asignatura_id=s.asignatura_id AND da.docente_id=s.docente_id AND da.estado='activo' WHERE s.id=:s AND s.docente_id=:d AND s.estado IN('abierta','cerrada') LIMIT 1");
+    $q->execute(['s'=>$seccionId,'d'=>$docenteId]);
+    if(!$q->fetchColumn())denegarAccesoDocente('Intento de acceso a una sección no asignada.');
+}
+
+function exigirContenidoDocente(PDO $pdo,int $docenteId,int $contenidoId): void
+{
+    if($docenteId<1||$contenidoId<1)denegarAccesoDocente('Contenido docente inválido.');
+    $q=$pdo->prepare("SELECT 1 FROM contenidos c JOIN capacitacion_secciones s ON s.id=c.seccion_id AND s.docente_id=c.docente_id WHERE c.id=:c AND c.docente_id=:d LIMIT 1");
+    $q->execute(['c'=>$contenidoId,'d'=>$docenteId]);
+    if(!$q->fetchColumn())denegarAccesoDocente('Intento de acceso a contenido no asignado.');
 }
 
 function docentePuedeEstudiante(PDO $pdo,int $docenteId,int $estudianteId,?int $asignaturaId=null): bool

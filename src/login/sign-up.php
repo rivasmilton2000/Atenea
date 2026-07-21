@@ -73,6 +73,7 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
   </section>
 </div>
 <script src="<?= atenea_url('src/estudiantes/assets/js/core/libs.min.js') ?>"></script>
+<script src="<?= atenea_url('src/website/assets/js/security-ui.js') ?>"></script>
 <script>
 (() => {
   const endpoint = <?= json_encode(atenea_url('src/api/ubicaciones.php'), JSON_UNESCAPED_SLASHES) ?>;

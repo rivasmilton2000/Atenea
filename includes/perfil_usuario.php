@@ -57,7 +57,7 @@ function ubicacionValida(PDO $pdo, int $departamentoId, int $municipioId, int $d
 
 function datosPerfilCompletos(array $usuario): bool
 {
-    return fechaNacimientoValida(isset($usuario['fecha_nacimiento']) ? (string) $usuario['fecha_nacimiento'] : null)
+    $datosBasicos=fechaNacimientoValida(isset($usuario['fecha_nacimiento']) ? (string) $usuario['fecha_nacimiento'] : null)
         && normalizarDui(isset($usuario['dui']) ? (string) $usuario['dui'] : null) !== null
         && normalizarDui(isset($usuario['dui']) ? (string) $usuario['dui'] : null) !== ''
         && telefonoValido(
@@ -67,6 +67,8 @@ function datosPerfilCompletos(array $usuario): bool
         && (int) ($usuario['departamento_id'] ?? 0) > 0
         && (int) ($usuario['municipio_id'] ?? 0) > 0
         && (int) ($usuario['distrito_id'] ?? 0) > 0;
+    if(($usuario['perfil_estado']??'completo')!=='pendiente')return $datosBasicos;
+    return $datosBasicos&&trim((string)($usuario['nombre']??''))!==''&&trim((string)($usuario['apellido']??''))!==''&&trim((string)($usuario['direccion']??''))!==''&&!empty($usuario['terminos_aceptados_at']);
 }
 
 function obtenerPerfilUsuario(int $usuarioId): ?array
@@ -75,7 +77,7 @@ function obtenerPerfilUsuario(int $usuarioId): ?array
         'SELECT u.id,u.nombre,u.apellido,u.correo,u.password,u.rol,u.foto,u.proveedor,u.google_id,
                 u.email_verificado,u.fecha_nacimiento,u.dui,u.codigo_telefono,u.telefono,
                 u.departamento_id,u.municipio_id,u.distrito_id,u.direccion,u.estado,u.ultimo_acceso,
-                u.session_version,u.created_at,u.updated_at,d.nombre departamento,m.nombre municipio,
+                u.session_version,u.perfil_estado,u.terminos_aceptados_at,u.google_registro_iniciado_at,u.created_at,u.updated_at,d.nombre departamento,m.nombre municipio,
                 di.nombre distrito
          FROM usuarios u
          LEFT JOIN departamentos d ON d.id=u.departamento_id

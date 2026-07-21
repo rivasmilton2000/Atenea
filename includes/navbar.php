@@ -3,12 +3,13 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/contenido.php';
 require_once __DIR__ . '/carrito.php';
 require_once __DIR__ . '/notificaciones.php';
+require_once __DIR__ . '/personalizacion_visual.php';
 $usuarioNavbar = obtenerUsuarioActual();
 $cantidadNavbar = cantidadCarritoActualAtenea(obtenerConexion());
 $notificacionesNavbar = $usuarioNavbar ? notificacionesUsuarioResumen((int)$usuarioNavbar['id'],1) : ['no_leidas'=>0,'notificaciones'=>[]];
 $navItems = obtenerMenuSitio();
 $configuracionNavbar = $configuracionSitio ?? obtenerConfiguracionSitio();
-$logoNavbar = $configuracionNavbar['logo'] ?? 'img/atenea-logo.png';
+$logoNavbar = obtenerPersonalizacionVisualAtenea('website')['logo'] ?: ($configuracionNavbar['logo'] ?? 'img/atenea-logo.png');
 $paginaPorUrlNavbar = ['index.php'=>'inicio','src/website/about.php'=>'nosotros','src/website/courses.php'=>'capacitaciones','src/website/trainers.php'=>'docentes','src/website/events.php'=>'eventos','src/website/pricing.php'=>'productos','src/website/noticias.php'=>'noticias','src/website/contact.php'=>'contacto'];
 $itemActivoNavbar = static function(array $item) use (&$itemActivoNavbar, $paginaPorUrlNavbar, $activePage): bool {
     if (($paginaPorUrlNavbar[$item['url'] ?? ''] ?? '') === $activePage) return true;
@@ -46,8 +47,8 @@ $renderMenuNavbar = static function(array $items) use (&$renderMenuNavbar, $item
       <a class="btn position-relative me-2" href="<?=atenea_url('src/notificaciones/index.php')?>" aria-label="Notificaciones"><i class="bi bi-bell fs-5" aria-hidden="true"></i><span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" data-atenea-notification-count <?=$notificacionesNavbar['no_leidas']?'':'hidden'?>><?=(int)$notificacionesNavbar['no_leidas']?></span></a>
       <div class="dropdown atenea-user-menu">
         <button class="btn atenea-user-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <img src="<?= atenea_e(urlAvatarAtenea($usuarioNavbar)) ?>" alt="Foto de <?= atenea_e((string) $usuarioNavbar['nombre']) ?>">
-          <span class="atenea-user-name"><?= atenea_e((string) $usuarioNavbar['nombre']) ?></span>
+          <img src="<?= atenea_e(urlAvatarAtenea($usuarioNavbar)) ?>" data-atenea-current-avatar alt="Foto de <?= atenea_e((string) $usuarioNavbar['nombre']) ?>">
+          <span class="atenea-user-name" data-atenea-current-name><?= atenea_e(trim((string)$usuarioNavbar['nombre'].' '.(string)($usuarioNavbar['apellido']??''))) ?></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="bi bi-person me-2"></i>Mi perfil</button></li>

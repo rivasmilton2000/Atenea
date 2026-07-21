@@ -66,8 +66,8 @@ try {
         $nombreUsuario = generarNombreUsuarioDisponible($pdo, $correo, $nombre . '.' . $apellido);
         $consulta = $pdo->prepare(
             "INSERT INTO usuarios
-             (nombre,apellido,nombre_usuario,correo,password,rol,estado,proveedor,email_verificado,fecha_nacimiento,dui,codigo_telefono,telefono,departamento_id,municipio_id,distrito_id,direccion,created_at,updated_at)
-             VALUES(:nombre,:apellido,:nombre_usuario,:correo,:password,'usuario','activo','local',0,:fecha,:dui,:codigo,:telefono,:departamento,:municipio,:distrito,:direccion,NOW(),NOW())"
+             (nombre,apellido,nombre_usuario,correo,password,rol,estado,proveedor,email_verificado,perfil_estado,terminos_aceptados_at,fecha_nacimiento,dui,codigo_telefono,telefono,departamento_id,municipio_id,distrito_id,direccion,created_at,updated_at)
+             VALUES(:nombre,:apellido,:nombre_usuario,:correo,:password,'usuario','activo','local',0,'completo',NOW(),:fecha,:dui,:codigo,:telefono,:departamento,:municipio,:distrito,:direccion,NOW(),NOW())"
         );
         $consulta->execute([
             'nombre' => $nombre, 'apellido' => $apellido, 'nombre_usuario' => $nombreUsuario, 'correo' => $correo,
@@ -85,6 +85,7 @@ try {
             'fecha_nacimiento' => $fechaNacimiento, 'dui' => $dui,
             'codigo_telefono' => $codigoTelefono, 'telefono' => $telefono,
             'departamento_id' => $departamentoId, 'municipio_id' => $municipioId, 'distrito_id' => $distritoId,
+            'perfil_estado'=>'completo','terminos_aceptados_at'=>date('Y-m-d H:i:s'),'direccion'=>$direccion,
         ]);
         try {
             sincronizarCarritoInvitadoAtenea($pdo, $usuarioId);

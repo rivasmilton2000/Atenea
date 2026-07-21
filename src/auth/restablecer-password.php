@@ -37,6 +37,7 @@ try {
 
     $actualizar = $pdo->prepare("UPDATE usuarios SET password=:password,proveedor=IF(google_id IS NULL,'local','mixto'),session_version=session_version+1,last_activity_at=NOW() WHERE id=:id");
     $actualizar->execute(['password' => password_hash($password, PASSWORD_DEFAULT), 'id' => (int) $usuario['user_id']]);
+    revocarTokensRecuerdoUsuarioAtenea($pdo,(int)$usuario['user_id']);
     $pdo->prepare('UPDATE password_reset_tokens SET used_at=NOW() WHERE user_id=:usuario AND used_at IS NULL')->execute(['usuario' => (int) $usuario['user_id']]);
     if(!registrarAuditoria(['target_user_id'=>(int)$usuario['user_id'],'event_type'=>'password.reset_completed','module'=>'security','entity_type'=>'user','entity_id'=>$usuario['user_id'],'action'=>'reset_password','result'=>'success','description'=>'El usuario restablecio su contrasena y se invalidaron las sesiones anteriores.'],$pdo))throw new RuntimeException('No fue posible registrar el cambio.');
     $pdo->commit();

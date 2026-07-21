@@ -4,8 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
 /**
- * Permisos administrativos disponibles. El esquema actual no contiene SuperAdmin;
- * por ello el rol admin recibe los permisos sensibles y se protege al ultimo admin.
+ * Permisos administrativos disponibles. Las acciones especialmente sensibles
+ * vuelven a comprobar la marca es_superadmin además del rol administrativo.
  */
 function permisosPorRolAtenea(string $rol): array
 {
@@ -29,6 +29,10 @@ function permisosPorRolAtenea(string $rol): array
             'communications.reply',
             'mail.manage',
             'system_errors.manage',
+            'appearance.manage',
+            'backups.view',
+            'backups.manage',
+            'backups.restore',
             'dte.manage',
             'academic.supervise',
             'academic.courses.view',
@@ -56,7 +60,7 @@ function usuarioTienePermiso(string $permiso, ?array $usuario = null): bool
 {
     $usuario ??= obtenerUsuarioActual();
     if ($usuario === null || !in_array($permiso, permisosPorRolAtenea((string) ($usuario['rol'] ?? '')), true)) return false;
-    if ($permiso !== 'users.delete_admin') return true;
+    if (!in_array($permiso, ['users.delete_admin','backups.restore'], true)) return true;
     $consulta = obtenerConexion()->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol='admin' AND es_superadmin=1 AND estado='activo' AND deleted_at IS NULL");
     $consulta->execute(['id'=>(int)$usuario['id']]);
     return (bool)$consulta->fetchColumn();

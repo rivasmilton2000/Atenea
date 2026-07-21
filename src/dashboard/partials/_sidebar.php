@@ -9,7 +9,7 @@ $dashboardActive = trim((string) ($dashboardActive ?? $detectedRoute), '/');
 if ($dashboardActive === '' || $dashboardActive === 'index.php') $dashboardActive = 'panel';
 
 $inicioAbierto = in_array($dashboardActive, ['secciones/index.php', 'secciones/editar.php', 'elementos/index.php', 'elementos/editar.php', 'hero'], true);
-$configAbierta = in_array($dashboardActive, ['configuracion/index.php', 'navbar/index.php', 'navbar/editar.php'], true);
+$configAbierta = in_array($dashboardActive, ['configuracion/index.php', 'configuracion/dte.php', 'navbar/index.php', 'navbar/editar.php', 'backups/index.php'], true) || str_starts_with($dashboardActive, 'personalizacion/');
 $portalAbierto = str_starts_with($dashboardActive, 'portal-estudiante');
 $comercioAbierto = str_starts_with($dashboardActive, 'productos/') || str_starts_with($dashboardActive, 'categorias/') || str_starts_with($dashboardActive, 'pedidos/') || str_starts_with($dashboardActive, 'facturas/');
 $operacionesAbiertas = str_starts_with($dashboardActive,'notificaciones/') || str_starts_with($dashboardActive,'comunicaciones/') || str_starts_with($dashboardActive,'errores/');
@@ -41,6 +41,8 @@ $rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'a
         <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'configuracion/index.php' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/configuracion/index.php') ?>">Configuración general</a></li>
         <li class="nav-item"><a class="nav-link <?= $dashboardActive === 'configuracion/dte.php' ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/configuracion/dte.php') ?>">Configuración DTE</a></li>
         <li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive, 'navbar/') ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/navbar/index.php') ?>">Barra y menú</a></li>
+        <li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive, 'personalizacion/') ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/personalizacion/index.php') ?>">Editor visual</a></li>
+        <li class="nav-item"><a class="nav-link <?= str_starts_with($dashboardActive, 'backups/') ? 'active' : '' ?>" href="<?= atenea_url('src/dashboard/backups/index.php') ?>">Copias de seguridad</a></li>
       </ul></div>
     </li>
     <li class="nav-item <?= $portalAbierto ? 'active' : '' ?>">

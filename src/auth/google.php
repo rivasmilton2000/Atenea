@@ -27,6 +27,7 @@ if ($accion === 'vincular' && !usuarioAutenticado()) {
     volverDesdeGoogle('Inicia sesión antes de vincular una cuenta de Google.');
 }
 if (in_array($accion, ['login', 'registro'], true) && usuarioAutenticado()) redirigirPorRol();
+if(!googleIntentosPermitidosAtenea())volverDesdeGoogle('Se registraron demasiados intentos con Google. Espera unos minutos antes de continuar.',$accion==='registro'?'src/login/sign-up.php':'src/login/sign-in.php');
 
 $configuracion = obtenerConfiguracionGoogle();
 if (!googleDisponible($configuracion)) {

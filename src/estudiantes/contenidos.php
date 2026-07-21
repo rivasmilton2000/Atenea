@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);require_once dirname(__DIR__,2).'/includes/portal_estudiante_layout.php';require_once dirname(__DIR__,2).'/includes/portal_estudiante_aula.php';$portal=portalEstudianteCabecera('Contenidos','contenidos','Materiales publicados para tus secciones activas.');$contenidos=aulaContenidosEstudiante(obtenerConexion(),(int)$portal['perfil']['id'],['texto','documento','enlace','recurso_descargable'],200);renderizarListadoContenidosAula($contenidos,'Todavía no hay materiales publicados para tus clases.');portalEstudiantePie();

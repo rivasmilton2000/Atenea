@@ -49,83 +49,73 @@ function elementoAleatorioSeguro(array $ids): ?int
     return (int) $ids[random_int(0, count($ids) - 1)];
 }
 
+function registrarHistorialSeccionCapacitacion(PDO $pdo,int $seccionId,string $accion,?array $antes,?array $despues,?int $adminId=null,?string $motivo=null): void
+{
+    $permitidas=['creada','editada','abierta','cerrada','docente_cambiado','asignacion_automatica','asignacion_manual','estudiante_movido'];
+    if(!in_array($accion,$permitidas,true))throw new DomainException('La acción de historial no es válida.');
+    $q=$pdo->prepare('INSERT INTO capacitacion_seccion_historial(seccion_id,accion,datos_anteriores,datos_nuevos,motivo,realizado_por) VALUES(:seccion,:accion,:antes,:despues,:motivo,:admin)');
+    $q->execute(['seccion'=>$seccionId,'accion'=>$accion,'antes'=>$antes?json_encode($antes,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR):null,'despues'=>$despues?json_encode($despues,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR):null,'motivo'=>$motivo?mb_substr(trim($motivo),0,500):null,'admin'=>$adminId]);
+}
+
+function buscarSeccionDisponibleCapacitacion(PDO $pdo,int $asignaturaId): ?array
+{
+    $q=$pdo->prepare("SELECT s.* FROM capacitacion_secciones s JOIN usuarios u ON u.id=s.docente_id AND u.rol='docente' AND u.estado='activo' AND u.deleted_at IS NULL JOIN docentes_asignaturas da ON da.docente_id=s.docente_id AND da.asignatura_id=s.asignatura_id AND da.estado='activo' WHERE s.asignatura_id=:a AND s.estado='abierta' AND s.cantidad_actual<s.capacidad_maxima ORDER BY (s.cantidad_actual/NULLIF(s.capacidad_maxima,0)),COALESCE(s.fecha_inicio,'9999-12-31'),s.id FOR UPDATE");
+    $q->execute(['a'=>$asignaturaId]);return$q->fetch()?:null;
+}
+
+function encolarCorreoAsignacionCapacitacion(PDO $pdo,int $inscripcionId): bool
+{
+    $q=$pdo->prepare("SELECT i.id,u.id usuario_id,u.nombre,u.apellido,u.correo,a.nombre capacitacion,s.codigo,s.nombre seccion,s.horario,s.fecha_inicio,CONCAT_WS(' ',d.nombre,d.apellido) docente FROM inscripciones_capacitacion i JOIN usuarios u ON u.id=i.usuario_id JOIN asignaturas a ON a.id=i.asignatura_id JOIN capacitacion_secciones s ON s.id=i.seccion_id JOIN usuarios d ON d.id=i.docente_id WHERE i.id=:id AND i.estado IN('inscrito','finalizado')");$q->execute(['id'=>$inscripcionId]);$datos=$q->fetch();if(!$datos)return false;
+    try{enviarPlantillaCorreoAtenea('aviso_administrativo',(string)$datos['correo'],trim($datos['nombre'].' '.$datos['apellido']),['asunto'=>'Asignación académica completada · '.$datos['capacitacion'],'resumen'=>'Tu sección y docente ya fueron asignados.','mensaje'=>'Sección: '.$datos['seccion'].' ('.$datos['codigo'].'). Docente: '.$datos['docente'].'. Horario: '.($datos['horario']?:'por confirmar').'. Inicio: '.($datos['fecha_inicio']?date('d/m/Y',strtotime($datos['fecha_inicio'])):'por confirmar').'.','enlace'=>atenea_url_absoluta('src/estudiantes/clase.php'),'texto_boton'=>'Ver mi clase'],['usuario_id'=>(int)$datos['usuario_id'],'idempotency_key'=>'capacitacion-asignada:inscripcion:'.$inscripcionId]);return true;}catch(Throwable $e){error_log('Correo asignación '.$inscripcionId.': '.sanitizarErrorCorreoAtenea($e));return false;}
+}
+
+function notificarAsignacionCapacitacion(PDO $pdo,array $inscripcion,array $seccion,?int $actorId=null): void
+{
+    $q=$pdo->prepare('SELECT nombre FROM asignaturas WHERE id=:id');$q->execute(['id'=>$inscripcion['asignatura_id']]);$capacitacion=(string)$q->fetchColumn();
+    $q=$pdo->prepare('SELECT CONCAT_WS(\' \',nombre,apellido) FROM usuarios WHERE id=:id');$q->execute(['id'=>$seccion['docente_id']]);$docente=(string)$q->fetchColumn();
+    crearNotificacionAtenea(['usuario_id'=>(int)$inscripcion['usuario_id'],'created_by'=>$actorId,'tipo'=>'asignacion_completada','categoria'=>'capacitaciones','nivel'=>'exito','titulo'=>'Sección y docente asignados','descripcion'=>'Ya perteneces a '.$seccion['nombre'].' ('.$seccion['codigo'].') con '.$docente.'. Horario: '.($seccion['horario']?:'por confirmar').'.','url'=>atenea_url('src/estudiantes/clase.php'),'idempotency_key'=>'capacitacion:asignada:'.(int)$inscripcion['id']],$pdo);
+    encolarCorreoAsignacionCapacitacion($pdo,(int)$inscripcion['id']);
+}
+
+function asignarInscripcionPendiente(PDO $pdo,int $inscripcionId,?int $adminId=null,string $motivo='Asignación automática después del pago'): array
+{
+    $q=$pdo->prepare('SELECT * FROM inscripciones_capacitacion WHERE id=:id FOR UPDATE');$q->execute(['id'=>$inscripcionId]);$inscripcion=$q->fetch();if(!$inscripcion)throw new DomainException('La inscripción no existe.');
+    if($inscripcion['estado']!=='pendiente_asignacion')return['asignada'=>false,'estado'=>$inscripcion['estado'],'inscripcion'=>$inscripcion];
+    $seccion=buscarSeccionDisponibleCapacitacion($pdo,(int)$inscripcion['asignatura_id']);$pdo->prepare('UPDATE inscripciones_capacitacion SET ultimo_intento_asignacion_at=NOW() WHERE id=:id')->execute(['id'=>$inscripcionId]);
+    if(!$seccion){$q=$pdo->prepare('SELECT nombre FROM asignaturas WHERE id=:id');$q->execute(['id'=>$inscripcion['asignatura_id']]);$nombre=(string)$q->fetchColumn();crearNotificacionAtenea(['rol'=>'admin','tipo'=>'inscripcion_pendiente','categoria'=>'capacitaciones','nivel'=>'error','titulo'=>'Asignación académica pendiente','descripcion'=>'No existe una sección abierta con docente y cupo para '.$nombre.'.','url'=>atenea_url('src/dashboard/capacitaciones/inscripciones.php?estado=pendiente_asignacion&capacitacion_id='.(int)$inscripcion['asignatura_id']),'idempotency_key'=>'capacitacion:sin-cupo:'.$inscripcionId],$pdo);return['asignada'=>false,'estado'=>'pendiente_asignacion','inscripcion'=>$inscripcion];}
+    $q=$pdo->prepare('UPDATE capacitacion_secciones SET cantidad_actual=cantidad_actual+1 WHERE id=:id AND estado=\'abierta\' AND cantidad_actual<capacidad_maxima');$q->execute(['id'=>$seccion['id']]);if($q->rowCount()!==1)throw new RuntimeException('La sección seleccionada se quedó sin cupo.');
+    $metodo='automatica';$q=$pdo->prepare("UPDATE inscripciones_capacitacion SET seccion_id=:seccion,docente_id=:docente,estado='inscrito',asignado_por=:admin,metodo_asignacion=:metodo,assigned_at=NOW() WHERE id=:id AND estado='pendiente_asignacion'");$q->execute(['seccion'=>$seccion['id'],'docente'=>$seccion['docente_id'],'admin'=>$adminId,'metodo'=>$metodo,'id'=>$inscripcionId]);if($q->rowCount()!==1)throw new RuntimeException('La inscripción cambió mientras se procesaba.');
+    $pdo->prepare('INSERT INTO inscripcion_movimientos(inscripcion_id,seccion_origen_id,seccion_destino_id,docente_origen_id,docente_destino_id,motivo,realizado_por) VALUES(:i,NULL,:destino,NULL,:docente,:motivo,:admin)')->execute(['i'=>$inscripcionId,'destino'=>$seccion['id'],'docente'=>$seccion['docente_id'],'motivo'=>mb_substr(trim($motivo),0,500),'admin'=>$adminId]);
+    $pdo->prepare("INSERT INTO estudiantes_docentes(estudiante_id,docente_id,asignatura_id,estado,matriculado_por) VALUES(:e,:d,:a,'activo',:admin) ON DUPLICATE KEY UPDATE estado='activo',matriculado_por=VALUES(matriculado_por)")->execute(['e'=>$inscripcion['usuario_id'],'d'=>$seccion['docente_id'],'a'=>$inscripcion['asignatura_id'],'admin'=>$adminId]);
+    $inscripcion['seccion_id']=$seccion['id'];$inscripcion['docente_id']=$seccion['docente_id'];$inscripcion['estado']='inscrito';$inscripcion['metodo_asignacion']=$metodo;registrarHistorialSeccionCapacitacion($pdo,(int)$seccion['id'],'asignacion_automatica',null,['inscripcion_id'=>$inscripcionId,'usuario_id'=>$inscripcion['usuario_id']],$adminId,$motivo);notificarAsignacionCapacitacion($pdo,$inscripcion,$seccion,$adminId);
+    return['asignada'=>true,'estado'=>'inscrito','inscripcion'=>$inscripcion,'seccion'=>$seccion];
+}
+
 function asignarInscripcionAutomatica(PDO $pdo, int $pagoId): array
 {
-    $q = $pdo->prepare('SELECT cp.*,a.cupo_seccion,a.fecha_inicio,a.fecha_finalizacion,a.nombre FROM capacitacion_pagos cp INNER JOIN asignaturas a ON a.id=cp.asignatura_id WHERE cp.id=:id FOR UPDATE');
+    $q = $pdo->prepare('SELECT cp.*,a.nombre,a.asignacion_automatica FROM capacitacion_pagos cp INNER JOIN asignaturas a ON a.id=cp.asignatura_id WHERE cp.id=:id FOR UPDATE');
     $q->execute(['id' => $pagoId]);
     $pago = $q->fetch();
     if (!$pago || $pago['estado'] !== 'pagado') throw new RuntimeException('El pago académico no está confirmado.');
 
     $q = $pdo->prepare('SELECT * FROM inscripciones_capacitacion WHERE pago_id=:pago OR (usuario_id=:usuario AND asignatura_id=:asignatura) LIMIT 1 FOR UPDATE');
     $q->execute(['pago' => $pagoId, 'usuario' => $pago['usuario_id'], 'asignatura' => $pago['asignatura_id']]);
-    if ($existente = $q->fetch()) return $existente;
-
-    $pdo->prepare('SELECT id FROM asignaturas WHERE id=:id FOR UPDATE')->execute(['id' => $pago['asignatura_id']]);
-    $docentes = docentesElegiblesCapacitacion($pdo, (int) $pago['asignatura_id']);
-    $seccionId = null;
-    $docenteId = null;
-
-    if ($docentes) {
-        $marcas = implode(',', array_fill(0, count($docentes), '?'));
-        $q = $pdo->prepare("SELECT id,docente_id FROM capacitacion_secciones WHERE asignatura_id=? AND estado='abierta' AND cantidad_actual<capacidad_maxima AND capacidad_maxima<=30 AND docente_id IN($marcas) ORDER BY id FOR UPDATE");
-        $q->execute(array_merge([(int) $pago['asignatura_id']], $docentes));
-        $secciones = $q->fetchAll();
-        if ($secciones) {
-            $elegida = $secciones[random_int(0, count($secciones) - 1)];
-            $seccionId = (int) $elegida['id'];
-            $docenteId = (int) $elegida['docente_id'];
-        } else {
-            $docenteId = elementoAleatorioSeguro($docentes);
-            $q = $pdo->prepare('SELECT COUNT(*)+1 FROM capacitacion_secciones WHERE asignatura_id=:a');
-            $q->execute(['a' => $pago['asignatura_id']]);
-            $numero = (int) $q->fetchColumn();
-            $codigo = 'CAP-' . (int) $pago['asignatura_id'] . '-S' . str_pad((string) $numero, 2, '0', STR_PAD_LEFT);
-            $q = $pdo->prepare("INSERT INTO capacitacion_secciones(asignatura_id,docente_id,codigo,nombre,fecha_inicio,fecha_finalizacion,capacidad_maxima,estado) VALUES(:a,:d,:codigo,:nombre,:inicio,:fin,:cupo,'abierta')");
-            $q->execute(['a' => $pago['asignatura_id'], 'd' => $docenteId, 'codigo' => $codigo, 'nombre' => 'Sección ' . $numero, 'inicio' => $pago['fecha_inicio'], 'fin' => $pago['fecha_finalizacion'], 'cupo' => min(30, max(1, (int) $pago['cupo_seccion']))]);
-            $seccionId = (int) $pdo->lastInsertId();
-        }
-    }
-
-    $estado = $seccionId ? 'inscrito' : 'pendiente_asignacion';
-    $q = $pdo->prepare('INSERT INTO inscripciones_capacitacion(usuario_id,asignatura_id,pago_id,seccion_id,docente_id,estado,assigned_at) VALUES(:u,:a,:p,:s,:d,:estado,:fecha)');
-    $q->execute(['u' => $pago['usuario_id'], 'a' => $pago['asignatura_id'], 'p' => $pagoId, 's' => $seccionId, 'd' => $docenteId, 'estado' => $estado, 'fecha' => $seccionId ? date('Y-m-d H:i:s') : null]);
-    $inscripcionId = (int) $pdo->lastInsertId();
-
-    if ($seccionId && $docenteId) {
-        $q = $pdo->prepare('UPDATE capacitacion_secciones SET cantidad_actual=cantidad_actual+1 WHERE id=:id AND cantidad_actual<capacidad_maxima AND capacidad_maxima<=30');
-        $q->execute(['id' => $seccionId]);
-        if ($q->rowCount() !== 1) throw new RuntimeException('La sección seleccionada se quedó sin cupo.');
-        $pdo->prepare("INSERT INTO estudiantes_docentes(estudiante_id,docente_id,asignatura_id,estado) VALUES(:e,:d,:a,'activo') ON DUPLICATE KEY UPDATE estado='activo'")
-            ->execute(['e' => $pago['usuario_id'], 'd' => $docenteId, 'a' => $pago['asignatura_id']]);
-    }
-
-    crearNotificacionAtenea(['usuario_id' => (int) $pago['usuario_id'], 'tipo' => 'inscripcion_confirmada', 'categoria' => 'capacitaciones', 'nivel' => $seccionId ? 'exito' : 'advertencia', 'titulo' => $seccionId ? 'Inscripción confirmada' : 'Pago confirmado, asignación pendiente', 'descripcion' => $seccionId ? 'Ya estás inscrito en ' . $pago['nombre'] . '.' : 'Tu pago está confirmado. Atenea asignará docente y sección en cuanto exista disponibilidad.', 'url' => atenea_url('src/estudiantes/cursos.php'), 'idempotency_key' => 'capacitacion:inscripcion:' . $inscripcionId], $pdo);
-    crearNotificacionAtenea(['rol' => 'admin', 'tipo' => $seccionId ? 'inscripcion_nueva' : 'inscripcion_pendiente', 'categoria' => 'capacitaciones', 'nivel' => $seccionId ? 'informacion' : 'error', 'titulo' => $seccionId ? 'Nueva inscripción' : 'Inscripción sin docente disponible', 'descripcion' => $seccionId ? 'Se creó una inscripción automática en ' . $pago['nombre'] . '.' : 'El pago fue confirmado, pero la inscripción requiere asignación manual.', 'url' => atenea_url('src/dashboard/capacitaciones/inscripciones.php?capacitacion_id=' . (int) $pago['asignatura_id']), 'idempotency_key' => 'capacitacion:admin:' . $inscripcionId], $pdo);
-
-    $q = $pdo->prepare('SELECT * FROM inscripciones_capacitacion WHERE id=:id');
-    $q->execute(['id' => $inscripcionId]);
-    return $q->fetch();
+    $existente=$q->fetch();
+    if($existente){if($existente['estado']==='pendiente_asignacion'&&(int)$pago['asignacion_automatica']===1){$resultado=asignarInscripcionPendiente($pdo,(int)$existente['id']);return$resultado['inscripcion'];}return$existente;}
+    $q=$pdo->prepare("INSERT INTO inscripciones_capacitacion(usuario_id,asignatura_id,pago_id,estado,asignacion_limite_at) VALUES(:u,:a,:p,'pendiente_asignacion',DATE_ADD(NOW(),INTERVAL 3 DAY))");
+    $q->execute(['u'=>$pago['usuario_id'],'a'=>$pago['asignatura_id'],'p'=>$pagoId]);$inscripcionId=(int)$pdo->lastInsertId();
+    crearNotificacionAtenea(['usuario_id'=>(int)$pago['usuario_id'],'tipo'=>'pago_academico_confirmado','categoria'=>'capacitaciones','nivel'=>'informacion','titulo'=>'Pago confirmado, asignación en proceso','descripcion'=>'Recibimos tu pago de '.$pago['nombre'].'. La asignación de sección y docente puede tardar hasta 3 días.','url'=>atenea_url('src/estudiantes/cursos.php'),'idempotency_key'=>'capacitacion:pago-confirmado:'.$inscripcionId],$pdo);
+    $resultado=(int)$pago['asignacion_automatica']===1?asignarInscripcionPendiente($pdo,$inscripcionId):['inscripcion'=>['id'=>$inscripcionId,'usuario_id'=>$pago['usuario_id'],'asignatura_id'=>$pago['asignatura_id'],'pago_id'=>$pagoId,'estado'=>'pendiente_asignacion']];
+    if((int)$pago['asignacion_automatica']!==1)crearNotificacionAtenea(['rol'=>'admin','tipo'=>'inscripcion_pendiente','categoria'=>'capacitaciones','nivel'=>'advertencia','titulo'=>'Asignación manual requerida','descripcion'=>'La asignación automática está desactivada para '.$pago['nombre'].'.','url'=>atenea_url('src/dashboard/capacitaciones/inscripciones.php?estado=pendiente_asignacion&capacitacion_id='.(int)$pago['asignatura_id']),'idempotency_key'=>'capacitacion:manual-requerida:'.$inscripcionId],$pdo);
+    return$resultado['inscripcion'];
 }
 
 function enviarConfirmacionInscripcion(int $pagoId): bool
 {
-    $q = obtenerConexion()->prepare('SELECT cp.id pago_id,cp.importe,cp.moneda,u.id usuario_id,u.nombre,u.apellido,u.correo,a.nombre capacitacion,i.estado,s.codigo seccion FROM capacitacion_pagos cp INNER JOIN usuarios u ON u.id=cp.usuario_id INNER JOIN asignaturas a ON a.id=cp.asignatura_id INNER JOIN inscripciones_capacitacion i ON i.pago_id=cp.id LEFT JOIN capacitacion_secciones s ON s.id=i.seccion_id WHERE cp.id=:id AND cp.estado=\'pagado\'');
+    $pdo=obtenerConexion();$q = $pdo->prepare("SELECT i.id,i.estado FROM capacitacion_pagos cp INNER JOIN inscripciones_capacitacion i ON i.pago_id=cp.id WHERE cp.id=:id AND cp.estado='pagado'");
     $q->execute(['id' => $pagoId]);
     $datos = $q->fetch();
-    if (!$datos) return false;
-    try {
-        enviarPlantillaCorreoAtenea('aviso_administrativo', (string) $datos['correo'], trim($datos['nombre'] . ' ' . $datos['apellido']), [
-            'asunto' => 'Pago e inscripción confirmados · ' . $datos['capacitacion'],
-            'resumen' => 'Tu pago de capacitación fue confirmado por Stripe.',
-            'mensaje' => $datos['estado'] === 'inscrito' ? 'Tu pago fue confirmado y quedaste inscrito en la sección ' . $datos['seccion'] . '.' : 'Tu pago fue confirmado. La asignación de docente y sección está pendiente; no necesitas pagar nuevamente.',
-            'enlace' => atenea_url_absoluta('src/estudiantes/cursos.php'),
-            'texto_boton' => 'Ver mis capacitaciones',
-        ], ['usuario_id' => (int) $datos['usuario_id'], 'idempotency_key' => 'capacitacion-confirmada:pago:' . $pagoId]);
-        return true;
-    } catch (Throwable $e) {
-        error_log('Correo inscripción ' . $pagoId . ': ' . sanitizarErrorCorreoAtenea($e));
-        return false;
-    }
+    return $datos&&in_array($datos['estado'],['inscrito','finalizado'],true)?encolarCorreoAsignacionCapacitacion($pdo,(int)$datos['id']):false;
 }
 
 function errorTransitorioMysqlAtenea(Throwable $error): bool
@@ -224,13 +214,14 @@ function moverInscripcionCapacitacion(PDO $pdo, int $inscripcionId, int $seccion
         $pdo->prepare('SELECT id FROM capacitacion_secciones WHERE id=:id FOR UPDATE')->execute(['id' => $inscripcion['seccion_id']]);
         $pdo->prepare('UPDATE capacitacion_secciones SET cantidad_actual=GREATEST(cantidad_actual-1,0) WHERE id=:id')->execute(['id' => $inscripcion['seccion_id']]);
     }
-    $pdo->prepare('UPDATE capacitacion_secciones SET cantidad_actual=cantidad_actual+1 WHERE id=:id AND cantidad_actual<capacidad_maxima')->execute(['id' => $seccionDestinoId]);
-    $q = $pdo->prepare("UPDATE inscripciones_capacitacion SET seccion_id=:seccion,docente_id=:docente,estado='inscrito',asignado_por=:admin,assigned_at=NOW() WHERE id=:id");
+    $q=$pdo->prepare('UPDATE capacitacion_secciones SET cantidad_actual=cantidad_actual+1 WHERE id=:id AND cantidad_actual<capacidad_maxima');$q->execute(['id' => $seccionDestinoId]);if($q->rowCount()!==1)throw new DomainException('La sección de destino se quedó sin cupo.');
+    $q = $pdo->prepare("UPDATE inscripciones_capacitacion SET seccion_id=:seccion,docente_id=:docente,estado='inscrito',asignado_por=:admin,metodo_asignacion='manual',assigned_at=NOW() WHERE id=:id");
     $q->execute(['seccion' => $seccionDestinoId, 'docente' => $destino['docente_id'], 'admin' => $adminId, 'id' => $inscripcionId]);
-    $pdo->prepare('INSERT INTO inscripcion_movimientos(inscripcion_id,seccion_origen_id,seccion_destino_id,docente_origen_id,docente_destino_id,motivo,realizado_por) VALUES(:i,:origen,:destino,:docente_origen,:docente_destino,:motivo,:admin)')
-        ->execute(['i' => $inscripcionId, 'origen' => $inscripcion['seccion_id'], 'destino' => $seccionDestinoId, 'docente_origen' => $inscripcion['docente_id'], 'docente_destino' => $destino['docente_id'], 'motivo' => $motivo, 'admin' => $adminId]);
+    $q=$pdo->prepare('INSERT INTO inscripcion_movimientos(inscripcion_id,seccion_origen_id,seccion_destino_id,docente_origen_id,docente_destino_id,motivo,realizado_por) VALUES(:i,:origen,:destino,:docente_origen,:docente_destino,:motivo,:admin)');
+    $q->execute(['i' => $inscripcionId, 'origen' => $inscripcion['seccion_id'], 'destino' => $seccionDestinoId, 'docente_origen' => $inscripcion['docente_id'], 'docente_destino' => $destino['docente_id'], 'motivo' => $motivo, 'admin' => $adminId]);$movimientoId=(int)$pdo->lastInsertId();
     if ($inscripcion['docente_id']) $pdo->prepare("UPDATE estudiantes_docentes SET estado='retirado' WHERE estudiante_id=:e AND docente_id=:d AND asignatura_id=:a AND estado='activo'")->execute(['e' => $inscripcion['usuario_id'], 'd' => $inscripcion['docente_id'], 'a' => $inscripcion['asignatura_id']]);
     $pdo->prepare("INSERT INTO estudiantes_docentes(estudiante_id,docente_id,asignatura_id,estado,matriculado_por) VALUES(:e,:d,:a,'activo',:admin) ON DUPLICATE KEY UPDATE estado='activo',matriculado_por=VALUES(matriculado_por)")
         ->execute(['e' => $inscripcion['usuario_id'], 'd' => $destino['docente_id'], 'a' => $inscripcion['asignatura_id'], 'admin' => $adminId]);
-    crearNotificacionAtenea(['usuario_id' => (int) $inscripcion['usuario_id'], 'tipo' => 'seccion_actualizada', 'categoria' => 'capacitaciones', 'nivel' => 'informacion', 'titulo' => 'Tu sección fue actualizada', 'descripcion' => 'Administración actualizó tu sección académica. Tu progreso y notas se conservaron.', 'url' => atenea_url('src/estudiantes/cursos.php'), 'idempotency_key' => 'capacitacion:movimiento:' . $inscripcionId . ':' . $seccionDestinoId . ':' . time()], $pdo);
+    registrarHistorialSeccionCapacitacion($pdo,$seccionDestinoId,$inscripcion['seccion_id']?'estudiante_movido':'asignacion_manual',['seccion_id'=>$inscripcion['seccion_id'],'docente_id'=>$inscripcion['docente_id']],['inscripcion_id'=>$inscripcionId,'seccion_id'=>$seccionDestinoId,'docente_id'=>$destino['docente_id']],$adminId,$motivo);
+    if($inscripcion['estado']==='pendiente_asignacion'){$inscripcion['estado']='inscrito';notificarAsignacionCapacitacion($pdo,$inscripcion,$destino,$adminId);}else crearNotificacionAtenea(['usuario_id' => (int) $inscripcion['usuario_id'], 'created_by'=>$adminId,'tipo' => 'seccion_actualizada', 'categoria' => 'capacitaciones', 'nivel' => 'informacion', 'titulo' => 'Tu sección fue actualizada', 'descripcion' => 'Administración actualizó tu sección académica. Tu progreso y notas se conservaron.', 'url' => atenea_url('src/estudiantes/clase.php'), 'idempotency_key' => 'capacitacion:movimiento:' . $movimientoId], $pdo);
 }

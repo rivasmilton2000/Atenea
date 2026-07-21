@@ -50,6 +50,10 @@ function ateneaNormalizarAlerta(?array $flash): ?array
 
 function ateneaAlertasHead(): void
 {
+    require_once __DIR__ . '/personalizacion_visual.php';
+    $ruta = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    $area = str_contains($ruta, '/src/dashboard/') ? 'dashboard' : (str_contains($ruta, '/src/estudiantes/') ? 'estudiantes' : (str_contains($ruta, '/src/docente/') ? 'docente' : 'website'));
+    renderizarPersonalizacionVisualAtenea($area);
     ?>
   <!-- SweetAlert2 se centraliza aquí para evitar cargas duplicadas y facilitar su reemplazo por archivos locales. -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">

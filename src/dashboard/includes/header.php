@@ -1,9 +1,10 @@
 <?php
 require_once __DIR__ . '/cms.php';
 require_once dirname(__DIR__, 3) . '/includes/alerts.php';
+require_once dirname(__DIR__, 3) . '/includes/personalizacion_visual.php';
 $dashboardTitle ??= 'Panel principal';
 $configuracionAdmin ??= obtenerConfiguracionSitio();
-$logoAdmin = $configuracionAdmin['logo'] ?? 'img/atenea-logo.png';
+$logoAdmin = obtenerPersonalizacionVisualAtenea('dashboard')['logo'] ?: ($configuracionAdmin['logo'] ?? 'img/atenea-logo.png');
 $faviconAdmin = $configuracionAdmin['favicon'] ?? 'img/atenea-logo.png';
 ?>
 <!DOCTYPE html>
@@ -22,6 +23,8 @@ $faviconAdmin = $configuracionAdmin['favicon'] ?? 'img/atenea-logo.png';
   <link rel="stylesheet" href="<?= atenea_url('src/dashboard/assets/css/style.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/dashboard/assets/css/atenea-branding.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/website/assets/css/security-ui.css') ?>">
+  <?php renderizarPersonalizacionVisualAtenea('dashboard'); ?>
   <?php ateneaAlertasHead(); ?>
   <link rel="icon" type="image/png" href="<?= rutaImagenContenido($faviconAdmin, 'img/atenea-logo.png') ?>">
 </head>

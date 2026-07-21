@@ -34,12 +34,12 @@ if (!is_array($datosEstado)
     || (int) ($datosEstado['expira'] ?? 0) < time()
     || !is_string($datosEstado['nonce'] ?? null)
     || !is_string($datosEstado['code_verifier'] ?? null)) {
-    registrarAuditoria(['event_type'=>'auth.google_state_failed','module'=>'auth','action'=>'google_callback','result'=>'blocked','description'=>'Se bloqueo un callback de Google por state invalido o vencido.']);
+    registrarIntentoGoogleFallidoAtenea(['event_type'=>'auth.google_state_failed','module'=>'auth','action'=>'google_callback','result'=>'blocked','description'=>'Se bloqueó un callback de Google por estado inválido o vencido.']);
     falloCallbackGoogle('La verificación de seguridad de Google expiró o no es válida.', $accion);
 }
 if (isset($_GET['error'])) {
     $errorGoogle = (string) $_GET['error'];
-    registrarAuditoria([
+    registrarIntentoGoogleFallidoAtenea([
         'actor_user_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,
         'event_type'=>$errorGoogle === 'access_denied' ? 'auth.google_access_denied' : 'auth.google_failed',
         'module'=>'auth','action'=>'google_callback','result'=>'failure',
@@ -70,17 +70,30 @@ try {
         header('Location: ' . $retornoVinculacion);
         exit;
     }
-    $usuario = autenticarConPerfilGoogle($perfil);
+    $usuario = autenticarConPerfilGoogle($perfil,$accion);
+    unset($_SESSION['google_intentos_fallidos']);
     iniciarSesionUsuario($usuario);
     if ((string)$usuario['rol'] === 'usuario') try {
         sincronizarCarritoInvitadoAtenea(obtenerConexion(), (int)$usuario['id']);
     } catch (Throwable $syncError) {
         error_log('Sincronización de carrito Atenea: ' . $syncError->getMessage());
     }
-    redirigirPorRol((string) $usuario['rol']);
+    if($accion==='registro')header('Location: '.atenea_url('src/estudiantes/perfil.php?completar=1'));else redirigirPorRol((string) $usuario['rol']);
+    exit;
+} catch (GoogleCuentaNoVinculadaException|GoogleCuentaRequiereVinculacionException $e) {
+    $_SESSION['google_vinculacion_pendiente']=['google_id'=>$perfil['google_id']??'','correo'=>$perfil['correo']??'','expira'=>time()+600];
+    $_SESSION['google_opciones_vinculacion']=true;
+    registrarIntentoGoogleFallidoAtenea(['event_type'=>'auth.google_unlinked','module'=>'auth','action'=>'google_callback','result'=>'failure','description'=>'Se intentó acceder con una identidad de Google no vinculada.']);
+    falloCallbackGoogle('No existe una cuenta vinculada con esta identidad de Google. Puedes registrarte con Google o iniciar sesión con tu contraseña para vincularla.','login');
+} catch (GoogleCuentaYaVinculadaException $e) {
+    registrarIntentoGoogleFallidoAtenea(['event_type'=>'auth.google_registration_existing','module'=>'auth','action'=>'google_callback','result'=>'failure','description'=>'Se intentó registrar una identidad de Google ya vinculada.']);
+    falloCallbackGoogle('Esta identidad de Google ya está vinculada. Utiliza la opción de iniciar sesión con Google.','login');
+} catch (GoogleRegistroBloqueadoException $e) {
+    registrarIntentoGoogleFallidoAtenea(['event_type'=>'auth.google_registration_blocked','module'=>'auth','action'=>'google_callback','result'=>'blocked','description'=>'Se bloqueó un registro con Google durante el periodo de conservación.']);
+    falloCallbackGoogle('No es posible registrar una cuenta con estos datos en este momento.','registro');
 } catch (Throwable $e) {
     error_log('OAuth Google Atenea: ' . $e->getMessage());
-    registrarAuditoria([
+    registrarIntentoGoogleFallidoAtenea([
         'actor_user_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,
         'event_type'=>'auth.google_failed','module'=>'auth','action'=>'google_callback','result'=>'failure',
         'description'=>'No fue posible validar una autenticacion con Google.',

@@ -32,7 +32,7 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
   <div class="navbar-menu-wrapper d-flex align-items-top">
     <ul class="navbar-nav">
       <li class="nav-item fw-semibold d-none d-lg-block ms-0">
-        <h1 class="welcome-text"><?= $saludoAdmin ?>, <span class="text-black fw-bold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></span></h1>
+        <h1 class="welcome-text"><?= $saludoAdmin ?>, <span class="text-black fw-bold" data-atenea-current-name><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></span></h1>
         <h3 class="welcome-sub-text">Resumen de la actividad de Atenea esta semana </h3>
       </li>
     </ul>
@@ -114,7 +114,7 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
       </li>
       <li class="nav-item d-none d-lg-block">
         <button type="button" id="adminProfileTrigger" class="admin-profile-trigger" data-bs-toggle="modal" data-bs-target="#adminProfileModal" aria-label="Abrir mi perfil">
-          <img class="admin-navbar-avatar" src="<?= atenea_e($fotoAdmin) ?>" alt="Fotografía del administrador">
+          <img class="admin-navbar-avatar" src="<?= atenea_e($fotoAdmin) ?>" data-atenea-current-avatar alt="Fotografía del administrador">
         </button>
       </li>
       <li class="nav-item dropdown d-none d-lg-block user-dropdown">
@@ -123,7 +123,7 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
         </button>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="adminUserMenuToggle">
           <div class="dropdown-header text-center">
-            <p class="mb-1 fw-semibold"><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></p>
+            <p class="mb-1 fw-semibold" data-atenea-current-name><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></p>
             <p class="fw-light text-muted mb-0"><?= atenea_e($correoAdmin) ?></p>
           </div>
           <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#adminProfileModal"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>

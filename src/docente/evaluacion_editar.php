@@ -10,8 +10,7 @@ $consulta = $pdo->prepare('SELECT e.*,a.nombre asignatura FROM evaluaciones e JO
 $consulta->execute(['id' => $id, 'docente' => $docenteId]);
 $evaluacion = $consulta->fetch();
 if (!$evaluacion || !docentePuedeCurso($pdo, $docenteId, (int) $evaluacion['asignatura_id'])) {
-    http_response_code(403);
-    exit('No tienes acceso a esta evaluación.');
+    denegarAccesoDocente('Intento de acceso a una evaluación no asignada.');
 }
 
 docenteCabecera('Editar evaluación', 'evaluaciones', 'Actualiza una evaluación de tu curso.');

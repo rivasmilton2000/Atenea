@@ -3,7 +3,7 @@
     <div class="row gy-4">
       <div class="col-lg-4 col-md-6 footer-about">
         <a href="<?= atenea_url('index.php') ?>" class="logo footer-logo d-flex align-items-center">
-          <img src="<?= rutaImagenContenido($configuracionSitio['logo'] ?? 'img/atenea-logo.png', 'img/atenea-logo.png') ?>" alt="<?= atenea_e($configuracionSitio['nombre_sitio'] ?? 'Atenea Escuela de Naturopatía Holística') ?>">
+          <img src="<?= logoPersonalizacionVisualAtenea('website', $configuracionSitio['logo'] ?? 'img/atenea-logo.png') ?>" alt="<?= atenea_e($configuracionSitio['nombre_sitio'] ?? 'Atenea Escuela de Naturopatía Holística') ?>">
         </a>
         <div class="footer-contact pt-3">
           <p><?= atenea_e($configuracionSitio['direccion'] ?? 'El Salvador') ?></p>
@@ -60,6 +60,7 @@
 <?php
 require_once __DIR__ . '/perfil_modal.php';
 renderizarModalPerfil('website');
+renderizarControlSesionAtenea();
 ?>
 
 <button type="button" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center border-0" aria-label="Volver arriba"><i class="bi bi-arrow-up-short"></i></button>
@@ -73,6 +74,7 @@ renderizarModalPerfil('website');
 <script src="<?= atenea_url('src/website/assets/vendor/swiper/swiper-bundle.min.js') ?>"></script>
 <script src="<?= atenea_url('src/website/assets/js/main.js') ?>"></script>
 <script src="<?= atenea_url('src/website/assets/js/perfil-modal.js') ?>"></script>
+<script src="<?= atenea_url('src/website/assets/js/security-ui.js') ?>"></script>
 <?php ateneaAlertasScripts(); ?>
 </body>
 </html>

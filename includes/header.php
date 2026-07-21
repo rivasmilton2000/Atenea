@@ -2,6 +2,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/contenido.php';
 require_once __DIR__ . '/alerts.php';
+require_once __DIR__ . '/personalizacion_visual.php';
 
 $pageTitle = $pageTitle ?? 'Atenea Escuela de Naturopatía Holística';
 $pageDescription = $pageDescription ?? 'Capacitaciones y certificaciones en naturopatía y bienestar holístico.';
@@ -32,8 +33,11 @@ $faviconSitio = $configuracionSitio['favicon'] ?? 'img/atenea-logo.png';
   <link href="<?= atenea_url('src/website/assets/vendor/swiper/swiper-bundle.min.css') ?>" rel="stylesheet">
   <link href="<?= atenea_url('src/website/assets/css/main.css') ?>" rel="stylesheet">
   <link href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>" rel="stylesheet">
+  <link href="<?= atenea_url('src/website/assets/css/security-ui.css') ?>" rel="stylesheet">
   <?php if ($pageClass === 'cart-page'): ?><link href="<?= atenea_url('src/website/assets/css/cart.css') ?>" rel="stylesheet"><?php endif; ?>
   <?php if ($pageClass === 'dynamic-section-page'): ?><link href="<?= atenea_url('src/website/assets/css/dynamic-section.css') ?>" rel="stylesheet"><?php endif; ?>
+  <?php if ($pageClass === 'contact-page'): ?><link href="<?= atenea_url('src/website/assets/css/contact-modern.css') ?>" rel="stylesheet"><?php endif; ?>
+  <?php renderizarPersonalizacionVisualAtenea('website'); ?>
   <?php ateneaAlertasHead(); ?>
 </head>
 <body class="<?= atenea_e($pageClass) ?>">

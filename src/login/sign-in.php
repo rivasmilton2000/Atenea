@@ -5,13 +5,18 @@ require_once dirname(__DIR__, 2) . '/includes/google_oauth.php';
 require_once dirname(__DIR__, 2) . '/includes/portal_estudiante.php';
 require_once dirname(__DIR__, 2) . '/includes/alerts.php';
 
+if(isset($_GET['retorno'])&&urlRetornoInternaSegura((string)$_GET['retorno']))$_SESSION['url_retorno']=mb_substr((string)$_GET['retorno'],0,500);
+if(($_GET['motivo']??'')==='inactividad'&&empty($_SESSION['mensaje_auth'])){$_SESSION['mensaje_auth']='Tu sesión se cerró después de 10 minutos sin actividad.';$_SESSION['mensaje_auth_tipo']='warning';}
+if(($_GET['motivo']??'')==='cuenta_eliminada'&&empty($_SESSION['mensaje_auth'])){$_SESSION['mensaje_auth']='Tu cuenta quedó bloqueada y programada para eliminación. No podrás acceder ni registrar el mismo correo durante 60 días.';$_SESSION['mensaje_auth_tipo']='warning';}
 if (usuarioAutenticado()) redirigirPorRol();
 $mensaje = (string) ($_SESSION['mensaje_auth'] ?? '');
 $tipoMensaje = match ($_SESSION['mensaje_auth_tipo'] ?? 'danger') {
     'success' => 'success', 'info' => 'info', 'warning' => 'warning', default => 'danger',
 };
 $correo = (string) ($_SESSION['login_correo'] ?? '');
+$opcionesGoogle=!empty($_SESSION['google_opciones_vinculacion']);
 unset($_SESSION['mensaje_auth'], $_SESSION['mensaje_auth_tipo'], $_SESSION['login_correo']);
+unset($_SESSION['google_opciones_vinculacion']);
 $google = obtenerConfiguracionGoogle();
 $googleDisponible = googleDisponible($google);
 $diagnosticoGoogle = diagnosticoGoogle($google);
@@ -42,6 +47,7 @@ $logo = atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo'));
             <h1 class="h2 mb-2 text-center"><?= atenea_e(obtenerConfiguracionPortalEstudiante('login_titulo')) ?></h1>
             <p class="text-center"><?= atenea_e(obtenerConfiguracionPortalEstudiante('login_subtitulo')) ?></p>
             <?php if ($mensaje !== ''): ?><noscript><div class="alert alert-<?= $tipoMensaje ?>" role="alert"><?= atenea_e($mensaje) ?></div></noscript><?php endif; ?>
+            <?php if($opcionesGoogle):?><div class="alert alert-info" role="status"><strong>Cuenta de Google no vinculada</strong><p class="mb-2 mt-1">Elige cómo deseas continuar:</p><div class="d-flex flex-wrap gap-2"><a class="btn btn-sm btn-primary" href="<?=atenea_url('src/auth/google.php?accion=registro')?>">Registrarme con Google</a><a class="btn btn-sm btn-outline-secondary" href="#correo">Usar contraseña y vincular</a></div></div><?php endif;?>
 
             <form method="post" action="<?= atenea_url('src/auth/procesar_login.php') ?>">
               <input type="hidden" name="csrf_token" value="<?= atenea_e(obtenerTokenCsrf()) ?>">
@@ -76,6 +82,7 @@ $logo = atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo'));
   </section>
 </div>
 <script src="<?= atenea_url('src/estudiantes/assets/js/core/libs.min.js') ?>"></script>
+<script src="<?= atenea_url('src/website/assets/js/security-ui.js') ?>"></script>
 <script>
 document.getElementById('google-login')?.addEventListener('click', function () {
   this.classList.add('is-loading');

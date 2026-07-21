@@ -95,7 +95,8 @@ function encolarCorreoAtenea(string $destinatario, string $nombre, string $asunt
     $opcionesSeguras = $opciones;
     unset($opcionesSeguras['permitir_envio_prueba']);
 
-    $pdo->beginTransaction();
+    $transaccionPropia = !$pdo->inTransaction();
+    if ($transaccionPropia) $pdo->beginTransaction();
     try {
         if ($grupo && !$cancelado && !empty($opciones['agrupar'])) {
             $q = $pdo->prepare("SELECT id FROM correo_envios WHERE usuario_id=:u AND grupo_clave=:g AND estado='pendiente' AND created_at>=DATE_SUB(NOW(),INTERVAL 15 MINUTE) ORDER BY id DESC LIMIT 1 FOR UPDATE");
@@ -105,7 +106,7 @@ function encolarCorreoAtenea(string $destinatario, string $nombre, string $asunt
                 $q = $pdo->prepare("INSERT IGNORE INTO correo_envios(tipo,asunto,usuario_id,pedido_id,hilo_id,destinatario_enmascarado,destinatario_hash,destinatario_email,destinatario_nombre,contenido_html,contenido_texto,opciones_json,idempotency_key,evento_id,grupo_clave,estado,cancelado_at,cancelado_motivo,max_intentos,es_modo_prueba) VALUES(:tipo,:asunto,:usuario,:pedido,:hilo,:mascara,:hash,:email,:nombre,:html,:texto,:opciones,:clave,:evento,:grupo,'cancelado',NOW(),'Agrupado en otro correo pendiente.',:maximo,:prueba)");
                 $q->execute(['tipo'=>$tipo,'asunto'=>mb_substr($asunto,0,190),'usuario'=>$usuarioId,'pedido'=>$opciones['pedido_id']??null,'hilo'=>$opciones['hilo_id']??null,'mascara'=>enmascararCorreoAtenea($destinatario),'hash'=>hash('sha256',$destinatario),'email'=>$destinatario,'nombre'=>mb_substr($nombre,0,190),'html'=>$html,'texto'=>$texto,'opciones'=>json_encode($opcionesSeguras,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'clave'=>$clave,'evento'=>$evento,'grupo'=>$grupo,'maximo'=>$maxIntentos,'prueba'=>$modoPrueba?1:0]);
                 $pdo->prepare('UPDATE correo_envios SET agrupados=agrupados+1 WHERE id=:id')->execute(['id'=>$principal]);
-                $pdo->commit();
+                if ($transaccionPropia) $pdo->commit();
                 return $principal;
             }
         }
@@ -114,10 +115,10 @@ function encolarCorreoAtenea(string $destinatario, string $nombre, string $asunt
         $q = $pdo->prepare('SELECT id FROM correo_envios WHERE idempotency_key=:clave');
         $q->execute(['clave'=>$clave]);
         $id = (int) $q->fetchColumn();
-        $pdo->commit();
+        if ($transaccionPropia) $pdo->commit();
         return $id ?: null;
     } catch (Throwable $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
+        if ($transaccionPropia && $pdo->inTransaction()) $pdo->rollBack();
         throw $e;
     }
 }

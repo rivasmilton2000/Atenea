@@ -1,170 +1,21 @@
 <?php
 declare(strict_types=1);
-
-require_once dirname(__DIR__, 3) . '/includes/config.php';
-require_once dirname(__DIR__, 3) . '/includes/session.php';
-require_once dirname(__DIR__, 3) . '/includes/mailer.php';
-require_once dirname(__DIR__, 3) . '/includes/comunicaciones.php';
-require_once dirname(__DIR__, 3) . '/includes/errores_sistema.php';
-
-const CONTACTO_MAX_INTENTOS = 5;
-const CONTACTO_VENTANA_SEGUNDOS = 600;
-const CONTACTO_TIEMPO_MINIMO = 3;
-
-function registrarErrorContacto(string $mensaje): void
-{
-    $archivo = dirname(__DIR__, 3) . '/logs/contact.log';
-    $linea = '[' . date('Y-m-d H:i:s') . '] ' . str_replace(["\r", "\n"], ' ', $mensaje) . PHP_EOL;
-    error_log($linea, 3, $archivo);
-}
-
-function volverContacto(string $tipo, string $mensaje, array $datos = []): never
-{
-    $_SESSION['contacto_flash'] = ['tipo' => $tipo, 'mensaje' => $mensaje];
-    if ($tipo === 'error') $_SESSION['contacto_datos'] = $datos;
-    header('Location: ' . atenea_url('src/website/contact.php'));
-    exit;
-}
-
-function verificarRecaptcha(string $token, string $secreto, string $ip, string $endpoint): bool
-{
-    if ($token === '' || $secreto === '') return false;
-    $campos = http_build_query(['secret' => $secreto, 'response' => $token, 'remoteip' => $ip]);
-
-    if (function_exists('curl_init')) {
-        $curl = curl_init($endpoint);
-        curl_setopt_array($curl, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $campos,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
-        ]);
-        $respuesta = curl_exec($curl);
-        $estado = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
-        curl_close($curl);
-        if (!is_string($respuesta) || $estado !== 200) return false;
-    } else {
-        $contexto = stream_context_create(['http' => ['method' => 'POST', 'header' => "Content-Type: application/x-www-form-urlencoded\r\n", 'content' => $campos, 'timeout' => 10]]);
-        $advertencia = '';
-        set_error_handler(static function (int $nivel, string $mensaje) use (&$advertencia): bool {
-            $advertencia = $mensaje;
-            return true;
-        });
-        try {
-            $respuesta = file_get_contents($endpoint, false, $contexto);
-        } finally {
-            restore_error_handler();
-        }
-        if (!is_string($respuesta)) {
-            registrarErrorContacto('Error de transporte al verificar reCAPTCHA: ' . ($advertencia !== '' ? $advertencia : 'sin respuesta'));
-            return false;
-        }
-    }
-
-    $resultado = json_decode($respuesta, true);
-    return is_array($resultado) && ($resultado['success'] ?? false) === true;
-}
-
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    header('Location: ' . atenea_url('src/website/contact.php'));
-    exit;
-}
-
-$nombre = trim(strip_tags((string) ($_POST['name'] ?? '')));
-$correo = strtolower(trim((string) ($_POST['email'] ?? '')));
-$asunto = trim(strip_tags((string) ($_POST['subject'] ?? '')));
-$mensaje = trim(strip_tags((string) ($_POST['message'] ?? '')));
-$datos = ['name' => $nombre, 'email' => $correo, 'subject' => $asunto, 'message' => $mensaje];
-$ip = filter_var($_SERVER['REMOTE_ADDR'] ?? '', FILTER_VALIDATE_IP) ?: 'no-disponible';
-$ahora = time();
-
-$intentos = array_values(array_filter(
-    is_array($_SESSION['contacto_intentos'] ?? null) ? $_SESSION['contacto_intentos'] : [],
-    static fn($momento): bool => is_int($momento) && $momento >= $ahora - CONTACTO_VENTANA_SEGUNDOS
-));
-if (count($intentos) >= CONTACTO_MAX_INTENTOS) {
-    volverContacto('error', 'Has realizado demasiados intentos. Espera unos minutos.', $datos);
-}
-$intentos[] = $ahora;
-$_SESSION['contacto_intentos'] = $intentos;
-
-if (!validarTokenCsrf(isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : null)) {
-    volverContacto('error', 'La solicitud expiró. Recarga la página e inténtalo nuevamente.', $datos);
-}
-
-$formularioId = (string) ($_POST['formulario_id'] ?? '');
-$formularios = is_array($_SESSION['contacto_formularios'] ?? null) ? $_SESSION['contacto_formularios'] : [];
-$inicioFormulario = $formularios[$formularioId] ?? null;
-unset($formularios[$formularioId]);
-$_SESSION['contacto_formularios'] = $formularios;
-if (!is_int($inicioFormulario) || $ahora - $inicioFormulario < CONTACTO_TIEMPO_MINIMO) {
-    volverContacto('error', 'No fue posible validar el envío. Espera unos segundos e inténtalo nuevamente.', $datos);
-}
-
-if (trim((string) ($_POST['website'] ?? '')) !== '') {
-    registrarErrorContacto('Honeypot activado desde IP ' . $ip);
-    volverContacto('exito', 'Tu mensaje fue enviado correctamente.');
-}
-
-$errores = [];
-if ($nombre === '' || mb_strlen($nombre) > 100) $errores[] = 'Ingresa un nombre válido.';
-if (!filter_var($correo, FILTER_VALIDATE_EMAIL) || strlen($correo) > 190) $errores[] = 'Ingresa un correo electrónico válido.';
-if ($asunto === '' || mb_strlen($asunto) > 150) $errores[] = 'Ingresa un asunto válido.';
-if ($mensaje === '' || mb_strlen($mensaje) > 5000) $errores[] = 'Ingresa un mensaje válido.';
-if (preg_match('/[\r\n]/', $nombre . $correo . $asunto)) $errores[] = 'Los datos contienen caracteres no permitidos.';
-if ($errores) volverContacto('error', implode(' ', $errores), $datos);
-
-$configuracion = configuracionCorreoAtenea();
-$captchaConfigurado = trim((string)($configuracion['recaptcha_secret_key']??'')) !== '' && trim((string)($configuracion['recaptcha_verify_uri']??'')) !== '';
-if (!$captchaConfigurado) {
-    registrarErrorContacto('Configuración CAPTCHA incompleta.');
-    volverContacto('error', 'No fue posible validar el mensaje. Inténtalo nuevamente.', $datos);
-}
-
-$captcha = (string) ($_POST['g-recaptcha-response'] ?? '');
-if (!verificarRecaptcha($captcha, (string) $configuracion['recaptcha_secret_key'], $ip, (string) $configuracion['recaptcha_verify_uri'])) {
-    volverContacto('error', 'Completa correctamente el CAPTCHA.', $datos);
-}
-
-$huella = hash('sha256', $correo . "\n" . $asunto . "\n" . $mensaje);
-$ultimoEnvio = is_array($_SESSION['contacto_ultimo_envio'] ?? null) ? $_SESSION['contacto_ultimo_envio'] : [];
-if (($ultimoEnvio['huella'] ?? '') === $huella && (int) ($ultimoEnvio['momento'] ?? 0) >= $ahora - 120) {
-    volverContacto('error', 'Este mensaje ya fue enviado. Espera unos minutos antes de repetirlo.', $datos);
-}
-
-try {
-    $hiloId = crearHiloComunicacionAtenea([
-        'canal'=>'contacto','asunto'=>$asunto,
-        'usuario_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,
-        'nombre'=>$nombre,'correo'=>$correo,'contenido'=>$mensaje,
-    ]);
-} catch (Throwable $e) {
-    registrarErrorContacto('Persistencia contacto: '.$e->getMessage());
-    volverContacto('error','No fue posible recibir el mensaje. Inténtalo nuevamente.',$datos);
-}
-
-try {
-    enviarPlantillaCorreoAtenea('contacto_recibido', (string) $configuracion['recipient'], 'Equipo Atenea', [
-        'nombre' => $nombre,
-        'correo' => $correo,
-        'asunto' => $asunto,
-        'mensaje' => $mensaje,
-        'fecha' => date('d/m/Y H:i:s') . ' (El Salvador)',
-        'referencia' => 'Formulario web · ' . substr(hash('sha256', $ip), 0, 12),
-    ], [
-        'usuario_id' => isset($_SESSION['usuario_id']) && is_int($_SESSION['usuario_id']) ? $_SESSION['usuario_id'] : null,
-        'idempotency_key' => 'contacto:' . $huella,
-        'reply_to' => $correo,
-        'reply_to_name' => $nombre,
-        'hilo_id' => $hiloId,
-    ]);
-
-    $_SESSION['contacto_ultimo_envio'] = ['huella' => $huella, 'momento' => $ahora];
-    unset($_SESSION['contacto_datos']);
-    volverContacto('exito', 'Tu mensaje fue enviado correctamente.');
-} catch (Throwable $e) {
-    registrarErrorContacto('Contacto: ' . sanitizarErrorCorreoAtenea($e));
-    $_SESSION['contacto_ultimo_envio'] = ['huella' => $huella, 'momento' => $ahora];
-    volverContacto('exito', 'Tu mensaje fue recibido. El equipo de Atenea lo revisará pronto.');
-}
+require_once dirname(__DIR__,3).'/includes/config.php';require_once dirname(__DIR__,3).'/includes/session.php';require_once dirname(__DIR__,3).'/includes/mailer.php';require_once dirname(__DIR__,3).'/includes/comunicaciones.php';require_once dirname(__DIR__,3).'/includes/errores_sistema.php';
+const CONTACTO_MAX_INTENTOS=5;const CONTACTO_VENTANA_SEGUNDOS=600;const CONTACTO_TIEMPO_MINIMO=3;
+function registrarErrorContacto(string $mensaje):void{$archivo=dirname(__DIR__,3).'/logs/contact.log';error_log('['.date('Y-m-d H:i:s').'] '.str_replace(["\r","\n"],' ',$mensaje).PHP_EOL,3,$archivo);}
+function solicitudContactoJson():bool{return str_contains(strtolower((string)($_SERVER['HTTP_ACCEPT']??'')),'application/json')||strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH']??''))==='xmlhttprequest';}
+function responderContacto(bool $ok,string $mensaje,array $datos=[],array $errores=[],int $status=200):never{if(solicitudContactoJson()){http_response_code($status);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>$ok,'message'=>$mensaje,'errors'=>(object)$errores],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);exit;}$_SESSION['contacto_flash']=['tipo'=>$ok?'exito':'error','mensaje'=>$mensaje];if(!$ok){$_SESSION['contacto_datos']=$datos;$_SESSION['contacto_errores']=$errores;}header('Location:'.atenea_url('src/website/contact.php'));exit;}
+function verificarRecaptcha(string $token,string $secreto,string $ip,string $endpoint):bool{if($token===''||$secreto===''||!filter_var($endpoint,FILTER_VALIDATE_URL))return false;$campos=http_build_query(['secret'=>$secreto,'response'=>$token,'remoteip'=>$ip]);if(function_exists('curl_init')){$curl=curl_init($endpoint);curl_setopt_array($curl,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$campos,CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>10,CURLOPT_HTTPHEADER=>['Content-Type: application/x-www-form-urlencoded']]);$respuesta=curl_exec($curl);$estado=(int)curl_getinfo($curl,CURLINFO_RESPONSE_CODE);curl_close($curl);if(!is_string($respuesta)||$estado!==200)return false;}else{$contexto=stream_context_create(['http'=>['method'=>'POST','header'=>"Content-Type: application/x-www-form-urlencoded\r\n",'content'=>$campos,'timeout'=>10]]);$respuesta=@file_get_contents($endpoint,false,$contexto);if(!is_string($respuesta))return false;}$resultado=json_decode($respuesta,true);return is_array($resultado)&&($resultado['success']??false)===true;}
+if(($_SERVER['REQUEST_METHOD']??'')!=='POST'){header('Location:'.atenea_url('src/website/contact.php'));exit;}
+$nombre=trim(strip_tags((string)($_POST['name']??'')));$correo=strtolower(trim((string)($_POST['email']??'')));$telefono=trim(strip_tags((string)($_POST['phone']??'')));$asunto=trim(strip_tags((string)($_POST['subject']??'')));$mensaje=trim(strip_tags((string)($_POST['message']??'')));$datos=['name'=>$nombre,'email'=>$correo,'phone'=>$telefono,'subject'=>$asunto,'message'=>$mensaje];$ip=filter_var($_SERVER['REMOTE_ADDR']??'',FILTER_VALIDATE_IP)?:'no-disponible';$ahora=time();
+$intentos=array_values(array_filter(is_array($_SESSION['contacto_intentos']??null)?$_SESSION['contacto_intentos']:[],static fn($t)=>is_int($t)&&$t>=$ahora-CONTACTO_VENTANA_SEGUNDOS));if(count($intentos)>=CONTACTO_MAX_INTENTOS)responderContacto(false,'Has realizado demasiados intentos. Espera unos minutos.',$datos,[],429);$intentos[]=$ahora;$_SESSION['contacto_intentos']=$intentos;
+if(!validarTokenCsrf((string)($_POST['csrf_token']??'')))responderContacto(false,'La sesión del formulario venció. Recarga la página.',$datos,[],419);
+$formularioId=(string)($_POST['formulario_id']??'');$formularios=is_array($_SESSION['contacto_formularios']??null)?$_SESSION['contacto_formularios']:[];$inicio=$formularios[$formularioId]??null;if(!is_int($inicio)||$ahora-$inicio<CONTACTO_TIEMPO_MINIMO)responderContacto(false,'Espera unos segundos y vuelve a intentarlo.',$datos,[],422);
+if(trim((string)($_POST['website']??''))!==''){unset($formularios[$formularioId]);$_SESSION['contacto_formularios']=$formularios;registrarErrorContacto('Honeypot activado desde IP '.$ip);responderContacto(true,'Tu mensaje fue recibido correctamente.');}
+$errores=[];if($nombre===''||mb_strlen($nombre)>100)$errores['name']='Escribe un nombre válido.';if(!filter_var($correo,FILTER_VALIDATE_EMAIL)||strlen($correo)>190)$errores['email']='Escribe un correo electrónico válido.';if($telefono!==''&&(mb_strlen($telefono)>30||preg_match('/^[0-9+() .-]{7,30}$/',$telefono)!==1))$errores['phone']='Escribe un teléfono válido.';if($asunto===''||mb_strlen($asunto)>150)$errores['subject']='Escribe un asunto válido.';if($mensaje===''||mb_strlen($mensaje)>5000)$errores['message']='Escribe un mensaje de hasta 5000 caracteres.';if(preg_match('/[\r\n]/',$nombre.$correo.$telefono.$asunto))$errores['subject']='Los datos contienen caracteres no permitidos.';if($errores)responderContacto(false,'Revisa los campos señalados.',$datos,$errores,422);
+$config=configuracionCorreoAtenea();if(trim((string)($config['recaptcha_secret_key']??''))===''||trim((string)($config['recaptcha_site_key']??''))===''||trim((string)($config['recaptcha_verify_uri']??''))===''){registrarErrorContacto('Configuración CAPTCHA incompleta.');responderContacto(false,'El formulario está temporalmente fuera de servicio.',$datos,['captcha'=>'La protección CAPTCHA no está disponible.'],503);}if(!verificarRecaptcha((string)($_POST['g-recaptcha-response']??''),(string)$config['recaptcha_secret_key'],$ip,(string)$config['recaptcha_verify_uri']))responderContacto(false,'Completa correctamente la verificación de seguridad.',$datos,['captcha'=>'Confirma que no eres un robot.'],422);
+$huella=hash('sha256',$correo."\n".$telefono."\n".$asunto."\n".$mensaje);$ultimo=is_array($_SESSION['contacto_ultimo_envio']??null)?$_SESSION['contacto_ultimo_envio']:[];if(($ultimo['huella']??'')===$huella&&(int)($ultimo['momento']??0)>=$ahora-120)responderContacto(false,'Este mensaje ya fue recibido. Evita enviarlo nuevamente.',$datos,[],409);
+unset($formularios[$formularioId]);$_SESSION['contacto_formularios']=$formularios;$_SESSION['contacto_ultimo_envio']=['huella'=>$huella,'momento'=>$ahora];
+$contenido=($telefono!==''?'Teléfono: '.$telefono."\n\n":'').$mensaje;try{$hiloId=crearHiloComunicacionAtenea(['canal'=>'contacto','asunto'=>$asunto,'usuario_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,'nombre'=>$nombre,'correo'=>$correo,'contenido'=>$contenido]);}catch(Throwable$e){registrarErrorContacto('Persistencia contacto: '.$e->getMessage());responderContacto(false,'No fue posible recibir el mensaje. Inténtalo nuevamente.',$datos,[],503);}
+try{enviarPlantillaCorreoAtenea('contacto_recibido',(string)$config['recipient'],'Equipo Atenea',['nombre'=>$nombre,'correo'=>$correo,'asunto'=>$asunto,'mensaje'=>$contenido,'fecha'=>date('d/m/Y H:i:s').' (El Salvador)','referencia'=>'Formulario web · '.substr(hash('sha256',$ip),0,12)],['usuario_id'=>isset($_SESSION['usuario_id'])&&is_int($_SESSION['usuario_id'])?$_SESSION['usuario_id']:null,'idempotency_key'=>'contacto:'.$huella,'reply_to'=>$correo,'reply_to_name'=>$nombre,'hilo_id'=>$hiloId]);}catch(Throwable$e){registrarErrorContacto('Cola contacto: '.sanitizarErrorCorreoAtenea($e));}
+unset($_SESSION['contacto_datos'],$_SESSION['contacto_errores']);responderContacto(true,'Tu mensaje fue recibido. El equipo de Atenea lo revisará pronto.');

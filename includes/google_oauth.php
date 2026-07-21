@@ -5,6 +5,26 @@ require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/config/services.php';
 
+final class GoogleCuentaNoVinculadaException extends DomainException{}
+final class GoogleCuentaRequiereVinculacionException extends DomainException{}
+final class GoogleCuentaYaVinculadaException extends DomainException{}
+final class GoogleRegistroBloqueadoException extends DomainException{}
+
+function intentosGoogleRecientesAtenea(): array
+{
+    $ahora=time();$intentos=is_array($_SESSION['google_intentos_fallidos']??null)?$_SESSION['google_intentos_fallidos']:[];return array_values(array_filter($intentos,static fn($t)=>is_int($t)&&$t>$ahora-600));
+}
+
+function googleIntentosPermitidosAtenea(): bool
+{
+    $intentos=intentosGoogleRecientesAtenea();$_SESSION['google_intentos_fallidos']=$intentos;return count($intentos)<10;
+}
+
+function registrarIntentoGoogleFallidoAtenea(array $auditoria): void
+{
+    $intentos=intentosGoogleRecientesAtenea();if(count($intentos)>=10){$_SESSION['google_intentos_fallidos']=$intentos;return;}$intentos[]=time();$_SESSION['google_intentos_fallidos']=$intentos;registrarAuditoria($auditoria);
+}
+
 function obtenerConfiguracionGoogle(): array
 {
     return GoogleConfig::toArray();
@@ -116,7 +136,7 @@ function obtenerPerfilGoogle(string $codigo, array $configuracion, string $nonce
     ];
 }
 
-function autenticarConPerfilGoogle(array $perfil, bool $vincular = false): array
+function autenticarConPerfilGoogle(array $perfil, string $accion = 'login'): array
 {
     $pdo = obtenerConexion();
     $pdo->beginTransaction();
@@ -129,7 +149,7 @@ function autenticarConPerfilGoogle(array $perfil, bool $vincular = false): array
         $consulta->execute(['correo' => $perfil['correo']]);
         $usuarioCorreo = $consulta->fetch();
 
-        if ($vincular) {
+        if ($accion === 'vincular') {
             $idActual = (int) ($_SESSION['usuario_id'] ?? 0);
             if ($idActual < 1 || strtolower((string) ($_SESSION['usuario_correo'] ?? '')) !== $perfil['correo']) {
                 throw new RuntimeException('Solo puedes vincular una cuenta con el mismo correo.');
@@ -142,26 +162,18 @@ function autenticarConPerfilGoogle(array $perfil, bool $vincular = false): array
             $consulta = $pdo->prepare('SELECT * FROM usuarios WHERE id=:id');
             $consulta->execute(['id' => $idActual]);
             $usuario = $consulta->fetch();
-        } elseif ($usuarioGoogle || $usuarioCorreo) {
-            $usuario = $usuarioGoogle ?: $usuarioCorreo;
-            if ($usuarioGoogle && $usuarioCorreo && (int) $usuarioGoogle['id'] !== (int) $usuarioCorreo['id']) {
-                throw new RuntimeException('La identidad y el correo pertenecen a cuentas distintas.');
-            }
-            if (!empty($usuario['google_id']) && !hash_equals((string) $usuario['google_id'], (string) $perfil['google_id'])) {
-                throw new RuntimeException('El correo ya está vinculado con otra identidad.');
-            }
-            $consulta = $pdo->prepare("UPDATE usuarios SET google_id=:google_id,proveedor=IF(password IS NULL,'google','mixto'),email_verificado=1 WHERE id=:id");
-            $consulta->execute(['google_id' => $perfil['google_id'], 'id' => (int) $usuario['id']]);
-            $usuario['google_id'] = $perfil['google_id'];
-            $usuario['email_verificado'] = 1;
-            if (empty($usuario['nombre_usuario'])) {
-                $nombreUsuario = generarNombreUsuarioDisponible($pdo, (string) $perfil['correo'], (string) $perfil['nombre']);
-                $pdo->prepare('UPDATE usuarios SET nombre_usuario=:nombre_usuario WHERE id=:id')->execute(['nombre_usuario'=>$nombreUsuario,'id'=>(int)$usuario['id']]);
-                $usuario['nombre_usuario'] = $nombreUsuario;
-            }
-        } else {
+        } elseif($accion==='login'){
+            if(!$usuarioGoogle)throw new GoogleCuentaNoVinculadaException('La identidad de Google no está vinculada.');
+            $usuario=$usuarioGoogle;
+        } elseif($accion==='registro'&&$usuarioGoogle){
+            throw new GoogleCuentaYaVinculadaException('La identidad de Google ya está registrada.');
+        } elseif($accion==='registro'&&$usuarioCorreo&&(($usuarioCorreo['estado']??'')!=='activo'||!empty($usuarioCorreo['deleted_at']))){
+            throw new GoogleRegistroBloqueadoException('El registro no está disponible durante el periodo de conservación.');
+        } elseif($accion==='registro'&&$usuarioCorreo){
+            throw new GoogleCuentaRequiereVinculacionException('La cuenta requiere vinculación mediante contraseña.');
+        } elseif($accion==='registro'){
             $nombreUsuario = generarNombreUsuarioDisponible($pdo, (string) $perfil['correo'], (string) $perfil['nombre']);
-            $consulta = $pdo->prepare("INSERT INTO usuarios(nombre,apellido,nombre_usuario,correo,password,google_id,proveedor,email_verificado,foto,rol,estado) VALUES(:nombre,:apellido,:nombre_usuario,:correo,NULL,:google_id,'google',1,:foto,'usuario','activo')");
+            $consulta = $pdo->prepare("INSERT INTO usuarios(nombre,apellido,nombre_usuario,correo,password,google_id,proveedor,email_verificado,perfil_estado,google_registro_iniciado_at,foto,rol,estado) VALUES(:nombre,:apellido,:nombre_usuario,:correo,NULL,:google_id,'google',1,'pendiente',NOW(),:foto,'usuario','activo')");
             $consulta->execute([
                 'nombre' => $perfil['nombre'] !== '' ? $perfil['nombre'] : 'Estudiante',
                 'apellido' => $perfil['apellido'],
@@ -174,7 +186,7 @@ function autenticarConPerfilGoogle(array $perfil, bool $vincular = false): array
             $consulta->execute(['id' => (int) $pdo->lastInsertId()]);
             $usuario = $consulta->fetch();
             registrarAuditoria(['actor_user_id'=>(int)$usuario['id'],'target_user_id'=>(int)$usuario['id'],'event_type'=>'user.created','module'=>'users','entity_type'=>'user','entity_id'=>$usuario['id'],'action'=>'create','result'=>'success','description'=>'Se creo una cuenta mediante Google.','metadata'=>['provider'=>'google','role'=>'usuario']],$pdo);
-        }
+        }else throw new DomainException('Acción de Google no válida.');
 
         if (!is_array($usuario) || ($usuario['estado'] ?? '') !== 'activo') throw new RuntimeException('La cuenta no está activa.');
         $pdo->prepare('UPDATE usuarios SET ultimo_acceso=NOW(),last_activity_at=NOW() WHERE id=:id')->execute(['id' => (int) $usuario['id']]);

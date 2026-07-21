@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);require_once dirname(__DIR__,2).'/includes/portal_estudiante_layout.php';require_once dirname(__DIR__,2).'/includes/portal_estudiante_aula.php';$portal=portalEstudianteCabecera('Tareas','tareas','Actividades, entregas pendientes y correcciones solicitadas.');$contenidos=aulaContenidosEstudiante(obtenerConexion(),(int)$portal['perfil']['id'],['actividad'],200);renderizarListadoContenidosAula($contenidos,'No hay tareas publicadas para tus clases.');portalEstudiantePie();

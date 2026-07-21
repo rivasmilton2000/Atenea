@@ -1,3 +1,5 @@
+@import url('../website/assets/css/security-ui.css');
+
 :root {
   --atenea-dorado: var(--atenea-gold, #c49a3a);
   --atenea-verde: var(--atenea-green, #173f35);

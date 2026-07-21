@@ -94,6 +94,21 @@ function crearVerificacionCuenta(PDO $pdo, int $usuarioId, string $tipo, array $
     return ['id' => $id, 'tipo' => $tipo];
 }
 
+function limpiarMetadatosImagenAtenea(string $contenido,string $mime): string
+{
+    if($mime==='image/jpeg'){
+        if(!str_starts_with($contenido,"\xFF\xD8"))return '';$salida="\xFF\xD8";$pos=2;$largo=strlen($contenido);
+        while($pos+4<=$largo){if(ord($contenido[$pos])!==0xFF)return '';$inicio=$pos;while($pos<$largo&&ord($contenido[$pos])===0xFF)$pos++;if($pos>=$largo)return '';$marcador=ord($contenido[$pos++]);if($marcador===0xDA){$salida.=substr($contenido,$inicio);break;}if(in_array($marcador,[0xD8,0xD9,0x01],true)||($marcador>=0xD0&&$marcador<=0xD7)){$salida.=substr($contenido,$inicio,$pos-$inicio);continue;}if($pos+2>$largo)return '';$tamano=unpack('n',substr($contenido,$pos,2))[1]??0;if($tamano<2||$pos+$tamano>$largo)return '';$bloque=substr($contenido,$inicio,($pos-$inicio)+$tamano);if(!(($marcador>=0xE1&&$marcador<=0xEF)||$marcador===0xFE))$salida.=$bloque;$pos+=$tamano;}return $salida;
+    }
+    if($mime==='image/png'){
+        $firma="\x89PNG\r\n\x1a\n";if(!str_starts_with($contenido,$firma))return '';$salida=$firma;$pos=8;$largo=strlen($contenido);$privados=['tEXt','zTXt','iTXt','eXIf','tIME'];while($pos+12<=$largo){$tamano=unpack('N',substr($contenido,$pos,4))[1]??-1;$tipo=substr($contenido,$pos+4,4);$total=12+$tamano;if($tamano<0||$pos+$total>$largo)return '';if(!in_array($tipo,$privados,true))$salida.=substr($contenido,$pos,$total);$pos+=$total;if($tipo==='IEND')break;}return $salida;
+    }
+    if($mime==='image/webp'){
+        if(strlen($contenido)<12||substr($contenido,0,4)!=='RIFF'||substr($contenido,8,4)!=='WEBP')return '';$cuerpo='WEBP';$pos=12;$largo=strlen($contenido);while($pos+8<=$largo){$tipo=substr($contenido,$pos,4);$tamano=unpack('V',substr($contenido,$pos+4,4))[1]??-1;$total=8+$tamano+($tamano%2);if($tamano<0||$pos+$total>$largo)return '';if(!in_array($tipo,['EXIF','XMP ','ICCP'],true))$cuerpo.=substr($contenido,$pos,$total);$pos+=$total;}return 'RIFF'.pack('V',strlen($cuerpo)).$cuerpo;
+    }
+    return '';
+}
+
 function guardarFotoPerfil(array $archivo, ?string $anterior): string
 {
     if (($archivo['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return (string) $anterior;
@@ -104,14 +119,17 @@ function guardarFotoPerfil(array $archivo, ?string $anterior): string
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
     $permitidos = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
     $contenido = file_get_contents($tmp);
-    if (!isset($permitidos[$mime]) || !is_string($contenido) || getimagesizefromstring($contenido) === false) {
+    $dimensiones=is_string($contenido)?getimagesizefromstring($contenido):false;
+    if (!isset($permitidos[$mime]) || !is_string($contenido) || $dimensiones === false) {
         throw new RuntimeException('Selecciona una imagen JPG, PNG o WEBP válida.');
     }
+    if((int)$dimensiones[0]!==512||(int)$dimensiones[1]!==512)throw new RuntimeException('Recorta la fotografía antes de guardarla. Debe quedar en formato cuadrado.');
     if (preg_match('/\.(?:php\d*|phtml|phar|html?|svg)(?:\.|$)/i', (string) ($archivo['name'] ?? ''))) throw new RuntimeException('El nombre del archivo no es seguro.');
     $directorio = ATENEA_ROOT . '/uploads/perfiles';
     if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) throw new RuntimeException('No fue posible preparar la carpeta de perfiles.');
+    $contenidoLimpio=limpiarMetadatosImagenAtenea($contenido,$mime);if($contenidoLimpio===''||getimagesizefromstring($contenidoLimpio)===false)throw new RuntimeException('No fue posible procesar la fotografía de forma segura.');
     $ruta = 'uploads/perfiles/' . bin2hex(random_bytes(20)) . '.' . $permitidos[$mime];
-    if (!move_uploaded_file($tmp, ATENEA_ROOT . '/' . $ruta)) throw new RuntimeException('No fue posible guardar la fotografía.');
+    if(file_put_contents(ATENEA_ROOT.'/'.$ruta,$contenidoLimpio,LOCK_EX)===false)throw new RuntimeException('No fue posible guardar la fotografía.');
     return $ruta;
 }
 
