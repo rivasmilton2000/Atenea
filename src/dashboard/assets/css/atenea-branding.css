@@ -31,18 +31,35 @@
 }
 
 .admin-profile-trigger {
-  padding: 0;
+  padding: 0 4px;
   border: 0;
   background: transparent;
   color: inherit;
   cursor: pointer;
-  border-radius: 50%;
-  line-height: 0;
+  border-radius: 999px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .admin-profile-trigger:focus-visible {
   outline: 2px solid #1f3bb3;
   outline-offset: 2px;
+}
+
+.admin-profile-trigger::after {
+  display: none;
+}
+
+.admin-profile-chevron {
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.admin-profile-trigger[aria-expanded="true"] .admin-profile-chevron {
+  transform: rotate(180deg);
 }
 
 .admin-navbar-avatar {
@@ -57,6 +74,47 @@
   display: block;
 }
 
+.navbar,
+.navbar .navbar-menu-wrapper,
+.navbar .navbar-nav,
+.navbar .admin-user-dropdown {
+  overflow: visible;
+}
+
+.navbar .admin-user-dropdown {
+  position: relative;
+}
+
+.navbar .admin-profile-menu {
+  z-index: 2050;
+  right: 0;
+  left: auto;
+  min-width: 280px;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  padding-top: 8px;
+  padding-bottom: 8px;
+  overflow: hidden;
+}
+
+.navbar .admin-profile-summary {
+  min-width: 0;
+  padding-right: 20px;
+  padding-left: 20px;
+}
+
+.navbar .admin-profile-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  white-space: normal;
+}
+
+.navbar .admin-profile-menu .dropdown-item:focus-visible {
+  outline: 2px solid #1f3bb3;
+  outline-offset: -3px;
+}
+
 .admin-profile-modal-photo {
   max-width: 120px;
   max-height: 120px;
@@ -66,4 +124,24 @@
   .navbar .navbar-brand-wrapper { padding: 6px 3px; }
   .navbar .navbar-brand-wrapper > .me-3 { display: none; }
   .sidebar { max-height: calc(100dvh - 60px); overflow-y: auto; overflow-x: hidden; }
+
+  .navbar .admin-profile-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .admin-navbar-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    min-height: 36px;
+    max-height: 36px;
+  }
+
+  .navbar .admin-profile-menu {
+    max-width: calc(100vw - 12px);
+  }
 }

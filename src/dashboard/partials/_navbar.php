@@ -4,9 +4,12 @@ require_once dirname(__DIR__, 3) . '/includes/notificaciones.php';
 $usuarioAdmin ??= obtenerUsuarioActual();
 $configuracionAdmin ??= obtenerConfiguracionSitio();
 $logoAdmin = rutaImagenContenido($configuracionAdmin['logo'] ?? 'img/atenea-logo.png', 'img/atenea-logo.png');
-$nombreAdmin = trim((string) (($usuarioAdmin['nombre'] ?? 'Administrador') . ' ' . ($usuarioAdmin['apellido'] ?? '')));
-$correoAdmin = (string) ($usuarioAdmin['correo'] ?? '');
 $perfilAdminNav = obtenerPerfilUsuario((int)($usuarioAdmin['id'] ?? 0)) ?: $usuarioAdmin;
+$nombreAdmin = trim(implode(' ', array_filter([
+  (string)($perfilAdminNav['nombre'] ?? $usuarioAdmin['nombre'] ?? $_SESSION['usuario_nombre'] ?? ''),
+  (string)($perfilAdminNav['apellido'] ?? $usuarioAdmin['apellido'] ?? $_SESSION['usuario_apellido'] ?? ''),
+], static fn(string $parte): bool => $parte !== '')));
+$correoAdmin = (string)($perfilAdminNav['correo'] ?? $usuarioAdmin['correo'] ?? $_SESSION['usuario_correo'] ?? '');
 $fotoAdmin = rutaFotoPerfil($perfilAdminNav);
 $horaLocal = (int) date('G');
 $saludoAdmin = $horaLocal < 12 ? 'Buenos días' : ($horaLocal < 18 ? 'Buenas tardes' : 'Buenas noches');
@@ -32,7 +35,7 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
   <div class="navbar-menu-wrapper d-flex align-items-top">
     <ul class="navbar-nav">
       <li class="nav-item fw-semibold d-none d-lg-block ms-0">
-        <h1 class="welcome-text"><?= $saludoAdmin ?>, <span class="text-black fw-bold" data-atenea-current-name><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></span></h1>
+        <h1 class="welcome-text"><?= $saludoAdmin ?>, <span class="text-black fw-bold" data-atenea-current-name><?= atenea_e($nombreAdmin) ?></span></h1>
         <h3 class="welcome-sub-text">Resumen de la actividad de Atenea esta semana </h3>
       </li>
     </ul>
@@ -112,25 +115,21 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
           </a>
         </div>
       </li>
-      <li class="nav-item d-none d-lg-block">
-        <button type="button" id="adminProfileTrigger" class="admin-profile-trigger" data-bs-toggle="modal" data-bs-target="#adminProfileModal" aria-label="Abrir mi perfil">
+      <li class="nav-item dropdown user-dropdown admin-user-dropdown">
+        <button type="button" id="adminProfileTrigger" class="nav-link admin-profile-trigger" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false" aria-haspopup="true" aria-controls="adminProfileMenu" aria-label="Abrir menú del administrador">
           <img class="admin-navbar-avatar" src="<?= atenea_e($fotoAdmin) ?>" data-atenea-current-avatar alt="Fotografía del administrador">
+          <i class="mdi mdi-chevron-down admin-profile-chevron" aria-hidden="true"></i>
         </button>
-      </li>
-      <li class="nav-item dropdown d-none d-lg-block user-dropdown">
-        <button type="button" class="nav-link border-0 bg-transparent" id="adminUserMenuToggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir menú de usuario">
-          <i class="mdi mdi-chevron-down" aria-hidden="true"></i>
-        </button>
-        <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="adminUserMenuToggle">
-          <div class="dropdown-header text-center">
-            <p class="mb-1 fw-semibold" data-atenea-current-name><?= atenea_e($nombreAdmin ?: 'Administrador Atenea') ?></p>
-            <p class="fw-light text-muted mb-0"><?= atenea_e($correoAdmin) ?></p>
+        <div id="adminProfileMenu" class="dropdown-menu dropdown-menu-end dropdown-menu-right navbar-dropdown admin-profile-menu" aria-labelledby="adminProfileTrigger">
+          <div class="dropdown-header text-center admin-profile-summary">
+            <p class="mb-1 fw-semibold text-dark text-wrap" data-atenea-current-name><?= atenea_e($nombreAdmin) ?></p>
+            <p class="fw-light text-muted mb-0 text-break"><?= atenea_e($correoAdmin) ?></p>
           </div>
-          <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#adminProfileModal"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Mi perfil</button>
-          <a class="dropdown-item" href="<?= atenea_url('index.php') ?>"><i class="dropdown-item-icon mdi mdi-web text-primary me-2"></i> Ver sitio</a>
-          <a class="dropdown-item" href="<?= atenea_url('src/dashboard/bitacora/index.php') ?>"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Actividad</a>
-          <a class="dropdown-item" href="<?= atenea_url('src/dashboard/docs/documentation.php') ?>"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> Ayuda</a>
-          <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Cerrar sesión</a>
+          <div class="dropdown-divider" role="separator"></div>
+          <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#adminProfileModal"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2" aria-hidden="true"></i>Mi perfil</button>
+          <a class="dropdown-item" href="<?= atenea_url('index.php') ?>"><i class="dropdown-item-icon mdi mdi-web text-primary me-2" aria-hidden="true"></i>Ver sitio</a>
+          <a class="dropdown-item" href="<?= atenea_url('src/dashboard/bitacora/index.php') ?>"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2" aria-hidden="true"></i>Actividad</a>
+          <a class="dropdown-item" href="<?= atenea_url('src/login/logout.php') ?>"><i class="dropdown-item-icon mdi mdi-power text-primary me-2" aria-hidden="true"></i>Cerrar sesión</a>
         </div>
       </li>
     </ul>

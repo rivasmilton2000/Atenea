@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('fs');
 
 const student = 'c7e12.estudiante@example.invalid';
 const password = 'PruebaEtapa12!2026';
@@ -33,6 +34,11 @@ test.describe.serial('Entrega integral Atenea', () => {
     ]) {
       await page.setViewportSize({ width, height });await page.goto(app(path),{waitUntil:'domcontentloaded'});
       await expect(page.locator('body')).toBeVisible();
+      if(path==='/index.php'){
+        await expect(page.locator('body')).not.toContainText('Plantilla base por BootstrapMade, distribuida por ThemeWagon y adaptada para Atenea.');
+        await expect(page.locator('footer .credits')).toHaveCount(0);
+        await expect(page.locator('footer a[href*="bootstrapmade.com"], footer a[href*="themewagon.com"]')).toHaveCount(0);
+      }
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 2);
       expect(overflow, `Desbordamiento horizontal en ${path}`).toBeFalsy();
       await page.screenshot({path:`${evidence}/${name}.png`,fullPage:true});
@@ -46,7 +52,9 @@ test.describe.serial('Entrega integral Atenea', () => {
     await page.locator('#departamento_id').selectOption({index:1});await expect(page.locator('#municipio_id option')).not.toHaveCount(1);await page.locator('#municipio_id').selectOption({index:1});await expect(page.locator('#distrito_id option')).not.toHaveCount(1);await page.locator('#distrito_id').selectOption({index:1});
     await page.locator('#direccion').fill('Dirección segura para prueba automatizada');await page.locator('#password').fill(password);await page.locator('#confirmar_password').fill(password);await page.locator('[name="terminos"]').check();
     await Promise.all([page.waitForURL('**/src/estudiantes/**'),page.locator('form[action*="procesar_registro"] button[type="submit"]').click()]);
-    await expect(page.locator('#portalSidebar')).toBeVisible();await page.screenshot({path:`${evidence}/estudiante-dashboard-desktop.png`,fullPage:true});
+    await expect(page.locator('#portalSidebar')).toBeVisible();
+    const studentLayout=await page.evaluate(()=>{const sidebar=document.querySelector('#portalSidebar').getBoundingClientRect();const main=document.querySelector('.main-content').getBoundingClientRect();const active=document.querySelector('#portalSidebar .nav-link.active');const header=document.querySelector('.iq-navbar-header');return{sidebarRight:sidebar.right,mainLeft:main.left,activeBackground:getComputedStyle(active).backgroundColor,activeText:getComputedStyle(active.querySelector('.item-name')).color,headerBackground:getComputedStyle(header).backgroundImage};});
+    expect(studentLayout.mainLeft).toBeGreaterThanOrEqual(studentLayout.sidebarRight-1);expect(studentLayout.activeBackground).toBe('rgb(23, 63, 53)');expect(studentLayout.activeText).toBe('rgb(255, 255, 255)');expect(studentLayout.headerBackground).toContain('rgb(23, 63, 53)');await page.screenshot({path:`${evidence}/estudiante-dashboard-desktop.png`,fullPage:true});
 
     await page.goto(app('/src/estudiantes/perfil.php'));await page.getByRole('button',{name:'Abrir mi perfil'}).click();await expect(page.locator('[data-atenea-profile-modal]')).toBeVisible();
     const modal=page.locator('[data-atenea-profile-modal]');await modal.locator('[name="telefono"]').fill('72345678');await modal.locator('[data-profile-photo-input]').setInputFiles('src/website/assets/img/course-1.jpg');await expect(modal.locator('[data-avatar-crop]')).toBeVisible();await modal.screenshot({path:`${evidence}/perfil-estudiante-edicion.png`});
@@ -63,6 +71,7 @@ test.describe.serial('Entrega integral Atenea', () => {
 
   test('perfil y editor visual administrativos', async ({ page }) => {
     await login(page,'c7e12.admin@example.invalid');await expect(page).toHaveURL(/dashboard/);await page.screenshot({path:`${evidence}/dashboard-admin.png`,fullPage:true});
+    await page.goto(app('/src/dashboard/backups/index.php'));await expect(page.getByRole('heading',{name:'Exportar copia SQL'})).toBeVisible();await expect(page.locator('#grupoTablaSql')).toBeHidden();await expect(page.locator('#progresoExportacionSql')).toBeHidden();await page.locator('#sql-alcance').selectOption('tabla');await expect(page.locator('#grupoTablaSql')).toBeVisible();await page.locator('#sql-tabla').selectOption({index:1});await page.locator('#sql-contenido').selectOption('estructura');await expect(page.locator('#resumenExportacionSql')).toContainText(/tabla.+solo estructura/i);await page.screenshot({path:`${evidence}/backups-sql-admin.png`,fullPage:true});const tablaSql=await page.locator('#sql-tabla').inputValue();const descargaPromesa=page.waitForEvent('download');await page.getByRole('button',{name:'Generar copia SQL'}).click();const descarga=await descargaPromesa;expect(descarga.suggestedFilename()).toMatch(new RegExp('^atenea_'+tablaSql+'_\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}\\.sql$'));const rutaSql=await descarga.path();const contenidoSql=fs.readFileSync(rutaSql,'utf8');expect(contenidoSql).toContain('CREATE TABLE `'+tablaSql+'`');expect(contenidoSql).not.toContain('INSERT INTO');await expect(page.locator('#progresoExportacionSql')).toBeHidden();
     await page.goto(app('/src/dashboard/personalizacion/index.php'));await expect(page.locator('body')).toContainText(/vista previa|personaliz/i);await page.screenshot({path:`${evidence}/editor-visual.png`,fullPage:true});
     await page.goto(app('/src/dashboard/index.php'));const trigger=page.locator('[data-bs-target="#adminProfileModal"]').first();await trigger.click();await expect(page.locator('#adminProfileModal')).toBeVisible();await page.locator('#adminProfileModal').screenshot({path:`${evidence}/perfil-administrador.png`});await page.goto(app('/src/login/logout.php'));
   });

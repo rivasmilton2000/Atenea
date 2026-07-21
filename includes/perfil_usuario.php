@@ -10,14 +10,42 @@ function normalizarDui(?string $dui): ?string
     return $digitos === '' ? null : (strlen($digitos) === 9 ? substr($digitos, 0, 8) . '-' . $digitos[8] : '');
 }
 
+function duiValidoExacto(?string $dui): bool
+{
+    return is_string($dui) && preg_match('/^\d{8}-\d$/D', $dui) === 1;
+}
+
+function normalizarNombrePersona(?string $valor): string
+{
+    return trim((string) preg_replace('/\s+/u', ' ', (string) $valor));
+}
+
+function nombrePersonaValido(?string $valor): bool
+{
+    if (!is_string($valor) || $valor !== strip_tags($valor) || preg_match('/[\x00-\x1F\x7F]/u', $valor)) {
+        return false;
+    }
+
+    $normalizado = normalizarNombrePersona($valor);
+    $longitud = mb_strlen($normalizado);
+    return $longitud >= 2
+        && $longitud <= 60
+        && preg_match("/^(?=.*\\p{L})[\\p{L}\\p{M} '\\x{2019}-]+$/u", $normalizado) === 1;
+}
+
 function fechaNacimientoValida(?string $fecha): bool
 {
     if (!is_string($fecha) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
         return false;
     }
 
-    $valor = DateTimeImmutable::createFromFormat('!Y-m-d', $fecha, new DateTimeZone('America/El_Salvador'));
-    return $valor !== false && $valor->format('Y-m-d') === $fecha && $valor <= new DateTimeImmutable('today');
+    $zona = new DateTimeZone('America/El_Salvador');
+    $valor = DateTimeImmutable::createFromFormat('!Y-m-d', $fecha, $zona);
+    $hoy = new DateTimeImmutable('today', $zona);
+    return $valor !== false
+        && $valor->format('Y-m-d') === $fecha
+        && $valor >= $hoy->modify('-120 years')
+        && $valor <= $hoy->modify('-18 years');
 }
 
 function normalizarCodigoTelefono(?string $codigo): string
@@ -31,13 +59,50 @@ function normalizarTelefono(?string $telefono): string
     return substr((string) preg_replace('/\D+/', '', (string) $telefono), 0, 15);
 }
 
+function normalizarTelefonoParaCodigo(string $codigo, ?string $telefono): string
+{
+    $digitos = normalizarTelefono($telefono);
+    $prefijo = preg_replace('/\D+/', '', $codigo) ?: '';
+    if ($prefijo !== '' && str_starts_with($digitos, $prefijo)) {
+        $digitos = substr($digitos, strlen($prefijo));
+    }
+    return substr($digitos, 0, 15);
+}
+
 function telefonoValido(string $codigo, string $telefono): bool
 {
-    if (!preg_match('/^\+[1-9]\d{0,3}$/', $codigo) || !preg_match('/^\d{7,15}$/', $telefono)) {
+    if (!preg_match('/^\+[1-9]\d{0,3}$/', $codigo)) {
         return false;
     }
 
-    return $codigo !== '+503' || preg_match('/^[267]\d{7}$/', $telefono) === 1;
+    $longitudes = [
+        '+503' => 8, '+502' => 8, '+504' => 8, '+505' => 8,
+        '+506' => 8, '+507' => 8, '+52' => 10, '+1' => 10,
+    ];
+    $longitud = $longitudes[$codigo] ?? null;
+    if ($longitud !== null && preg_match('/^\d{' . $longitud . '}$/D', $telefono) !== 1) {
+        return false;
+    }
+    if ($longitud === null && preg_match('/^\d{7,15}$/D', $telefono) !== 1) {
+        return false;
+    }
+
+    return $codigo !== '+503' || preg_match('/^[267]\d{7}$/D', $telefono) === 1;
+}
+
+function normalizarDireccionPerfil(?string $direccion): string
+{
+    return trim((string) preg_replace('/\s+/u', ' ', (string) $direccion));
+}
+
+function direccionPerfilValida(?string $direccion): bool
+{
+    if (!is_string($direccion) || $direccion !== strip_tags($direccion) || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', $direccion)) {
+        return false;
+    }
+    $normalizada = normalizarDireccionPerfil($direccion);
+    $longitud = mb_strlen($normalizada);
+    return $longitud >= 8 && $longitud <= 250 && preg_match('/[\p{L}\p{N}]/u', $normalizada) === 1;
 }
 
 function ubicacionValida(PDO $pdo, int $departamentoId, int $municipioId, int $distritoId): bool
@@ -57,18 +122,23 @@ function ubicacionValida(PDO $pdo, int $departamentoId, int $municipioId, int $d
 
 function datosPerfilCompletos(array $usuario): bool
 {
+    $dui = isset($usuario['dui']) ? (string) $usuario['dui'] : null;
+    $codigo = normalizarCodigoTelefono(isset($usuario['codigo_telefono']) ? (string) $usuario['codigo_telefono'] : null);
     $datosBasicos=fechaNacimientoValida(isset($usuario['fecha_nacimiento']) ? (string) $usuario['fecha_nacimiento'] : null)
-        && normalizarDui(isset($usuario['dui']) ? (string) $usuario['dui'] : null) !== null
-        && normalizarDui(isset($usuario['dui']) ? (string) $usuario['dui'] : null) !== ''
+        && duiValidoExacto($dui)
         && telefonoValido(
-            normalizarCodigoTelefono(isset($usuario['codigo_telefono']) ? (string) $usuario['codigo_telefono'] : null),
-            normalizarTelefono(isset($usuario['telefono']) ? (string) $usuario['telefono'] : null)
+            $codigo,
+            normalizarTelefonoParaCodigo($codigo, isset($usuario['telefono']) ? (string) $usuario['telefono'] : null)
         )
         && (int) ($usuario['departamento_id'] ?? 0) > 0
         && (int) ($usuario['municipio_id'] ?? 0) > 0
         && (int) ($usuario['distrito_id'] ?? 0) > 0;
     if(($usuario['perfil_estado']??'completo')!=='pendiente')return $datosBasicos;
-    return $datosBasicos&&trim((string)($usuario['nombre']??''))!==''&&trim((string)($usuario['apellido']??''))!==''&&trim((string)($usuario['direccion']??''))!==''&&!empty($usuario['terminos_aceptados_at']);
+    return $datosBasicos
+        && nombrePersonaValido((string)($usuario['nombre']??''))
+        && nombrePersonaValido((string)($usuario['apellido']??''))
+        && direccionPerfilValida((string)($usuario['direccion']??''))
+        && !empty($usuario['terminos_aceptados_at']);
 }
 
 function obtenerPerfilUsuario(int $usuarioId): ?array

@@ -10,10 +10,15 @@ $esCliente = $usuarioActual !== null && $usuarioActual['rol'] === 'usuario';
 $pageTitle = 'Carrito de compras | Atenea';
 $pageDescription = 'Revisa los productos, ofertas, existencias y total de tu carrito Atenea.';
 $pageClass = 'cart-page'; $activePage = 'productos';
-require dirname(__DIR__, 2) . '/includes/header.php';
+if ($esCliente) {
+    require_once dirname(__DIR__, 2) . '/includes/portal_estudiante_layout.php';
+    portalEstudianteCabecera('Carrito de compras', 'carrito', 'Revisa los productos seleccionados antes de continuar al pago.');
+} else {
+    require dirname(__DIR__, 2) . '/includes/header.php';
+}
 ?>
-<main class="main cart-main">
-  <div class="page-title"><nav class="breadcrumbs"><div class="container"><ol><li><a href="<?= atenea_url('index.php') ?>">Inicio</a></li><li><a href="<?= atenea_url('src/website/pricing.php') ?>">Productos</a></li><li class="current" aria-current="page">Carrito</li></ol></div></nav></div>
+<<?= $esCliente ? 'div' : 'main' ?> class="<?= $esCliente ? '' : 'main ' ?>cart-main">
+  <?php if (!$esCliente): ?><div class="page-title"><nav class="breadcrumbs"><div class="container"><ol><li><a href="<?= atenea_url('index.php') ?>">Inicio</a></li><li><a href="<?= atenea_url('src/website/pricing.php') ?>">Productos</a></li><li class="current" aria-current="page">Carrito</li></ol></div></nav></div><?php endif; ?>
   <section class="section cart-section"><div class="container">
     <div class="cart-heading"><div><span class="cart-kicker">Tu selección</span><h1>Carrito de compras</h1><p>Los precios y la disponibilidad se comprobarán nuevamente antes de crear el pago.</p></div><span class="cart-heading-count"><i class="bi bi-cart3" aria-hidden="true"></i> <?= (int)$resumen['cantidad'] ?> producto<?= (int)$resumen['cantidad'] === 1 ? '' : 's' ?></span></div>
     <?php if (!$resumen['items']): ?>
@@ -42,5 +47,5 @@ require dirname(__DIR__, 2) . '/includes/header.php';
       </aside></div></div>
     <?php endif; ?>
   </div></section>
-</main>
-<?php require dirname(__DIR__, 2) . '/includes/footer.php'; ?>
+</<?= $esCliente ? 'div' : 'main' ?>>
+<?php if ($esCliente) portalEstudiantePie(); else require dirname(__DIR__, 2) . '/includes/footer.php'; ?>

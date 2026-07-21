@@ -8,13 +8,36 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .main-content .iq-navbar-header { position: relative; }
 .main-content .iq-header-img { width: 100vw; }
 
+.atenea-aula .iq-navbar-header {
+  height: 215px;
+  background-color: var(--bs-primary);
+}
+
+.atenea-aula .iq-navbar-header .iq-container {
+  position: relative;
+  z-index: 2;
+}
+
+.atenea-aula .iq-navbar-header h1,
+.atenea-aula .iq-navbar-header p {
+  color: #fff;
+}
+
+.atenea-aula .iq-navbar-header .portal-breadcrumb a,
+.atenea-aula .iq-navbar-header .portal-breadcrumb .active {
+  color: rgba(255, 255, 255, .88) !important;
+}
+
 @media (min-width: 1200px) {
-  .sidebar + .main-content { width: calc(100% - 16.2rem); }
-  .sidebar + .main-content .iq-navbar-header .iq-header-img { width: 100%; }
+  .sidebar + .portal-sidebar-overlay + .main-content {
+    width: calc(100% - 16.2rem);
+    margin-left: 16.2rem;
+  }
+  .sidebar + .portal-sidebar-overlay + .main-content .iq-navbar-header .iq-header-img { width: 100%; }
 }
 
 @media (max-width: 1199.98px) {
-  .sidebar + .main-content { width: 100%; }
+  .sidebar + .portal-sidebar-overlay + .main-content { width: 100%; }
   .sidebar .sidebar-body { max-height: calc(100dvh - 92px); overflow-y: auto; overflow-x: hidden; }
 }
 
@@ -37,11 +60,11 @@ html, body { max-width: 100%; overflow-x: hidden; }
 @media (max-width: 575.98px) {
   .atenea-portal-logo-mobile img { width: 92px; height: 60px; max-width: 92px; max-height: 60px; }
 }
-.atenea-aula .sidebar{z-index:1050;transition:transform .25s ease;box-shadow:0 0 24px rgba(20,55,42,.1)}
-.atenea-aula .sidebar-body{padding-bottom:1.5rem}.atenea-aula .iq-main-menu .nav-link{min-height:44px;display:flex;align-items:center;gap:.65rem}.atenea-aula .iq-main-menu .nav-link.active{background:#173f35;color:#fff;font-weight:600}.atenea-aula .iq-main-menu .nav-link:focus-visible,.portal-menu-button:focus-visible,.portal-sidebar-close:focus-visible{outline:3px solid rgba(23,63,53,.3);outline-offset:2px}
+.atenea-aula .sidebar{z-index:1050;transition:transform .25s ease}
+.atenea-aula .sidebar-body{padding-bottom:1.5rem}.atenea-aula .iq-main-menu .nav-link{min-height:44px;display:flex;align-items:center;gap:.65rem}.atenea-aula .sidebar .sidebar-body .iq-main-menu .nav-link.active{background:var(--bs-primary)!important;color:#fff!important;font-weight:500}.atenea-aula .sidebar .sidebar-body .iq-main-menu .nav-link.active .item-name,.atenea-aula .sidebar .sidebar-body .iq-main-menu .nav-link.active .icon{color:#fff!important}.atenea-aula .sidebar .sidebar-body .iq-main-menu .nav-link:hover{color:var(--bs-primary)}.atenea-aula .iq-main-menu .nav-link:focus-visible,.portal-menu-button:focus-visible,.portal-sidebar-close:focus-visible{outline:3px solid rgba(var(--bs-primary-rgb),.3);outline-offset:2px}
 .atenea-aula .submenu{margin:.15rem 0 .5rem;padding-left:2.65rem;display:none;flex-direction:column}.atenea-aula .submenu.show{display:flex}.atenea-aula .submenu .nav-link{min-height:38px;padding:.45rem .75rem;font-size:.9rem}.atenea-aula .submenu-arrow{font-size:.75rem;transition:transform .2s ease}.atenea-aula [aria-expanded="true"] .submenu-arrow{transform:rotate(180deg)}
-.portal-menu-button,.portal-sidebar-close{border:0;background:transparent;color:#173f35;width:44px;height:44px;border-radius:50%;font-size:1.55rem;display:inline-flex;align-items:center;justify-content:center}.portal-menu-button:hover,.portal-sidebar-close:hover{background:#e8f0ed}.portal-sidebar-overlay{display:none;position:fixed;inset:0;border:0;background:rgba(12,29,24,.55);z-index:1040}.portal-breadcrumb{margin:0 0 .5rem}.portal-breadcrumb a,.portal-breadcrumb .active{color:rgba(255,255,255,.88)}
-.aula-stat{border:1px solid rgba(23,63,53,.1);border-radius:1rem;background:#fff;height:100%}.aula-stat .aula-icon{width:46px;height:46px;border-radius:14px;background:#e8f0ed;color:#173f35;display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem}.aula-list-item{display:block;border:1px solid #e6ebe8;border-radius:.8rem;padding:1rem;color:inherit;text-decoration:none;transition:border-color .2s,transform .2s}.aula-list-item:hover{border-color:#173f35;transform:translateY(-1px);color:inherit}.aula-empty{text-align:center;padding:3rem 1rem;color:#68736f}.aula-empty i{font-size:2.5rem;color:#8ca098}.aula-date{min-width:58px;border-radius:.75rem;background:#e8f0ed;color:#173f35;text-align:center;padding:.45rem}.aula-date strong{display:block;font-size:1.2rem}
+.portal-menu-button,.portal-sidebar-close{border:0;background:transparent;color:var(--bs-primary);width:44px;height:44px;border-radius:50%;font-size:1.55rem;display:inline-flex;align-items:center;justify-content:center}.portal-menu-button:hover,.portal-sidebar-close:hover{background:rgba(var(--bs-primary-rgb),.1)}.portal-sidebar-overlay{display:none;position:fixed;inset:0;border:0;background:rgba(35,45,66,.45);z-index:1040}.portal-breadcrumb{margin:0 0 .5rem}.portal-breadcrumb a,.portal-breadcrumb .active{color:rgba(255,255,255,.88)}
+.aula-stat{border:0;border-radius:var(--bs-border-radius);background:#fff;height:100%;box-shadow:0 10px 30px rgba(17,38,146,.05)}.aula-stat .aula-icon{width:46px;height:46px;border-radius:.5rem;background:rgba(var(--bs-primary-rgb),.12);color:var(--bs-primary);display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem}.aula-list-item{display:block;border:1px solid var(--bs-border-color);border-radius:.5rem;padding:1rem;color:inherit;text-decoration:none;transition:border-color .2s,transform .2s}.aula-list-item:hover{border-color:var(--bs-primary);transform:translateY(-1px);color:inherit}.aula-empty{text-align:center;padding:3rem 1rem;color:var(--bs-body-color)}.aula-empty i{font-size:2.5rem;color:#8a92a6}.aula-date{min-width:58px;border-radius:.5rem;background:rgba(var(--bs-primary-rgb),.12);color:var(--bs-primary);text-align:center;padding:.45rem}.aula-date strong{display:block;font-size:1.2rem}
 @media (min-width:1200px){body.portal-sidebar-collapsed .sidebar{transform:translateX(-100%)}body.portal-sidebar-collapsed .sidebar+.portal-sidebar-overlay+.main-content{width:100%;margin-left:0}}
-@media (max-width:1199.98px){.atenea-aula .sidebar{transform:translateX(-105%)}body.portal-sidebar-open .sidebar{transform:translateX(0)}body.portal-sidebar-open .portal-sidebar-overlay{display:block}.atenea-aula .main-content{width:100%!important;margin-left:0!important}.atenea-aula .iq-navbar-header{height:auto!important;min-height:190px}.atenea-aula .content-inner{padding-left:1rem;padding-right:1rem}}
-@media (max-width:575.98px){.atenea-aula .sidebar{width:min(88vw,320px)}.atenea-aula .iq-navbar-header h1{font-size:1.55rem}.aula-responsive-table thead{display:none}.aula-responsive-table,.aula-responsive-table tbody,.aula-responsive-table tr,.aula-responsive-table td{display:block;width:100%}.aula-responsive-table tr{border:1px solid #e6ebe8;border-radius:.75rem;margin-bottom:.75rem;padding:.5rem}.aula-responsive-table td{border:0;padding:.35rem .5rem}.aula-responsive-table td:before{content:attr(data-label);font-weight:600;display:block;color:#68736f;font-size:.75rem;text-transform:uppercase}}
+@media (max-width:1199.98px){.atenea-aula .sidebar{--sidebar-width:min(88vw,320px);width:var(--sidebar-width);max-width:var(--sidebar-width);transform:translateX(-105%)}body.portal-sidebar-open .sidebar{transform:translateX(0)}body.portal-sidebar-open .portal-sidebar-overlay{display:block}.atenea-aula .main-content{width:100%!important;margin-left:0!important}.atenea-aula .iq-navbar-header{height:auto!important;min-height:190px}.atenea-aula .content-inner{padding-left:1rem;padding-right:1rem}}
+@media (max-width:575.98px){.atenea-aula .iq-navbar-header h1{font-size:1.55rem}.aula-responsive-table thead{display:none}.aula-responsive-table,.aula-responsive-table tbody,.aula-responsive-table tr,.aula-responsive-table td{display:block;width:100%}.aula-responsive-table tr{border:1px solid var(--bs-border-color);border-radius:.5rem;margin-bottom:.75rem;padding:.5rem}.aula-responsive-table td{border:0;padding:.35rem .5rem}.aula-responsive-table td:before{content:attr(data-label);font-weight:600;display:block;color:var(--bs-body-color);font-size:.75rem;text-transform:uppercase}}
