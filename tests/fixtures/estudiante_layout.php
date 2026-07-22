@@ -44,4 +44,7 @@ $q->execute([
     'distrito'=>(int)$ubicacion['distrito_id'],
     'direccion'=>'Dirección temporal para validar el dashboard de Atenea.',
 ]);
+$usuarioId=(int)$pdo->lastInsertId();
+$q=$pdo->prepare("INSERT INTO pedidos(numero,usuario_id,subtotal,descuento,envio,impuestos,total,moneda,checkout_key,estado,payment_status) VALUES(:numero,:usuario,25,0,0,0,25,'usd',:clave,'pagado','paid')");
+$q->execute(['numero'=>'TEST-EST-'.strtoupper(bin2hex(random_bytes(4))),'usuario'=>$usuarioId,'clave'=>hash('sha256',$correo)]);
 echo json_encode(['correo'=>$correo], JSON_UNESCAPED_SLASHES) . "\n";

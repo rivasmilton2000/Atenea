@@ -1,4 +1,11 @@
 const { test, expect } = require('@playwright/test');
+const { execFileSync } = require('child_process');
+const path = require('path');
+
+const root = path.resolve(__dirname, '../..');
+const php = 'C:\\xampp\\php\\php.exe';
+const studentFixture = path.join(root, 'tests/fixtures/estudiante_layout.php');
+const teacherFixture = path.join(root, 'tests/fixtures/docente_layout.php');
 
 const app = path => `/Atenea${path}`;
 
@@ -13,6 +20,16 @@ async function login(page) {
 }
 
 test.describe.serial('Dashboard oficial de estudiantes', () => {
+  test.beforeAll(() => {
+    execFileSync(php, [studentFixture, 'setup'], { cwd: root });
+    execFileSync(php, [teacherFixture, 'setup'], { cwd: root });
+  });
+
+  test.afterAll(() => {
+    execFileSync(php, [studentFixture, 'cleanup'], { cwd: root });
+    execFileSync(php, [teacherFixture, 'cleanup'], { cwd: root });
+  });
+
   test('todos los módulos usan el dashboard nuevo y un único layout compartido', async ({ page }) => {
     const failures = [];
     page.on('response', response => {
@@ -75,6 +92,8 @@ test.describe.serial('Dashboard oficial de estudiantes', () => {
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(app('/src/estudiantes/facturas.php'));
+    await expect(page.locator('tbody tr')).toHaveCount(1);
+    await expect(page.locator('tbody')).toContainText('Pagado');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2)).toBeTruthy();
     await page.goto(app('/src/estudiantes/perfil.php'));
     await page.getByRole('button', { name: 'Abrir mi perfil' }).click();
@@ -85,11 +104,31 @@ test.describe.serial('Dashboard oficial de estudiantes', () => {
 
   test('rutas heredadas redirigen y los textos de demostración no aparecen', async ({ page }) => {
     await login(page);
-    await page.goto(app('/src/estudiantes/dashboard/admin.php'));
-    await expect(page).toHaveURL(/\/src\/estudiantes\/index\.php$/);
     await page.goto(app('/src/estudiantes/dashboard_estudiantes/dashboard/index.php'));
     await expect(page).toHaveURL(/\/src\/estudiantes\/index\.php$/);
     const text = await page.locator('body').innerText();
     expect(text).not.toMatch(/Hope UI|Hello Devs|Austin Robertson|Marketing Administrator|Total Sales|Go Pro/i);
+  });
+
+  test('sesión ausente, rol ajeno y cierre de sesión quedan protegidos en backend', async ({ browser, page }) => {
+    const anonContext = await browser.newContext();
+    const anonPage = await anonContext.newPage();
+    await anonPage.goto(app('/src/estudiantes/index.php'));
+    await expect(anonPage).toHaveURL(/\/src\/login\/sign-in\.php/);
+    await anonContext.close();
+
+    await page.goto(app('/src/login/sign-in.php'));
+    await page.locator('#correo').fill('layout.docente@example.invalid');
+    await page.locator('#password').fill('DocenteLayout!2026');
+    await Promise.all([
+      page.waitForURL(url => !url.pathname.endsWith('/sign-in.php')),
+      page.getByRole('button', { name: /iniciar|ingresar|acceder/i }).click(),
+    ]);
+    const forbidden = await page.goto(app('/src/estudiantes/index.php'));
+    expect(forbidden.status()).toBe(403);
+
+    await page.goto(app('/src/login/logout.php'));
+    await page.goto(app('/src/estudiantes/index.php'));
+    await expect(page).toHaveURL(/\/src\/login\/sign-in\.php/);
   });
 });

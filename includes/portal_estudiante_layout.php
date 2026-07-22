@@ -11,42 +11,22 @@ require_once __DIR__.'/carrito.php';
 require_once __DIR__.'/notificaciones.php';
 require_once __DIR__.'/personalizacion_visual.php';
 require_once ATENEA_ROOT.'/src/estudiantes/includes/auth.php';
-require_once ATENEA_ROOT.'/src/estudiantes/includes/student_data.php';
-
-function datosPortalEstudiante(int $usuarioId): array
-{
-    $pdo=obtenerConexion();
-    $q=$pdo->prepare("SELECT COUNT(*) pedidos,COALESCE(SUM(estado='pagado'),0) pagados,COALESCE(SUM(CASE WHEN estado='pagado' THEN total ELSE 0 END),0) invertido FROM pedidos WHERE usuario_id=:u");
-    $q->execute(['u'=>$usuarioId]);
-    $resumen=$q->fetch()?:['pedidos'=>0,'pagados'=>0,'invertido'=>0];
-    $q=$pdo->prepare('SELECT id,numero,total,moneda,estado,created_at FROM pedidos WHERE usuario_id=:u ORDER BY created_at DESC LIMIT 8');
-    $q->execute(['u'=>$usuarioId]);
-    $pedidos=$q->fetchAll();
-    $q=$pdo->prepare("SELECT COUNT(*) FROM admin_notices WHERE user_id=:u AND status='pendiente'");
-    $q->execute(['u'=>$usuarioId]);
-    $avisos=(int)$q->fetchColumn();
-    $q=$pdo->prepare("SELECT COUNT(*) FROM inscripciones_capacitacion WHERE usuario_id=:u AND estado IN('pendiente_asignacion','inscrito','finalizado')");
-    $q->execute(['u'=>$usuarioId]);
-    $capacitaciones=(int)$q->fetchColumn();
-    $q=$pdo->prepare("SELECT COUNT(*) FROM certificados_capacitacion WHERE estudiante_id=:u AND estado='emitido'");
-    $q->execute(['u'=>$usuarioId]);
-    return ['resumen'=>$resumen,'pedidos'=>$pedidos,'capacitaciones'=>$capacitaciones,'certificados'=>$certificados,'avisos_pendientes'=>$avisos];
-}
+require_once ATENEA_ROOT.'/src/estudiantes/includes/student_context.php';
 
 function estadoPedidoEstudiante(string $estado): string{return match($estado){'pagado'=>'Pagado','pendiente_pago'=>'Pendiente de pago','preparando'=>'Preparando','enviado'=>'Enviado','entregado'=>'Entregado','pago_fallido'=>'Pago fallido','cancelado'=>'Cancelado','reembolsado'=>'Reembolsado',default=>ucfirst(str_replace('_',' ',$estado))};}
 function claseEstadoPedido(string $estado): string{return match($estado){'pagado','entregado'=>'bg-success','pago_fallido','cancelado'=>'bg-danger','reembolsado'=>'bg-info','enviado'=>'bg-primary',default=>'bg-warning'};}
 
 function portalEstudianteCabecera(string $titulo,string $activo='inicio',string $descripcion='',bool $permitirIncompleto=false): array
 {
-    $perfil=autorizarPortalEstudianteAtenea($permitirIncompleto);
-    $datos=datosPortalEstudiante((int)$perfil['id']);
-    $cantidadCarrito=cantidadCarrito(obtenerConexion(),(int)$perfil['id']);
-    $notificacionesPortal=notificacionesUsuarioResumen((int)$perfil['id'],5);
-    $mensajesNoLeidos=mensajesNoLeidosEstudianteAtenea(obtenerConexion(),(int)$perfil['id']);
-    $logo=logoPersonalizacionVisualAtenea('estudiantes',obtenerConfiguracionPortalEstudiante('portal_logo'));
-    $avatar=rutaFotoPerfil($perfil);
-    $hora=(int)date('G');
-    $saludo=$hora<12?'Buenos días':($hora<18?'Buenas tardes':'Buenas noches');
+    $contexto=cargarContextoEstudianteAtenea($permitirIncompleto);
+    $perfil=$contexto['perfil'];
+    $datos=$contexto['datos'];
+    $cantidadCarrito=$contexto['cantidad_carrito'];
+    $notificacionesPortal=$contexto['notificaciones'];
+    $mensajesNoLeidos=$contexto['mensajes_no_leidos'];
+    $logo=$contexto['logo'];
+    $avatar=$contexto['avatar'];
+    $saludo=$contexto['saludo'];
     $GLOBALS['portal_estudiante_flash']=is_array($_SESSION['portal_flash']??null)?$_SESSION['portal_flash']:null;
     unset($_SESSION['portal_flash']);
     $GLOBALS['portal_estudiante_activo']=$activo;

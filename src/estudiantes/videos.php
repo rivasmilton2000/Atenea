@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);require_once dirname(__DIR__,2).'/includes/portal_estudiante_layout.php';require_once dirname(__DIR__,2).'/includes/portal_estudiante_aula.php';$portal=portalEstudianteCabecera('Videos','videos','Videos autorizados y recursos audiovisuales de tus capacitaciones.');$contenidos=aulaContenidosEstudiante(obtenerConexion(),(int)$portal['perfil']['id'],['video'],200);renderizarListadoContenidosAula($contenidos,'Tu docente todavía no ha publicado videos.');portalEstudiantePie();

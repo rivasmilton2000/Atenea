@@ -1,0 +1,252 @@
+/* Ajustes mínimos de Atenea sobre el dashboard proporcionado. */
+@import url("../../../website/assets/vendor/bootstrap-icons/bootstrap-icons.min.css");
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../dashboard_estudiantes/dashboard/assets/fonts/Manrope/Manrope-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../../dashboard_estudiantes/dashboard/assets/fonts/Manrope/Manrope-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../../dashboard_estudiantes/dashboard/assets/fonts/Manrope/Manrope-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../../dashboard_estudiantes/dashboard/assets/fonts/Manrope/Manrope-Bold.woff2") format("woff2");
+}
+
+.student-dashboard {
+  overflow-x: hidden;
+}
+
+.student-dashboard .navbar .navbar-brand-wrapper .navbar-brand img {
+  width: 126px;
+  height: 70px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.student-dashboard .navbar .navbar-brand-wrapper .brand-logo-mini img {
+  width: 48px;
+  height: 48px;
+}
+
+.student-dashboard .navbar .navbar-menu-wrapper,
+.student-dashboard .navbar .navbar-nav,
+.student-dashboard .navbar .user-dropdown {
+  overflow: visible;
+}
+
+.student-dashboard .navbar .user-dropdown .img-xs,
+.student-dashboard .navbar .user-dropdown .img-md {
+  object-fit: cover;
+}
+
+.student-dashboard .navbar .user-dropdown .img-md {
+  width: 72px;
+  height: 72px;
+}
+
+.student-dashboard .student-count-label {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 18px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  color: #fff;
+  background: #f29f05;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.student-dashboard .sidebar .nav {
+  padding-bottom: 2rem;
+}
+
+.student-dashboard .sidebar .nav .nav-category {
+  margin-top: .75rem;
+}
+
+.student-dashboard .sidebar .nav .nav-item .nav-link {
+  min-height: 46px;
+}
+
+.student-dashboard .content-wrapper {
+  min-width: 0;
+}
+
+.student-dashboard .student-page-heading {
+  border-bottom: 1px solid #e9edf4;
+  padding-bottom: 1rem;
+}
+
+.student-dashboard .card {
+  border-radius: 14px;
+}
+
+.student-dashboard .card-header {
+  border-bottom-color: #eef0f4;
+  background: transparent;
+}
+
+.student-dashboard .aula-stat,
+.student-dashboard .aula-list-item {
+  display: block;
+  height: 100%;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+}
+
+.student-dashboard .aula-list-item {
+  padding: 1rem;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.student-dashboard .aula-list-item:hover,
+.student-dashboard .aula-list-item:focus-visible {
+  border-color: #1f3bb3;
+  box-shadow: 0 8px 24px rgba(31, 59, 179, .09);
+  transform: translateY(-1px);
+}
+
+.student-dashboard .aula-icon {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  color: #1f3bb3;
+  background: rgba(31, 59, 179, .1);
+  font-size: 1.25rem;
+}
+
+.student-dashboard .aula-empty {
+  padding: 2rem 1rem;
+  color: #6c7383;
+  text-align: center;
+}
+
+.student-dashboard .aula-empty > i {
+  font-size: 2.25rem;
+}
+
+.student-dashboard .aula-date {
+  display: grid;
+  width: 54px;
+  min-width: 54px;
+  padding: .45rem;
+  place-items: center;
+  border-radius: 10px;
+  color: #1f3bb3;
+  background: rgba(31, 59, 179, .08);
+}
+
+.student-dashboard .aula-date strong {
+  font-size: 1.25rem;
+}
+
+.student-dashboard .table-responsive,
+.student-dashboard .student-scroll-safe {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.student-dashboard img,
+.student-dashboard video,
+.student-dashboard iframe {
+  max-width: 100%;
+}
+
+@media (max-width: 991.98px) {
+  .student-dashboard .sidebar {
+    max-height: calc(100dvh - 60px);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .student-dashboard .navbar .navbar-brand-wrapper {
+    padding-inline: 6px;
+  }
+
+  .student-dashboard .navbar .navbar-brand-wrapper .brand-logo-mini img {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .student-dashboard .content-wrapper {
+    padding: 1rem;
+  }
+
+  .student-dashboard .aula-responsive-table thead {
+    display: none;
+  }
+
+  .student-dashboard .aula-responsive-table,
+  .student-dashboard .aula-responsive-table tbody,
+  .student-dashboard .aula-responsive-table tr,
+  .student-dashboard .aula-responsive-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .student-dashboard .aula-responsive-table tr {
+    margin-bottom: 1rem;
+    padding: .5rem .75rem;
+    border: 1px solid #e8edf3;
+    border-radius: 12px;
+  }
+
+  .student-dashboard .aula-responsive-table td {
+    padding: .55rem 0;
+    border: 0;
+  }
+
+  .student-dashboard .aula-responsive-table td[data-label]::before {
+    display: block;
+    color: #6c7383;
+    content: attr(data-label);
+    font-size: .75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .student-dashboard .navbar .navbar-menu-wrapper .navbar-nav .nav-item {
+    margin-left: .25rem;
+  }
+
+  .student-dashboard .navbar .navbar-menu-wrapper .navbar-nav .nav-link {
+    padding-inline: .35rem;
+  }
+
+  .student-dashboard .navbar .dropdown-menu {
+    max-width: calc(100vw - 12px);
+  }
+}

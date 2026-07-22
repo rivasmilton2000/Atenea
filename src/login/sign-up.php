@@ -25,8 +25,8 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title><?= atenea_e(obtenerConfiguracionPortalEstudiante('registro_titulo')) ?> | Atenea</title>
   <link rel="icon" href="<?= atenea_url('img/atenea-logo.png') ?>">
-  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/core/libs.min.css') ?>">
-  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/hope-ui.min.css') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/vendors/css/vendor.bundle.base.css') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/css/style.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/login/auth.css') ?>">
   <?php ateneaAlertasHead(); ?>
 </head>
@@ -68,11 +68,11 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
           </div></div>
         </div></div>
       </div>
-      <div class="col-lg-5 d-lg-block d-none bg-primary p-0 position-fixed end-0 top-0 vh-100 overflow-hidden"><img src="<?= atenea_url(obtenerConfiguracionPortalEstudiante('registro_imagen_lateral')) ?>" class="img-fluid h-100 w-100 gradient-main animated-scaleX" style="object-fit:cover" alt="Registro Atenea"></div>
+      <div class="col-lg-5 d-lg-block d-none bg-primary p-0 position-fixed end-0 top-0 vh-100 overflow-hidden"><img src="<?= recursoPortalEstudiante('registro_imagen_lateral','src/estudiantes/dashboard_estudiantes/dashboard/assets/images/dashboard/darkBG.png') ?>" class="img-fluid h-100 w-100 gradient-main animated-scaleX" style="object-fit:cover" alt="Registro Atenea"></div>
     </div>
   </section>
 </div>
-<script src="<?= atenea_url('src/estudiantes/assets/js/core/libs.min.js') ?>"></script>
+<script src="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/vendors/js/vendor.bundle.base.js') ?>"></script>
 <script src="<?= atenea_url('src/website/assets/js/security-ui.js') ?>"></script>
 <script>
 (() => {

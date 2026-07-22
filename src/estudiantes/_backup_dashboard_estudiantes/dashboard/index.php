@@ -1,0 +1,6 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__,4).'/includes/auth.php';
+exigirRol(['usuario']);
+header('Location: '.atenea_url('src/estudiantes/index.php'),true,302);
+exit;

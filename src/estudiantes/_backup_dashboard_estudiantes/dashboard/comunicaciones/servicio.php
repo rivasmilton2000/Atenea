@@ -1,0 +1,12 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__).'/includes/cms.php';
+require_once dirname(__DIR__,3).'/includes/comunicacion_centro.php';
+exigirPermiso('communications.view');
+$pdo=obtenerConexion();$diagnostico=diagnosticoImapAtenea($pdo,true);
+cmsCabecera('Diagnóstico IMAP','comunicaciones/servicio.php','Disponibilidad y sincronización del buzón institucional sin exponer credenciales.');
+?>
+<div class="card card-rounded"><div class="card-body"><div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4"><div><h2 class="h5 mb-1">Buzón institucional</h2><p class="text-muted mb-0">Todos los módulos utilizan la configuración central de <code>.env</code>.</p></div><?php if($diagnostico['disponible']):?><form method="post" action="<?=atenea_url('src/comunicaciones/imap-sincronizar.php')?>" data-atenea-loading data-atenea-loading-title="Sincronizando buzón"><input type="hidden" name="csrf_token" value="<?=atenea_e(obtenerTokenCsrf())?>"><button class="btn btn-primary"><i class="mdi mdi-sync me-1"></i> Sincronizar ahora</button></form><?php endif;?></div>
+<?php if($diagnostico['faltantes']):?><div class="alert alert-warning" role="alert"><strong>Configuración incompleta.</strong> Faltan: <?=atenea_e(implode(', ',$diagnostico['faltantes']))?>.</div><?php elseif(!$diagnostico['extension']):?><div class="alert alert-warning" role="alert"><strong>Extensión no disponible.</strong> Habilita <code>extension=imap</code> en el PHP utilizado por Apache y reinicia el servicio.</div><?php endif;?>
+<dl class="row mb-0"><dt class="col-sm-6 col-lg-4">IMAP disponible</dt><dd class="col-sm-6 col-lg-8"><span class="badge bg-<?=$diagnostico['disponible']?'success':'danger'?>"><?=$diagnostico['disponible']?'Disponible':'No disponible'?></span></dd><dt class="col-sm-6 col-lg-4">Conexión</dt><dd class="col-sm-6 col-lg-8"><span class="badge bg-<?=$diagnostico['conexion']?'success':'danger'?>"><?=$diagnostico['conexion']?'Correcta':'Incorrecta'?></span></dd><dt class="col-sm-6 col-lg-4">Última sincronización</dt><dd class="col-sm-6 col-lg-8"><?=atenea_e($diagnostico['ultima_sincronizacion']?date('d/m/Y H:i',strtotime($diagnostico['ultima_sincronizacion'])):'Sin sincronizaciones')?></dd><dt class="col-sm-6 col-lg-4">Mensajes sincronizados</dt><dd class="col-sm-6 col-lg-8"><?=(int)$diagnostico['mensajes_sincronizados']?></dd></dl></div></div>
+<?php cmsPie();

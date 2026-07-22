@@ -1,0 +1,8 @@
+<?php
+require_once dirname(__DIR__) . '/includes/cms.php';
+if($_SERVER['REQUEST_METHOD']!=='POST'||!validarTokenCsrf($_POST['csrf_token']??null)){cmsFlash('error','Solicitud o token CSRF inválido.');header('Location: index.php');exit;}
+$id=cmsId($_POST['id']??0);$accion=(string)($_POST['accion']??'');if(!$id){cmsFlash('error','ID inválido.');header('Location: index.php');exit;}
+$pdo=obtenerConexion();
+try{if($accion==='toggle'){$q=$pdo->prepare('UPDATE secciones SET activo=1-activo WHERE id=:id');$q->execute(['id'=>$id]);cmsFlash('exito','Estado actualizado.');}
+elseif($accion==='eliminar'){$pdo->beginTransaction();$q=$pdo->prepare('SELECT imagen FROM secciones WHERE id=:id FOR UPDATE');$q->execute(['id'=>$id]);$imagen=$q->fetchColumn();$q=$pdo->prepare('DELETE FROM secciones WHERE id=:id');$q->execute(['id'=>$id]);$pdo->commit();cmsEliminarImagenSiNoSeUsa($imagen?:null);cmsFlash('exito','Sección y elementos relacionados eliminados.');}
+else cmsFlash('error','Acción no válida.');}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log($e->getMessage());cmsFlash('error','No fue posible completar la acción.');}header('Location: index.php');exit;

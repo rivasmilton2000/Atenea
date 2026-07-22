@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
-const ATENEA_AVATAR_FALLBACK = 'src/estudiantes/assets/images/avatars/01.png';
+const ATENEA_AVATAR_FALLBACK = 'img/atenea-logo.png';
 
 function rutaAvatarLocalSegura(?string $ruta): ?string
 {

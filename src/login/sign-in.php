@@ -29,8 +29,8 @@ $logo = atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo'));
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title><?= atenea_e(obtenerConfiguracionPortalEstudiante('login_titulo')) ?> | Atenea</title>
   <link rel="icon" type="image/png" href="<?= $logo ?>">
-  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/core/libs.min.css') ?>">
-  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/assets/css/hope-ui.min.css') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/vendors/css/vendor.bundle.base.css') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/css/style.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/login/auth.css') ?>">
   <?php ateneaAlertasHead(); ?>
 </head>
@@ -77,11 +77,11 @@ $logo = atenea_url(obtenerConfiguracionPortalEstudiante('portal_logo'));
           </div></div>
         </div></div>
       </div>
-      <div class="col-md-6 d-md-block d-none bg-primary p-0 vh-100 overflow-hidden"><img src="<?= atenea_url(obtenerConfiguracionPortalEstudiante('login_imagen_lateral')) ?>" class="img-fluid gradient-main animated-scaleX" alt="Acceso Atenea"></div>
+      <div class="col-md-6 d-md-block d-none bg-primary p-0 vh-100 overflow-hidden"><img src="<?= recursoPortalEstudiante('login_imagen_lateral','src/estudiantes/dashboard_estudiantes/dashboard/assets/images/dashboard/darkBG.png') ?>" class="img-fluid gradient-main animated-scaleX" alt="Acceso Atenea"></div>
     </div>
   </section>
 </div>
-<script src="<?= atenea_url('src/estudiantes/assets/js/core/libs.min.js') ?>"></script>
+<script src="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/vendors/js/vendor.bundle.base.js') ?>"></script>
 <script src="<?= atenea_url('src/website/assets/js/security-ui.js') ?>"></script>
 <script>
 document.getElementById('google-login')?.addEventListener('click', function () {
