@@ -48,16 +48,33 @@ function ateneaNormalizarAlerta(?array $flash): ?array
     ];
 }
 
-function ateneaAlertasHead(): void
+function ateneaAlertasHead(?string $area = null): void
 {
     require_once __DIR__ . '/personalizacion_visual.php';
-    $ruta = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
-    $area = str_contains($ruta, '/src/dashboard/') ? 'dashboard' : (str_contains($ruta, '/src/estudiantes/') ? 'estudiantes' : (str_contains($ruta, '/src/docente/') ? 'docente' : 'website'));
+    if (!in_array($area, ['dashboard', 'estudiantes', 'docente', 'website'], true)) {
+        $ruta = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+        $rutaCompartida = str_contains($ruta, '/src/comunicaciones/') || str_contains($ruta, '/src/notificaciones/');
+        $rol = (string)($_SESSION['usuario_rol'] ?? '');
+        if ($rutaCompartida && in_array($rol, ['admin', 'docente', 'usuario'], true)) {
+            $area = ['admin' => 'dashboard', 'docente' => 'docente', 'usuario' => 'estudiantes'][$rol];
+        } elseif (str_contains($ruta, '/src/dashboard/')) {
+            $area = 'dashboard';
+        } elseif (str_contains($ruta, '/src/estudiantes/')) {
+            $area = 'estudiantes';
+        } elseif (str_contains($ruta, '/src/docente/')) {
+            $area = 'docente';
+        } else {
+            $area = 'website';
+        }
+    }
     renderizarPersonalizacionVisualAtenea($area);
     ?>
   <!-- SweetAlert2 se centraliza aquí para evitar cargas duplicadas y facilitar su reemplazo por archivos locales. -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   <link rel="stylesheet" href="<?= atenea_url('src/shared/assets/css/atenea-theme.css') ?>">
+<?php foreach (array_unique($GLOBALS['atenea_layout_styles'] ?? []) as $estilo): ?>
+  <link rel="stylesheet" href="<?= atenea_url((string)$estilo) ?>">
+<?php endforeach; ?>
 <?php
 }
 

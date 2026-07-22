@@ -25,7 +25,7 @@ $faviconAdmin = $configuracionAdmin['favicon'] ?? 'img/atenea-logo.png';
   <link rel="stylesheet" href="<?= atenea_url('src/website/assets/css/perfil-modal.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/website/assets/css/security-ui.css') ?>">
   <?php renderizarPersonalizacionVisualAtenea('dashboard'); ?>
-  <?php ateneaAlertasHead(); ?>
+  <?php ateneaAlertasHead('dashboard'); ?>
   <link rel="icon" type="image/png" href="<?= rutaImagenContenido($faviconAdmin, 'img/atenea-logo.png') ?>">
 </head>
 <body class="with-welcome-text">

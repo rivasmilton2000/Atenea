@@ -64,8 +64,10 @@ test.describe.serial('Etapa 2: Hope UI para estudiantes', () => {
         const before = await page.locator('.main-content').boundingBox();
         expect(before.x).toBeGreaterThan(250);
         await menuButton.click();
+        await expect(sidebar).toHaveClass(/sidebar-mini/);
         const collapsed = await page.locator('.main-content').boundingBox();
-        expect(collapsed.x).toBeLessThan(2);
+        expect(collapsed.x).toBeGreaterThanOrEqual(70);
+        expect(collapsed.x).toBeLessThan(90);
         await menuButton.click();
       } else {
         await menuButton.click();
