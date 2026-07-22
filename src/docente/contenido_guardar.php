@@ -1,5 +1,78 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/_layout.php';require_once dirname(__DIR__,2).'/includes/academico_flujo.php';
-exigirPermiso('academic.content.manage');if(($_SERVER['REQUEST_METHOD']??'')!=='POST'||!validarTokenCsrf((string)($_POST['csrf_token']??''))){http_response_code(400);exit;}$pdo=obtenerConexion();$docenteId=docenteSupervisadoAtenea($pdo);$seccion=docenteId($_POST['seccion_id']??0);$retorno=docenteUrl('contenidos.php',['seccion'=>$seccion]);
-try{if(!docentePoseeSeccion($pdo,$docenteId,$seccion))throw new DomainException('La sección no te pertenece.');$q=$pdo->prepare('SELECT asignatura_id FROM capacitacion_secciones WHERE id=:id');$q->execute(['id'=>$seccion]);$curso=(int)$q->fetchColumn();$modulo=trim(strip_tags((string)($_POST['modulo']??'')));$titulo=trim(strip_tags((string)($_POST['titulo']??'')));$descripcion=trim(strip_tags((string)($_POST['descripcion']??'')));$tipo=in_array($_POST['tipo']??'', ['video','texto','documento','enlace','actividad','evaluacion','recurso_descargable'],true)?$_POST['tipo']:'';$orden=(int)($_POST['orden']??0);$url=trim((string)($_POST['video_url']??''));$publicacion=trim((string)($_POST['fecha_publicacion']??''))?:null;$limite=trim((string)($_POST['fecha_limite']??''))?:null;$peso=filter_var($_POST['peso_progreso']??0,FILTER_VALIDATE_FLOAT);$estado=in_array($_POST['estado']??'', ['borrador','activo','inactivo'],true)?$_POST['estado']:'borrador';$obligatorio=isset($_POST['obligatorio'])?1:0;if($modulo===''||mb_strlen($modulo)>120||$titulo===''||mb_strlen($titulo)>190||mb_strlen($descripcion)>10000||$tipo===''||$peso===false||$peso<0||$peso>100||($publicacion&&$limite&&$limite<$publicacion)||!urlContenidoAcademicoValida($url,$tipo))throw new DomainException('Revisa los datos, fechas, peso o URL autorizada.');$categoria=$tipo==='video'?'video':'contenido';$archivo=guardarArchivoAcademico('archivo','contenidos',$categoria);if($tipo==='video'&&!$archivo&&$url==='')throw new DomainException('El video requiere un archivo privado o una URL autorizada.');if($tipo==='enlace'&&$url==='')throw new DomainException('El contenido de tipo enlace requiere una URL HTTPS.');$q=$pdo->prepare('INSERT INTO contenidos(asignatura_id,seccion_id,docente_id,modulo,tipo,titulo,descripcion,orden,video_url,archivo_relpath,archivo_nombre,archivo_mime,archivo_tamano,fecha_publicacion,fecha_limite,estado,activo,obligatorio,peso_progreso) VALUES(:a,:s,:d,:modulo,:tipo,:titulo,:descripcion,:orden,:url,:ruta,:nombre,:mime,:tamano,:publicacion,:limite,:estado,:activo,:obligatorio,:peso)');$q->execute(['a'=>$curso,'s'=>$seccion,'d'=>$docenteId,'modulo'=>$modulo,'tipo'=>$tipo,'titulo'=>$titulo,'descripcion'=>$descripcion?:null,'orden'=>$orden,'url'=>$url?:null,'ruta'=>$archivo['relpath']??null,'nombre'=>$archivo['nombre']??null,'mime'=>$archivo['mime']??null,'tamano'=>$archivo['tamano']??null,'publicacion'=>$publicacion,'limite'=>$limite,'estado'=>$estado,'activo'=>$estado==='activo'?1:0,'obligatorio'=>$obligatorio,'peso'=>$peso]);registrarAuditoria(['actor_user_id'=>$_SESSION['usuario_id'],'event_type'=>'academic.content.created','module'=>'academic','entity_type'=>'content','entity_id'=>$pdo->lastInsertId(),'action'=>'create','result'=>'success','description'=>'Contenido creado para una sección propia.'],$pdo);docenteFlash('exito','Contenido guardado para toda la sección.');}catch(Throwable$e){docenteFlash('error',$e instanceof DomainException?$e->getMessage():'No fue posible guardar el contenido.');}header('Location:'.$retorno);
+
+require_once __DIR__ . '/_layout.php';
+require_once dirname(__DIR__, 2) . '/includes/contenido_clase.php';
+require_once dirname(__DIR__, 2) . '/includes/audit.php';
+
+exigirPermiso('academic.content.manage');
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !validarTokenCsrf((string) ($_POST['csrf_token'] ?? ''))) {
+    http_response_code(400);
+    exit;
+}
+
+$pdo = obtenerConexion();
+$docenteId = docenteSupervisadoAtenea($pdo);
+$seccionId = docenteId($_POST['seccion_id'] ?? 0);
+$retorno = docenteUrl('contenidos.php', ['seccion'=>$seccionId]);
+$archivoGuardado = null;
+
+try {
+    if ($docenteId < 1 || !docentePoseeSeccion($pdo, $docenteId, $seccionId)) {
+        throw new DomainException('Solo puedes publicar en una sección que tengas asignada.');
+    }
+    $q = $pdo->prepare('SELECT asignatura_id FROM capacitacion_secciones WHERE id=:id AND docente_id=:docente');
+    $q->execute(['id'=>$seccionId, 'docente'=>$docenteId]);
+    $asignaturaId = (int) $q->fetchColumn();
+    if (!$asignaturaId) throw new DomainException('La clase seleccionada no está disponible.');
+
+    $modulo = textoPlanoContenido($_POST['modulo'] ?? '', 120, true);
+    $titulo = textoPlanoContenido($_POST['titulo'] ?? '', 190, true);
+    $descripcion = textoPlanoContenido($_POST['descripcion'] ?? '', 10000);
+    $tipoRecurso = (string) ($_POST['tipo_recurso'] ?? 'ninguno');
+    $url = trim((string) ($_POST['recurso_url'] ?? ''));
+    $tieneArchivo = archivoPresente();
+    validarEntradaRecursoContenido($tipoRecurso, $url, $tieneArchivo);
+    $fechaPublicacion = fechaHoraContenido($_POST['fecha_publicacion'] ?? null);
+    $estado = ($_POST['estado'] ?? '') === 'publicado' ? 'activo' : 'borrador';
+
+    if ($tieneArchivo) {
+        $categoria = $tipoRecurso === 'video_archivo' ? 'video' : 'contenido';
+        $archivoGuardado = guardarArchivoAcademico('archivo', 'contenidos', $categoria);
+    }
+    $tipo = match ($tipoRecurso) {
+        'video_archivo', 'youtube' => 'video',
+        'documento' => 'documento',
+        'google_drive', 'enlace' => 'enlace',
+        default => 'texto',
+    };
+
+    $pdo->beginTransaction();
+    $insertar = $pdo->prepare("INSERT INTO contenidos(asignatura_id,seccion_id,docente_id,modulo,tipo,titulo,descripcion,orden,video_url,archivo_relpath,archivo_nombre,archivo_mime,archivo_tamano,fecha_publicacion,publicado_at,estado,activo,obligatorio,peso_progreso) VALUES(:asignatura,:seccion,:docente,:modulo,:tipo,:titulo,:descripcion,0,:url,:ruta,:nombre,:mime,:tamano,:fecha,IF(:estado_publicado='activo',NOW(),NULL),:estado,:activo,0,0)");
+    $insertar->execute([
+        'asignatura'=>$asignaturaId, 'seccion'=>$seccionId, 'docente'=>$docenteId,
+        'modulo'=>$modulo, 'tipo'=>$tipo, 'titulo'=>$titulo, 'descripcion'=>$descripcion ?: null,
+        'url'=>$url ?: null, 'ruta'=>$archivoGuardado['relpath'] ?? null,
+        'nombre'=>$archivoGuardado['nombre'] ?? null, 'mime'=>$archivoGuardado['mime'] ?? null,
+        'tamano'=>$archivoGuardado['tamano'] ?? null, 'fecha'=>$fechaPublicacion,
+        'estado_publicado'=>$estado, 'estado'=>$estado, 'activo'=>$estado === 'activo' ? 1 : 0,
+    ]);
+    $contenidoId = (int) $pdo->lastInsertId();
+    $contenido = ['id'=>$contenidoId,'seccion_id'=>$seccionId,'asignatura_id'=>$asignaturaId,'docente_id'=>$docenteId,'titulo'=>$titulo];
+    if ($estado === 'activo') notificarPublicacionContenido($pdo, $contenido);
+    registrarAuditoria([
+        'actor_user_id'=>(int)$_SESSION['usuario_id'], 'target_user_id'=>$docenteId,
+        'event_type'=>'academic.content.created', 'module'=>'academic', 'entity_type'=>'content',
+        'entity_id'=>$contenidoId, 'action'=>'create', 'result'=>'success',
+        'description'=>'Se creó una publicación de clase en una sección asignada.',
+        'metadata'=>['estado'=>$estado,'tipo_recurso'=>$tipoRecurso,'seccion_id'=>$seccionId],
+    ], $pdo);
+    $pdo->commit();
+    docenteFlash('exito', $estado === 'activo' ? 'Publicación disponible para la clase.' : 'Borrador guardado.');
+} catch (Throwable $error) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($archivoGuardado) { $ruta=rutaPrivadaAcademica((string)$archivoGuardado['relpath']); if($ruta) @unlink($ruta); }
+    error_log('Contenido de clase crear: ' . $error->getMessage());
+    docenteFlash('error', $error instanceof DomainException ? $error->getMessage() : 'No fue posible guardar la publicación.');
+}
+header('Location:' . $retorno);

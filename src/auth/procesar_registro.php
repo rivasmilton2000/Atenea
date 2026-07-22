@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/audit.php';
 require_once dirname(__DIR__, 2) . '/includes/carrito.php';
+require_once dirname(__DIR__, 2) . '/includes/admin_notification_service.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Location: ' . atenea_url('src/login/sign-up.php'));
@@ -78,6 +79,7 @@ try {
         ]);
         $usuarioId = (int) $pdo->lastInsertId();
         registrarAuditoria(['actor_user_id'=>$usuarioId,'target_user_id'=>$usuarioId,'event_type'=>'user.created','module'=>'users','entity_type'=>'user','entity_id'=>$usuarioId,'action'=>'create','result'=>'success','description'=>'Se creo una cuenta mediante registro tradicional.','metadata'=>['provider'=>'local','role'=>'usuario']],$pdo);
+        notificarAdministracionAtenea('usuario_registrado','Nuevo usuario registrado','Se registró la cuenta de '.$nombre.' '.$apellido.'.','informacion',$usuarioId,atenea_url('src/dashboard/usuarios/detalle.php?id='.$usuarioId),'usuario:registrado:'.$usuarioId,['category'=>'usuarios'],$pdo);
         iniciarSesionUsuario([
             'id' => $usuarioId, 'nombre' => $nombre, 'apellido' => $apellido,
             'correo' => $correo, 'rol' => 'usuario', 'foto' => null,

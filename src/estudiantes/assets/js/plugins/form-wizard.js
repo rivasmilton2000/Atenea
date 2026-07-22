@@ -41,7 +41,6 @@
     const showTab=(n)=>{
         var x = document.getElementsByTagName("fieldset");
         x[n].style.display = "block";
-        console.log(n);
         ActiveTab(n);
        
     }

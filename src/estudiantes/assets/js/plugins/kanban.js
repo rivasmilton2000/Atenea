@@ -20,7 +20,6 @@ const sortable1 = Sortable.create(group1, {
     group2.classList.add("adding");
   },
   onSort: function(evt) {
-    console.log("group1 on sort");
     evt.from.classList.remove("adding");
   },
   onEnd: function(evt) {

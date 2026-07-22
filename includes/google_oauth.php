@@ -4,6 +4,7 @@ require_once __DIR__ . '/audit.php';
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/config/services.php';
+require_once __DIR__ . '/admin_notification_service.php';
 
 final class GoogleCuentaNoVinculadaException extends DomainException{}
 final class GoogleCuentaRequiereVinculacionException extends DomainException{}
@@ -186,6 +187,7 @@ function autenticarConPerfilGoogle(array $perfil, string $accion = 'login'): arr
             $consulta->execute(['id' => (int) $pdo->lastInsertId()]);
             $usuario = $consulta->fetch();
             registrarAuditoria(['actor_user_id'=>(int)$usuario['id'],'target_user_id'=>(int)$usuario['id'],'event_type'=>'user.created','module'=>'users','entity_type'=>'user','entity_id'=>$usuario['id'],'action'=>'create','result'=>'success','description'=>'Se creo una cuenta mediante Google.','metadata'=>['provider'=>'google','role'=>'usuario']],$pdo);
+            notificarAdministracionAtenea('usuario_registrado','Nuevo usuario registrado','Se registró una cuenta mediante Google.','informacion',(int)$usuario['id'],atenea_url('src/dashboard/usuarios/detalle.php?id='.$usuario['id']),'usuario:registrado:'.$usuario['id'],['category'=>'usuarios'],$pdo);
         }else throw new DomainException('Acción de Google no válida.');
 
         if (!is_array($usuario) || ($usuario['estado'] ?? '') !== 'activo') throw new RuntimeException('La cuenta no está activa.');

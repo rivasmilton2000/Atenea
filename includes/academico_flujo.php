@@ -8,7 +8,7 @@ require_once __DIR__.'/audit.php';
 
 function almacenamientoAcademicoBase(): string
 {
-    return rtrim(entornoAtenea('ACADEMIC_STORAGE_PATH', dirname(ATENEA_ROOT).'/atenea-private/academico'),'/\\');
+    return rtrim(entornoAtenea('ACADEMIC_STORAGE_PATH', dirname(dirname(ATENEA_ROOT)).'/atenea-private/academico'),'/\\');
 }
 
 function rutaPrivadaAcademica(string $relpath): ?string
@@ -18,15 +18,36 @@ function rutaPrivadaAcademica(string $relpath): ?string
     return $root&&$ruta&&str_starts_with(strtolower($ruta),strtolower($root.DIRECTORY_SEPARATOR))&&is_file($ruta)?$ruta:null;
 }
 
+function bytesConfiguracionPhpAtenea(string $valor): int
+{
+    $valor=trim($valor);if($valor===''||$valor==='-1')return PHP_INT_MAX;
+    if(!preg_match('/^(\d+)([KMG])?$/i',$valor,$partes))return 0;
+    $bytes=(int)$partes[1];$unidad=strtoupper((string)($partes[2]??''));
+    return match($unidad){'G'=>$bytes*1024*1024*1024,'M'=>$bytes*1024*1024,'K'=>$bytes*1024,default=>$bytes};
+}
+
+function limiteArchivoAcademicoMb(string $categoria): int
+{
+    $configurado=match ($categoria) {
+        'video' => max(1, (int) entornoAtenea('ACADEMIC_VIDEO_MAX_MB', '250')),
+        'contenido' => max(1, (int) entornoAtenea('ACADEMIC_DOCUMENT_MAX_MB', '20')),
+        default => max(1, (int) entornoAtenea('ACADEMIC_EVIDENCE_MAX_MB', '10')),
+    };
+    $upload=(int)floor(bytesConfiguracionPhpAtenea((string)ini_get('upload_max_filesize'))/1024/1024);
+    $post=(int)floor(bytesConfiguracionPhpAtenea((string)ini_get('post_max_size'))/1024/1024)-1;
+    $limites=array_filter([$configurado,$upload,$post],static fn(int $valor):bool=>$valor>0);
+    return max(1,min($limites?:[$configurado]));
+}
+
 function guardarArchivoAcademico(string $campo,string $carpeta,string $categoria): ?array
 {
     if(!isset($_FILES[$campo])||($_FILES[$campo]['error']??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)return null;
     $f=$_FILES[$campo];if(($f['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK)throw new DomainException('No fue posible recibir el archivo.');
     $mapas=[
-      'video'=>['max'=>(int)entornoAtenea('ACADEMIC_VIDEO_MAX_MB', '250')*1024*1024,'mimes'=>['video/mp4'=>'mp4','video/webm'=>'webm','video/ogg'=>'ogv']],
-      'contenido'=>['max'=>20*1024*1024,'mimes'=>['application/pdf'=>'pdf','application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx','application/vnd.ms-powerpoint'=>'ppt','application/vnd.openxmlformats-officedocument.presentationml.presentation'=>'pptx','application/vnd.ms-excel'=>'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'=>'xlsx','image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','text/plain'=>'txt']],
-      'evidencia'=>['max'=>10*1024*1024,'mimes'=>['application/pdf'=>'pdf','application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx','image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp']],
-    ];$regla=$mapas[$categoria]??null;if(!$regla||(int)$f['size']<1||(int)$f['size']>$regla['max'])throw new DomainException('El archivo está vacío o supera el tamaño permitido.');
+      'video'=>['max'=>limiteArchivoAcademicoMb('video')*1024*1024,'mimes'=>['video/mp4'=>'mp4','video/webm'=>'webm','video/ogg'=>'ogv']],
+      'contenido'=>['max'=>limiteArchivoAcademicoMb('contenido')*1024*1024,'mimes'=>['application/pdf'=>'pdf','application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx','application/vnd.ms-powerpoint'=>'ppt','application/vnd.openxmlformats-officedocument.presentationml.presentation'=>'pptx','application/vnd.ms-excel'=>'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'=>'xlsx','image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','text/plain'=>'txt']],
+      'evidencia'=>['max'=>limiteArchivoAcademicoMb('evidencia')*1024*1024,'mimes'=>['application/pdf'=>'pdf','application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx','image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp']],
+    ];$regla=$mapas[$categoria]??null;if(!$regla||(int)$f['size']<1||(int)$f['size']>$regla['max'])throw new DomainException('El archivo está vacío o supera el límite configurado de '.limiteArchivoAcademicoMb($categoria).' MB.');
     $mime=(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);if(!isset($regla['mimes'][$mime]))throw new DomainException('El tipo MIME real del archivo no está permitido.');$ext=strtolower(pathinfo((string)$f['name'],PATHINFO_EXTENSION));$esperada=$regla['mimes'][$mime];if(!in_array($ext,$esperada==='jpg'?['jpg','jpeg']:[$esperada],true)||preg_match('/\.(?:php\d*|phtml|phar|html?|svg|exe|sh)(?:\.|$)/i',(string)$f['name']))throw new DomainException('La extensión no coincide con el archivo o no es segura.');
     $base=almacenamientoAcademicoBase();$dir=$base.DIRECTORY_SEPARATOR.$carpeta;if(!is_dir($dir)&&!mkdir($dir,0700,true)&&!is_dir($dir))throw new RuntimeException('No se pudo preparar el almacenamiento privado.');$nombre=bin2hex(random_bytes(24)).'.'.$esperada;if(!move_uploaded_file($f['tmp_name'],$dir.DIRECTORY_SEPARATOR.$nombre))throw new RuntimeException('No se pudo guardar el archivo privado.');
     return ['relpath'=>$carpeta.'/'.$nombre,'nombre'=>mb_substr(basename((string)$f['name']),0,190),'mime'=>$mime,'tamano'=>(int)$f['size']];
@@ -56,7 +77,7 @@ function inscripcionEstudianteSeccion(PDO $pdo,int $estudianteId,int $seccionId,
 function progresoInscripcion(PDO $pdo,int $inscripcionId): array
 {
     $q=$pdo->prepare('SELECT * FROM inscripciones_capacitacion WHERE id=:id');$q->execute(['id'=>$inscripcionId]);$i=$q->fetch();if(!$i)throw new DomainException('La inscripción no existe.');
-    $q=$pdo->prepare("SELECT c.id,c.tipo,c.obligatorio,c.peso_progreso,p.visto_at,p.completado_at,(SELECT ec.estado FROM entregas_contenido ec WHERE ec.contenido_id=c.id AND ec.estudiante_id=:u ORDER BY ec.intento DESC LIMIT 1) entrega_estado,(SELECT ec.nota FROM entregas_contenido ec WHERE ec.contenido_id=c.id AND ec.estudiante_id=:u2 AND ec.nota IS NOT NULL ORDER BY ec.intento DESC LIMIT 1) nota FROM contenidos c LEFT JOIN progreso_contenido p ON p.contenido_id=c.id AND p.inscripcion_id=:i WHERE c.seccion_id=:s AND c.activo=1 AND c.estado='activo' AND (c.fecha_publicacion IS NULL OR c.fecha_publicacion<=NOW()) ORDER BY c.modulo,c.orden,c.id");$q->execute(['u'=>$i['usuario_id'],'u2'=>$i['usuario_id'],'i'=>$inscripcionId,'s'=>$i['seccion_id']]);$contenidos=$q->fetchAll();
+    $q=$pdo->prepare("SELECT c.id,c.tipo,c.obligatorio,c.peso_progreso,p.visto_at,p.completado_at,(SELECT ec.estado FROM entregas_contenido ec WHERE ec.contenido_id=c.id AND ec.estudiante_id=:u ORDER BY ec.intento DESC LIMIT 1) entrega_estado,(SELECT ec.nota FROM entregas_contenido ec WHERE ec.contenido_id=c.id AND ec.estudiante_id=:u2 AND ec.nota IS NOT NULL ORDER BY ec.intento DESC LIMIT 1) nota FROM contenidos c LEFT JOIN progreso_contenido p ON p.contenido_id=c.id AND p.inscripcion_id=:i WHERE c.seccion_id=:s AND c.activo=1 AND c.estado='activo' AND c.eliminado_at IS NULL AND (c.fecha_publicacion IS NULL OR c.fecha_publicacion<=NOW()) ORDER BY c.modulo,c.orden,c.id");$q->execute(['u'=>$i['usuario_id'],'u2'=>$i['usuario_id'],'i'=>$inscripcionId,'s'=>$i['seccion_id']]);$contenidos=$q->fetchAll();
     $total=0.0;$logrado=0.0;$vistos=0;$pendientes=0;$aprobadas=0;$rechazadas=0;$notas=[];$obligatorios=0;
     foreach($contenidos as$c){if($c['visto_at'])$vistos++;$esEntrega=in_array($c['tipo'],['actividad','evaluacion'],true);$completo=$esEntrega?$c['entrega_estado']==='aprobada':!empty($c['completado_at']);if($c['entrega_estado']==='aprobada')$aprobadas++;if(in_array($c['entrega_estado'],['rechazada','requiere_correccion'],true))$rechazadas++;if($c['nota']!==null)$notas[]=(float)$c['nota'];if((int)$c['obligatorio']===1){$obligatorios++;$peso=(float)$c['peso_progreso']>0?(float)$c['peso_progreso']:1.0;$total+=$peso;if($completo)$logrado+=$peso;else$pendientes++;}}
     $q=$pdo->prepare('SELECT MAX(ultima_actividad_at) FROM progreso_contenido WHERE inscripcion_id=:i');$q->execute(['i'=>$inscripcionId]);$ultima=$q->fetchColumn()?:$i['updated_at'];

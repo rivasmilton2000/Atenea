@@ -64,9 +64,11 @@ function plantillaCorreoAtenea(string $tipo, array $datos): array
                 . '<tr><td><strong>Asunto</strong></td><td>' . $e($datos['asunto'] ?? '') . '</td></tr>'
                 . '<tr><td valign="top"><strong>Mensaje</strong></td><td>' . nl2br($e($datos['mensaje'] ?? '')) . '</td></tr>'
                 . '<tr><td><strong>Fecha</strong></td><td>' . $e($datos['fecha'] ?? date('d/m/Y H:i')) . '</td></tr>'
-                . '<tr><td><strong>Referencia técnica</strong></td><td>' . $e($datos['referencia'] ?? 'No disponible') . '</td></tr></table>'
+                . '<tr><td><strong>Dirección IP</strong></td><td>' . $e($datos['ip'] ?? 'No disponible') . '</td></tr>'
+                . '<tr><td><strong>Referencia</strong></td><td>' . $e($datos['referencia'] ?? 'No disponible') . '</td></tr></table>'
+                . (!empty($datos['enlace']) ? botonCorreoAtenea('Abrir mensaje en el dashboard', (string)$datos['enlace']) : '')
                 . botonCorreoAtenea('Responder por correo', 'mailto:' . (string) ($datos['correo'] ?? ''));
-            $texto = "Nuevo mensaje de contacto\nNombre: " . ($datos['nombre'] ?? '') . "\nCorreo: " . ($datos['correo'] ?? '') . "\nAsunto: " . ($datos['asunto'] ?? '') . "\nMensaje:\n" . ($datos['mensaje'] ?? '') . "\nFecha: " . ($datos['fecha'] ?? '');
+            $texto = "Nuevo mensaje de contacto\nNombre: " . ($datos['nombre'] ?? '') . "\nCorreo: " . ($datos['correo'] ?? '') . "\nAsunto: " . ($datos['asunto'] ?? '') . "\nMensaje:\n" . ($datos['mensaje'] ?? '') . "\nFecha: " . ($datos['fecha'] ?? '') . "\nIP: " . ($datos['ip'] ?? 'No disponible') . "\nDashboard: " . ($datos['enlace'] ?? '');
             break;
 
         case 'recuperacion_password':

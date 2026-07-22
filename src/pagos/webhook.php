@@ -6,7 +6,7 @@ require_once dirname(__DIR__, 2) . '/includes/stripe_config.php';
 require_once dirname(__DIR__, 2) . '/includes/audit.php';
 require_once dirname(__DIR__, 2) . '/includes/carrito.php';
 require_once dirname(__DIR__, 2) . '/includes/dte.php';
-require_once dirname(__DIR__, 2) . '/includes/notificaciones.php';
+require_once dirname(__DIR__, 2) . '/includes/admin_notification_service.php';
 require_once dirname(__DIR__, 2) . '/includes/errores_sistema.php';
 
 function liberarReservaPedido(PDO $pdo, array $pedido, string $estado, string $nota): void
@@ -187,7 +187,7 @@ try {
             'checkout.session.expired'=>['pedido_cancelado','Pedido cancelado','advertencia'],
             'charge.refunded'=>['pedido_reembolsado','Pedido reembolsado','advertencia'],
         ];
-        if(isset($mapa[$evento->type])){$n=$mapa[$evento->type];crearNotificacionAtenea(['rol'=>'admin','tipo'=>$n[0],'categoria'=>'pagos','nivel'=>$n[2],'titulo'=>$n[1],'descripcion'=>'Stripe procesó el evento del pedido #'.$pedidoId.'.','url'=>atenea_url('src/dashboard/pedidos/detalle.php?id='.$pedidoId),'pedido_id'=>$pedidoId,'idempotency_key'=>'stripe:notificacion:'.$evento->id]);}
+        if(isset($mapa[$evento->type])){$n=$mapa[$evento->type];notificarAdministracionAtenea($n[0],$n[1],'Stripe procesó el evento del pedido #'.$pedidoId.'.',$n[2]==='exito'?'informacion':$n[2],null,atenea_url('src/dashboard/pedidos/detalle.php?id='.$pedidoId),'stripe:notificacion:'.$evento->id,['category'=>'pagos','pedido_id'=>$pedidoId]);}
     }
     if ($enviarCorreoPedido) { try { $dte=generarDtePedido($enviarCorreoPedido); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$enviarCorreoPedido.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$enviarCorreoPedido,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$enviarCorreoPedido]); } enviarConfirmacionCompraAtenea($enviarCorreoPedido); }
     http_response_code(200);

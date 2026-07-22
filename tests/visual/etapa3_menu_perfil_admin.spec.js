@@ -105,6 +105,10 @@ test('modal administrativo, rutas, logout y restricción por rol', async ({ page
   await page.locator('#adminProfileMenu').getByRole('link', { name: 'Actividad' }).click();
   await expect(page).toHaveURL(/dashboard\/bitacora\/index\.php/);
   await page.goto(app('/src/dashboard/index.php'));
+  await page.locator('#adminProfileTrigger').click();
+  await page.locator('#adminProfileMenu').getByRole('link', { name: 'Ver sitio' }).click();
+  await expect(page).toHaveURL(/\/Atenea\/index\.php$/);
+  await page.goto(app('/src/dashboard/index.php'));
   await expect(page.locator('body')).not.toContainText('Ayuda');
   await expect(page.locator('body')).not.toContainText('Plantilla base por BootstrapMade, distribuida por ThemeWagon y adaptada para Atenea.');
   await page.locator('#adminProfileTrigger').click();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/conexion.php';
 require_once __DIR__ . '/config/services.php';
 require_once __DIR__ . '/audit.php';
+require_once __DIR__ . '/admin_notification_service.php';
 
 const ATENEA_BACKUP_FORMAT = 'atenea-db-backup-v1';
 const ATENEA_BACKUP_TRACKING_TABLE = 'respaldos_base_datos';
@@ -192,6 +193,7 @@ function restaurarRespaldoBaseDatos(int $respaldoId, int $actorId): array
         $filas=restaurarArchivoRespaldo($pdo,$ruta,[ATENEA_BACKUP_TRACKING_TABLE]);
         $q=$pdo->prepare("UPDATE respaldos_base_datos SET estado='restaurado',restaurado_por=:u,restaurado_at=NOW(),respaldo_previo_id=:previo,error_sanitizado=NULL WHERE id=:id");$q->execute(['u'=>$actorId,'previo'=>$previo['id'],'id'=>$respaldoId]);
         registrarAuditoria(['actor_user_id'=>$actorId,'event_type'=>'database.backup.restored','module'=>'backups','entity_type'=>'database_backup','entity_id'=>$respaldoId,'action'=>'restore','result'=>'success','description'=>'Un Superadministrador restauró la base de datos después de crear una copia previa automática.','metadata'=>['pre_restore_backup_id'=>(int)$previo['id'],'rows'=>$filas]],$pdo);
+        notificarAdministracionAtenea('accion_administrativa_critica','Base de datos restaurada','Un Superadministrador restauró la copia #'.$respaldoId.'.','critico',$actorId,atenea_url('src/dashboard/backups/index.php'),'backup:restaurado:'.$respaldoId.':'.date('YmdHis'),['category'=>'administracion','created_by'=>$actorId],$pdo);
         return ['respaldo'=>$respaldoId,'previo'=>(int)$previo['id'],'filas'=>$filas];
     }catch(Throwable $e){try{$pdo->exec('SET FOREIGN_KEY_CHECKS=1');$pdo->prepare("UPDATE respaldos_base_datos SET estado='fallido',error_sanitizado='La restauración no pudo completarse. La copia previa permanece disponible.' WHERE id=:id")->execute(['id'=>$respaldoId]);registrarAuditoria(['actor_user_id'=>$actorId,'event_type'=>'database.backup.restore_failed','module'=>'backups','entity_type'=>'database_backup','entity_id'=>$respaldoId,'action'=>'restore','result'=>'failure','description'=>'Falló una restauración. La copia previa automática permanece disponible.'],$pdo);}catch(Throwable){}error_log('Atenea restore: '.$e->getMessage());throw $e;
     }finally{flock($bloqueo,LOCK_UN);fclose($bloqueo);}

@@ -13,14 +13,59 @@ function aulaContenidosEstudiante(PDO $pdo,int $usuarioId,array $tipos=[],int $l
 {
     $limite=max(1,min(250,$limite));$params=['u_entrega'=>$usuarioId,'u_nota'=>$usuarioId,'u_inscripcion'=>$usuarioId];$tipoSql='';
     if($tipos){$validos=array_values(array_intersect($tipos,['video','texto','documento','enlace','actividad','evaluacion','recurso_descargable']));if($validos){$marcas=[];foreach($validos as$k=>$tipo){$clave='tipo'.$k;$marcas[]=':'.$clave;$params[$clave]=$tipo;}$tipoSql=' AND c.tipo IN('.implode(',',$marcas).')';}}
-    $sql="SELECT c.id,c.asignatura_id,c.seccion_id,c.modulo,c.tipo,c.titulo,c.descripcion,c.fecha_publicacion,c.fecha_limite,c.obligatorio,c.video_url,c.archivo_relpath,a.nombre capacitacion,a.codigo,s.codigo seccion,i.id inscripcion_id,(SELECT e.estado FROM entregas_contenido e WHERE e.contenido_id=c.id AND e.estudiante_id=:u_entrega ORDER BY e.intento DESC LIMIT 1) entrega_estado,(SELECT e.nota FROM entregas_contenido e WHERE e.contenido_id=c.id AND e.estudiante_id=:u_nota ORDER BY e.intento DESC LIMIT 1) nota,p.visto_at,p.completado_at FROM inscripciones_capacitacion i JOIN contenidos c ON c.asignatura_id=i.asignatura_id AND c.seccion_id=i.seccion_id JOIN asignaturas a ON a.id=c.asignatura_id LEFT JOIN capacitacion_secciones s ON s.id=c.seccion_id LEFT JOIN progreso_contenido p ON p.inscripcion_id=i.id AND p.contenido_id=c.id WHERE i.usuario_id=:u_inscripcion AND i.estado IN('inscrito','finalizado') AND c.estado='activo' AND c.activo=1 AND (c.fecha_publicacion IS NULL OR c.fecha_publicacion<=NOW())".$tipoSql." ORDER BY COALESCE(c.fecha_limite,'9999-12-31'),a.nombre,c.modulo,c.orden,c.id LIMIT ".$limite;
+    $sql="SELECT c.id,c.asignatura_id,c.seccion_id,c.modulo,c.tipo,c.titulo,c.descripcion,c.fecha_publicacion,c.fecha_limite,c.obligatorio,c.video_url,c.archivo_relpath,a.nombre capacitacion,a.codigo,s.codigo seccion,i.id inscripcion_id,(SELECT e.estado FROM entregas_contenido e WHERE e.contenido_id=c.id AND e.estudiante_id=:u_entrega ORDER BY e.intento DESC LIMIT 1) entrega_estado,(SELECT e.nota FROM entregas_contenido e WHERE e.contenido_id=c.id AND e.estudiante_id=:u_nota ORDER BY e.intento DESC LIMIT 1) nota,p.visto_at,p.completado_at FROM inscripciones_capacitacion i JOIN contenidos c ON c.asignatura_id=i.asignatura_id AND c.seccion_id=i.seccion_id JOIN asignaturas a ON a.id=c.asignatura_id LEFT JOIN capacitacion_secciones s ON s.id=c.seccion_id LEFT JOIN progreso_contenido p ON p.inscripcion_id=i.id AND p.contenido_id=c.id WHERE i.usuario_id=:u_inscripcion AND i.estado IN('inscrito','finalizado') AND c.estado='activo' AND c.activo=1 AND c.eliminado_at IS NULL AND (c.fecha_publicacion IS NULL OR c.fecha_publicacion<=NOW())".$tipoSql." ORDER BY COALESCE(c.fecha_limite,'9999-12-31'),a.nombre,c.modulo,c.orden,c.id LIMIT ".$limite;
     $q=$pdo->prepare($sql);$q->execute($params);return$q->fetchAll();
 }
 
 function aulaFechasEstudiante(PDO $pdo,int $usuarioId,int $limite=30): array
 {
-    $limite=max(1,min(100,$limite));$q=$pdo->prepare("SELECT * FROM (SELECT c.id referencia_id,'contenido' origen,c.titulo,CONCAT(a.nombre,' · ',c.modulo) descripcion,c.fecha_limite fecha,CASE c.tipo WHEN 'actividad' THEN 'tarea' WHEN 'evaluacion' THEN 'evaluacion' ELSE 'contenido' END tipo FROM inscripciones_capacitacion i JOIN contenidos c ON c.seccion_id=i.seccion_id AND c.asignatura_id=i.asignatura_id JOIN asignaturas a ON a.id=c.asignatura_id WHERE i.usuario_id=:u1 AND i.estado IN('inscrito','finalizado') AND c.estado='activo' AND c.activo=1 AND c.fecha_limite IS NOT NULL UNION ALL SELECT s.id,'seccion',CONCAT('Inicio de ',a.nombre),CONCAT('Sección ',s.codigo,IF(s.horario IS NULL,'',CONCAT(' · ',s.horario))),CAST(s.fecha_inicio AS DATETIME),'clase' FROM inscripciones_capacitacion i JOIN capacitacion_secciones s ON s.id=i.seccion_id JOIN asignaturas a ON a.id=i.asignatura_id WHERE i.usuario_id=:u2 AND i.estado='inscrito' AND s.fecha_inicio IS NOT NULL UNION ALL SELECT e.id,'evaluacion',e.titulo,a.nombre,e.fecha_cierre,'evaluacion' FROM evaluaciones e JOIN asignaturas a ON a.id=e.asignatura_id WHERE e.estado='publicada' AND e.fecha_cierre IS NOT NULL AND EXISTS(SELECT 1 FROM inscripciones_capacitacion i WHERE i.usuario_id=:u3 AND i.asignatura_id=e.asignatura_id AND i.estado IN('inscrito','finalizado'))) fechas WHERE fecha>=DATE_SUB(NOW(),INTERVAL 1 DAY) ORDER BY fecha LIMIT ".$limite);
-    $q->execute(['u1'=>$usuarioId,'u2'=>$usuarioId,'u3'=>$usuarioId]);return$q->fetchAll();
+    $limite=max(1,min(100,$limite));
+    $texto=" COLLATE utf8mb4_unicode_ci";
+    $sql="SELECT * FROM (
+        SELECT c.id referencia_id,
+               CONVERT('contenido' USING utf8mb4){$texto} origen,
+               CONVERT(c.titulo USING utf8mb4){$texto} titulo,
+               CONVERT(CONCAT(a.nombre,' · ',c.modulo) USING utf8mb4){$texto} descripcion,
+               c.fecha_limite fecha,
+               CONVERT(CASE c.tipo WHEN 'actividad' THEN 'tarea' WHEN 'evaluacion' THEN 'evaluacion' ELSE 'contenido' END USING utf8mb4){$texto} tipo
+        FROM inscripciones_capacitacion i
+        JOIN contenidos c ON c.seccion_id=i.seccion_id AND c.asignatura_id=i.asignatura_id
+        JOIN asignaturas a ON a.id=c.asignatura_id
+        WHERE i.usuario_id=:u1 AND i.estado IN('inscrito','finalizado')
+          AND c.estado='activo' AND c.activo=1 AND c.eliminado_at IS NULL
+          AND c.fecha_limite IS NOT NULL
+        UNION ALL
+        SELECT s.id,
+               CONVERT('seccion' USING utf8mb4){$texto},
+               CONVERT(CONCAT('Inicio de ',a.nombre) USING utf8mb4){$texto},
+               CONVERT(CONCAT('Sección ',s.codigo,IF(s.horario IS NULL,'',CONCAT(' · ',s.horario))) USING utf8mb4){$texto},
+               CAST(s.fecha_inicio AS DATETIME),
+               CONVERT('clase' USING utf8mb4){$texto}
+        FROM inscripciones_capacitacion i
+        JOIN capacitacion_secciones s ON s.id=i.seccion_id
+        JOIN asignaturas a ON a.id=i.asignatura_id
+        WHERE i.usuario_id=:u2 AND i.estado='inscrito' AND s.fecha_inicio IS NOT NULL
+        UNION ALL
+        SELECT e.id,
+               CONVERT('evaluacion' USING utf8mb4){$texto},
+               CONVERT(e.titulo USING utf8mb4){$texto},
+               CONVERT(a.nombre USING utf8mb4){$texto},
+               e.fecha_cierre,
+               CONVERT('evaluacion' USING utf8mb4){$texto}
+        FROM evaluaciones e
+        JOIN asignaturas a ON a.id=e.asignatura_id
+        WHERE e.estado='publicada' AND e.fecha_cierre IS NOT NULL
+          AND EXISTS(
+              SELECT 1 FROM inscripciones_capacitacion i
+              WHERE i.usuario_id=:u3 AND i.asignatura_id=e.asignatura_id
+                AND i.estado IN('inscrito','finalizado')
+          )
+    ) fechas
+    WHERE fecha>=DATE_SUB(NOW(),INTERVAL 1 DAY)
+    ORDER BY fecha LIMIT ".$limite;
+    $q=$pdo->prepare($sql);
+    $q->execute(['u1'=>$usuarioId,'u2'=>$usuarioId,'u3'=>$usuarioId]);
+    return$q->fetchAll();
 }
 
 function aulaResumenEstudiante(PDO $pdo,int $usuarioId): array

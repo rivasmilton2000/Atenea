@@ -195,7 +195,6 @@ if (document.querySelectorAll('#d-main').length) {
   const chart = new ApexCharts(document.querySelector("#d-main"), options);
   chart.render();
   document.addEventListener('ColorChange', (e) => {
-    console.log(e)
     const newOpt = {
       colors: [e.detail.detail1, e.detail.detail2],
       fill: {

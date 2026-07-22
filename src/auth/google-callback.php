@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/includes/google_oauth.php';
 require_once dirname(__DIR__, 2) . '/includes/cuenta.php';
 require_once dirname(__DIR__, 2) . '/includes/carrito.php';
+require_once dirname(__DIR__, 2) . '/includes/errores_sistema.php';
 
 function falloCallbackGoogle(string $mensaje, string $accion = 'login'): never
 {
@@ -93,6 +94,7 @@ try {
     falloCallbackGoogle('No es posible registrar una cuenta con estos datos en este momento.','registro');
 } catch (Throwable $e) {
     error_log('OAuth Google Atenea: ' . $e->getMessage());
+    try { registrarErrorSistemaAtenea('sistema','google_oauth','Fallo de integración con Google.',['usuario_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null],'error'); } catch (Throwable) {}
     registrarIntentoGoogleFallidoAtenea([
         'actor_user_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,
         'event_type'=>'auth.google_failed','module'=>'auth','action'=>'google_callback','result'=>'failure',

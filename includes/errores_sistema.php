@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/notificaciones.php';
+require_once __DIR__ . '/admin_notification_service.php';
 
 function sanitizarContextoErrorAtenea(array $contexto): array
 {
@@ -24,6 +24,6 @@ function registrarErrorSistemaAtenea(string $categoria,string $modulo,string $me
     $q=$pdo->prepare("INSERT INTO errores_sistema(fingerprint,categoria,modulo,nivel,mensaje,contexto_sanitizado,pedido_id,usuario_id,primera_ocurrencia_at,ultima_ocurrencia_at) VALUES(:f,:c,:m,:n,:msg,:ctx,:p,:u,NOW(),NOW()) ON DUPLICATE KEY UPDATE ocurrencias=ocurrencias+1,ultima_ocurrencia_at=NOW(),contexto_sanitizado=VALUES(contexto_sanitizado),estado=IF(estado='resuelto','nuevo',estado),id=LAST_INSERT_ID(id)");
     $q->execute(['f'=>$fingerprint,'c'=>$categoria,'m'=>substr($modulo,0,80),'n'=>in_array($nivel,['advertencia','error','critico'],true)?$nivel:'error','msg'=>$mensaje,'ctx'=>json_encode($seguro,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'p'=>$pedido,'u'=>$contexto['usuario_id']??null]);
     $id=(int)$pdo->lastInsertId();
-    crearNotificacionAtenea(['rol'=>'admin','tipo'=>'error_'.$categoria,'categoria'=>$categoria,'nivel'=>'error','titulo'=>'Error operativo: '.$modulo,'descripcion'=>$mensaje,'url'=>atenea_url('src/dashboard/errores/detalle.php?id='.$id),'error_id'=>$id,'pedido_id'=>$pedido,'idempotency_key'=>'error:'.$fingerprint.':'.date('Y-m-d-H')],$pdo);
+    notificarAdministracionAtenea('error_'.$categoria,'Error operativo: '.$modulo,$mensaje,$nivel==='critico'?'critico':'error',isset($contexto['usuario_id'])?(int)$contexto['usuario_id']:null,atenea_url('src/dashboard/errores/detalle.php?id='.$id),'error:'.$fingerprint.':'.date('Y-m-d-H'),['category'=>$categoria,'error_id'=>$id,'pedido_id'=>$pedido],$pdo);
     return $id;
 }

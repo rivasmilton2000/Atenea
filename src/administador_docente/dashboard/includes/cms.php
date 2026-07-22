@@ -1,0 +1,167 @@
+<?php
+declare(strict_types=1);
+
+require_once dirname(__DIR__, 3) . '/includes/auth.php';
+require_once dirname(__DIR__, 3) . '/includes/conexion.php';
+require_once dirname(__DIR__, 3) . '/includes/contenido.php';
+require_once dirname(__DIR__, 3) . '/includes/perfil_modal.php';
+require_once dirname(__DIR__, 3) . '/includes/permissions.php';
+require_once dirname(__DIR__, 3) . '/includes/audit.php';
+require_once dirname(__DIR__, 3) . '/includes/website_versionado.php';
+require_once dirname(__DIR__, 3) . '/includes/alerts.php';
+exigirRol(['admin']);
+registrarCapturaAutomaticaCms();
+
+function cmsFlash(string $tipo, string $mensaje): void
+{
+    ateneaFlash($tipo, '', $mensaje);
+}
+
+function cmsObtenerFlash(): ?array
+{
+    $legacy = $_SESSION['cms_flash'] ?? null;
+    unset($_SESSION['cms_flash']);
+    return is_array($legacy) ? ateneaNormalizarAlerta($legacy) : ateneaObtenerFlash();
+}
+
+function cmsId(mixed $valor): int
+{
+    return filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
+}
+
+function cmsUrlValida(string $url): bool
+{
+    $url = trim($url);
+    if ($url === '') return true;
+    if (preg_match('/^(?:javascript|data|vbscript):/i', $url)) return false;
+    if (preg_match('#^https?://#i', $url)) return filter_var($url, FILTER_VALIDATE_URL) !== false;
+    if ($url === '#') return true;
+    if (str_starts_with($url, '#')) return preg_match('/^#[A-Za-z][\w-]*$/', $url) === 1;
+    return preg_match('~^[A-Za-z0-9_./?=&%#-]+$~', $url) === 1 && !str_contains($url, '..');
+}
+
+function cmsSubirImagen(string $campo): ?string
+{
+    if (!isset($_FILES[$campo]) || $_FILES[$campo]['error'] === UPLOAD_ERR_NO_FILE) return null;
+    $archivo = $_FILES[$campo];
+    if ($archivo['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('No fue posible recibir la imagen.');
+    if ((int) $archivo['size'] > 5 * 1024 * 1024) throw new RuntimeException('La imagen no puede superar 5 MB.');
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($archivo['tmp_name']);
+    $extensiones = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    if (!isset($extensiones[$mime])) throw new RuntimeException('Solo se permiten imágenes JPG, PNG o WEBP.');
+    $extensionOriginal = strtolower(pathinfo((string) $archivo['name'], PATHINFO_EXTENSION));
+    $extensionesPermitidas = $mime === 'image/jpeg' ? ['jpg','jpeg'] : [$extensiones[$mime]];
+    if (!in_array($extensionOriginal, $extensionesPermitidas, true)) throw new RuntimeException('La extensión no coincide con el tipo real de la imagen.');
+    $dimensiones = getimagesize($archivo['tmp_name']);
+    if (!$dimensiones || $dimensiones[0] < 1 || $dimensiones[1] < 1 || $dimensiones[0] > 8000 || $dimensiones[1] > 8000) throw new RuntimeException('Las dimensiones de la imagen no son válidas.');
+    if (preg_match('/\.(?:php\d*|phtml|phar|html?|svg)(?:\.|$)/i', (string) $archivo['name'])) throw new RuntimeException('El nombre del archivo no es seguro.');
+    $directorio = ATENEA_ROOT . '/uploads/contenido';
+    if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) throw new RuntimeException('No se pudo preparar la carpeta de imágenes.');
+    $nombre = bin2hex(random_bytes(16)) . '.' . $extensiones[$mime];
+    if (!move_uploaded_file($archivo['tmp_name'], $directorio . '/' . $nombre)) throw new RuntimeException('No se pudo guardar la imagen.');
+    return 'uploads/contenido/' . $nombre;
+}
+
+function cmsEliminarImagenSiNoSeUsa(?string $ruta): void
+{
+    $ruta = (string) $ruta;
+    if (!str_starts_with($ruta, 'uploads/contenido/') || str_contains($ruta, '..')) return;
+    $pdo = obtenerConexion();
+    $consulta = $pdo->prepare('SELECT (SELECT COUNT(*) FROM secciones WHERE imagen=:ruta1)+(SELECT COUNT(*) FROM elementos_seccion WHERE imagen=:ruta2)+(SELECT COUNT(*) FROM configuracion_sitio WHERE valor=:ruta3)+(SELECT COUNT(*) FROM productos WHERE imagen_principal=:ruta4)+(SELECT COUNT(*) FROM producto_imagenes WHERE ruta=:ruta5)+(SELECT COUNT(*) FROM categorias_producto WHERE imagen=:ruta6 AND eliminado_at IS NULL)+(SELECT COUNT(*) FROM noticias WHERE imagen_portada=:ruta7)+(SELECT COUNT(*) FROM asignaturas WHERE imagen=:ruta8)');
+    $consulta->execute(['ruta1'=>$ruta,'ruta2'=>$ruta,'ruta3'=>$ruta,'ruta4'=>$ruta,'ruta5'=>$ruta,'ruta6'=>$ruta,'ruta7'=>$ruta,'ruta8'=>$ruta]);
+    if ((int) $consulta->fetchColumn() === 0) {
+        $archivo = ATENEA_ROOT . '/' . $ruta;
+        if (is_file($archivo)) unlink($archivo);
+    }
+}
+
+function cmsSubirGaleria(string $campo): array
+{
+    if (!isset($_FILES[$campo]['name']) || !is_array($_FILES[$campo]['name'])) return [];
+    $rutas=[];$original=$_FILES[$campo];
+    try {
+        foreach($original['name'] as $i=>$nombre){if(($original['error'][$i]??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)continue;$_FILES['_galeria_temporal']=['name'=>$nombre,'type'=>$original['type'][$i]??'','tmp_name'=>$original['tmp_name'][$i]??'','error'=>$original['error'][$i]??UPLOAD_ERR_NO_FILE,'size'=>$original['size'][$i]??0];$rutas[]=cmsSubirImagen('_galeria_temporal');}
+    } catch (Throwable $e) {
+        foreach ($rutas as $ruta) cmsEliminarImagenSiNoSeUsa($ruta);
+        throw $e;
+    } finally {
+        unset($_FILES['_galeria_temporal']);
+    }
+    return array_values(array_filter($rutas));
+}
+
+function cmsSubirArchivoContenido(string $campo): ?string
+{
+    if (!isset($_FILES[$campo]) || $_FILES[$campo]['error'] === UPLOAD_ERR_NO_FILE) return null;
+    $archivo = $_FILES[$campo];
+    if ($archivo['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('No fue posible recibir el archivo.');
+    if ((int)$archivo['size'] > 12 * 1024 * 1024) throw new RuntimeException('El archivo no puede superar 12 MB.');
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($archivo['tmp_name']);
+    $permitidos = ['application/pdf'=>'pdf','application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx','application/vnd.ms-excel'=>'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'=>'xlsx','text/plain'=>'txt'];
+    $extension = strtolower(pathinfo((string)$archivo['name'], PATHINFO_EXTENSION));
+    if (!isset($permitidos[$mime]) || $extension !== $permitidos[$mime] || preg_match('/\.(?:php\d*|phtml|phar|html?|js)(?:\.|$)/i', (string)$archivo['name'])) throw new RuntimeException('Solo se permiten PDF, Word, Excel o TXT válidos.');
+    $directorio = ATENEA_ROOT . '/uploads/contenido/archivos';
+    if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) throw new RuntimeException('No se pudo preparar la carpeta de archivos.');
+    $nombre = bin2hex(random_bytes(16)) . '.' . $extension;
+    if (!move_uploaded_file($archivo['tmp_name'], $directorio . '/' . $nombre)) throw new RuntimeException('No se pudo guardar el archivo.');
+    return 'uploads/contenido/archivos/' . $nombre;
+}
+
+function cmsValidarLimiteAreas(PDO $pdo, int $seccionId, int $elementoExcluir = 0): void
+{
+    $seccion = $pdo->prepare('SELECT clave FROM secciones WHERE id=:id FOR UPDATE');
+    $seccion->execute(['id' => $seccionId]);
+    if ($seccion->fetchColumn() !== 'areas') return;
+    $conteo = $pdo->prepare('SELECT COUNT(*) FROM elementos_seccion WHERE seccion_id=:seccion AND activo=1 AND id<>:excluir');
+    $conteo->execute(['seccion' => $seccionId, 'excluir' => $elementoExcluir]);
+    if ((int) $conteo->fetchColumn() >= 4) {
+        throw new DomainException('La sección Áreas admite como máximo 4 elementos activos. Desactiva uno antes de activar otro.');
+    }
+}
+
+function fechaAdminActual(): string
+{
+    $dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    $meses = [1=>'enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return ucfirst($dias[(int)date('w')]) . ', ' . date('j') . ' de ' . $meses[(int)date('n')] . ' de ' . date('Y');
+}
+
+function cmsCabecera(string $titulo, string $activo, string $descripcion = 'Administra el contenido publicado en Atenea.'): void
+{
+    $dashboardTitle = $titulo;
+    $dashboardActive = $activo;
+    $dashboardDescription = $descripcion;
+    $dashboardFlash = cmsObtenerFlash();
+    $GLOBALS['atenea_dashboard_flash'] = $dashboardFlash;
+    $GLOBALS['atenea_dashboard_active'] = $activo;
+    $usuarioAdmin = obtenerUsuarioActual();
+    $configuracionAdmin = obtenerConfiguracionSitio();
+    require dirname(__DIR__) . '/includes/header.php';
+    require dirname(__DIR__) . '/partials/_navbar.php';
+    echo '<div class="container-fluid page-body-wrapper">';
+    require dirname(__DIR__) . '/partials/_sidebar.php';
+    echo '<div class="main-panel"><div class="content-wrapper">';
+    echo '<div class="d-sm-flex align-items-center justify-content-between border-bottom mb-4"><div><nav aria-label="breadcrumb"><ol class="breadcrumb mb-2"><li class="breadcrumb-item"><a href="'.atenea_url('src/dashboard/index.php').'">Panel principal</a></li><li class="breadcrumb-item active">'.atenea_e($titulo).'</li></ol></nav><h1 class="h3 mb-1">'.atenea_e($titulo).'</h1><p class="text-muted mb-3">'.atenea_e($descripcion).'</p></div></div>';
+}
+
+function cmsPaginacionSimple(int $pagina, int $paginas, array $parametros = []): string
+{
+    if ($paginas <= 1) return '';
+    $inicio=max(1,$pagina-2);$fin=min($paginas,$pagina+2);$html='<nav class="mt-4"><ul class="pagination justify-content-end">';
+    for($i=$inicio;$i<=$fin;$i++){$parametros['pagina']=$i;$html.='<li class="page-item '.($i===$pagina?'active':'').'"><a class="page-link" href="?'.atenea_e(http_build_query($parametros)).'">'.$i.'</a></li>';}
+    return $html.'</ul></nav>';
+}
+
+function cmsPie(): void
+{
+    $activo=(string)($GLOBALS['atenea_dashboard_active']??'');
+    if(in_array($activo,['comunicaciones/index.php','errores/index.php','facturas/index.php'],true)){
+        $pagina=max(1,(int)($GLOBALS['pagina']??1));$total=max(0,(int)($GLOBALS['total']??0));$limite=max(1,(int)($GLOBALS['lim']??25));
+        echo cmsPaginacionSimple($pagina,(int)ceil($total/$limite),$_GET);
+    }
+    echo '</div>';
+    require dirname(__DIR__) . '/partials/_footer.php';
+    echo '</div></div></div>';
+    renderizarModalPerfil('dashboard');
+    require dirname(__DIR__) . '/includes/scripts.php';
+}

@@ -1,0 +1,8 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__).'/includes/cms.php';
+require_once dirname(__DIR__,3).'/includes/capacitaciones.php';
+if(($_SERVER['REQUEST_METHOD']??'')!=='POST'||!validarTokenCsrf((string)($_POST['csrf_token']??''))){mostrarPaginaErrorAtenea(419);}
+$capId=cmsId($_POST['capacitacion_id']??0);$pdo=obtenerConexion();$sql="SELECT id FROM inscripciones_capacitacion WHERE estado='pendiente_asignacion'".($capId?' AND asignatura_id=:a':'').' ORDER BY created_at,id LIMIT 500';$q=$pdo->prepare($sql);$q->execute($capId?['a'=>$capId]:[]);$ids=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN));$asignadas=0;$pendientes=0;$fallos=0;
+foreach($ids as$id){try{$pdo->beginTransaction();$resultado=asignarInscripcionPendiente($pdo,$id,(int)$_SESSION['usuario_id'],'Asignación automática ejecutada por administración');$pdo->commit();$resultado['asignada']?$asignadas++:$pendientes++;}catch(Throwable$e){if($pdo->inTransaction())$pdo->rollBack();$fallos++;error_log('Asignación administrativa '.$id.': '.$e->getMessage());}}
+registrarAuditoria(['actor_user_id'=>$_SESSION['usuario_id'],'event_type'=>'enrollment.auto_assignment','module'=>'academic','entity_type'=>'training','entity_id'=>$capId?:null,'action'=>'assign','result'=>$fallos?'partial':'success','description'=>'Asignación automática administrativa ejecutada.','metadata'=>['asignadas'=>$asignadas,'pendientes'=>$pendientes,'fallos'=>$fallos]],$pdo);cmsFlash($fallos?'advertencia':'exito',"Proceso finalizado: $asignadas asignadas, $pendientes continúan pendientes y $fallos no pudieron procesarse.");header('Location:secciones.php'.($capId?'?capacitacion_id='.$capId:''));exit;
