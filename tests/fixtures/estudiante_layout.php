@@ -35,13 +35,13 @@ if (!$ubicacion) throw new RuntimeException('No existen ubicaciones para la prue
 $q = $pdo->prepare("INSERT INTO usuarios(nombre,apellido,nombre_usuario,correo,password,proveedor,email_verificado,rol,es_superadmin,estado,perfil_estado,terminos_aceptados_at,fecha_nacimiento,dui,codigo_telefono,telefono,departamento_id,municipio_id,distrito_id,direccion) VALUES(:nombre,:apellido,:usuario,:correo,:password,'local',1,'usuario',0,'activo','completo',NOW(),'1995-05-15','87654321-0','+503','71234567',:departamento,:municipio,:distrito,:direccion)");
 $q->execute([
     'nombre'=>'Estudiante',
-    'apellido'=>'Hope UI',
+    'apellido'=>'Atenea',
     'usuario'=>'layout.estudiante',
     'correo'=>$correo,
     'password'=>password_hash('PruebaLayout!2026', PASSWORD_DEFAULT),
     'departamento'=>(int)$ubicacion['departamento_id'],
     'municipio'=>(int)$ubicacion['municipio_id'],
     'distrito'=>(int)$ubicacion['distrito_id'],
-    'direccion'=>'Dirección temporal para validar el layout de Atenea.',
+    'direccion'=>'Dirección temporal para validar el dashboard de Atenea.',
 ]);
 echo json_encode(['correo'=>$correo], JSON_UNESCAPED_SLASHES) . "\n";

@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-require_once dirname(__DIR__, 4) . '/includes/auth.php';
+require_once dirname(__DIR__, 5) . '/includes/auth.php';
+exigirAutenticacion();
+mostrarPaginaErrorAtenea(404);
 require_once dirname(__DIR__, 4) . '/includes/conexion.php';
 require_once dirname(__DIR__, 4) . '/includes/contenido.php';
 require_once dirname(__DIR__, 4) . '/includes/perfil_modal.php';
