@@ -3,15 +3,15 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/dte.php';
-exigirRol(['usuario', 'admin']);
+exigirRol(['usuario', 'admin', 'administracion_docente', 'administrador_docente']);
 
 $pedido = filter_var($_GET['pedido'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
 $tipo = (string) ($_GET['tipo'] ?? 'pdf');
 $descargar = ($_GET['descargar'] ?? '') === '1';
 $pdo = obtenerConexion();
-$sql = 'SELECT d.*,p.usuario_id,p.numero FROM dte_documentos d JOIN pedidos p ON p.id=d.pedido_id WHERE d.pedido_id=:pedido';
+$sql = "SELECT d.*,p.usuario_id,p.numero,p.payment_status FROM dte_documentos d JOIN pedidos p ON p.id=d.pedido_id WHERE d.pedido_id=:pedido AND p.payment_status='paid'";
 $args = ['pedido' => $pedido];
-if (($_SESSION['usuario_rol'] ?? '') !== 'admin') {
+if (!in_array(($_SESSION['usuario_rol']??''),['admin','administracion_docente','administrador_docente'],true)) {
     $sql .= ' AND p.usuario_id=:usuario';
     $args['usuario'] = $_SESSION['usuario_id'];
 }

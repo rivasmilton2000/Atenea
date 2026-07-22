@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__,2).'/includes/auth.php';
 require_once dirname(__DIR__,2).'/includes/hybrid_permissions.php';
-exigirRol(['administracion_docente']);
+exigirRol(['administracion_docente','administrador_docente']);
 if(($_SERVER['REQUEST_METHOD']??'')!=='POST'||!validarTokenCsrf((string)($_POST['csrf_token']??''))){
     registrarFalloGlobalAtenea('Cambio de modo híbrido con solicitud inválida.',403);
     mostrarPaginaErrorAtenea(403);

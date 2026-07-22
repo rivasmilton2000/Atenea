@@ -29,6 +29,9 @@ function permisosPorRolAtenea(string $rol): array
             'communications.view',
             'communications.reply',
             'mail.manage',
+            'newsletter.view',
+            'newsletter.manage',
+            'newsletter.export',
             'system_errors.manage',
             'appearance.manage',
             'backups.view',
@@ -60,7 +63,7 @@ function permisosPorRolAtenea(string $rol): array
 function usuarioTienePermiso(string $permiso, ?array $usuario = null): bool
 {
     $usuario ??= obtenerUsuarioActual();
-    if ($usuario !== null && ($usuario['rol'] ?? '') === ATENEA_HYBRID_ROLE) {
+    if ($usuario !== null && esRolAdministradorDocenteAtenea($usuario['rol'] ?? null)) {
         return permisoHibridoUsuarioAtenea((int)$usuario['id'], $permiso);
     }
     if ($usuario === null || !in_array($permiso, permisosPorRolAtenea((string) ($usuario['rol'] ?? '')), true)) return false;
@@ -81,5 +84,5 @@ function exigirPermiso(string $permiso): void
 
 function rolesAdministrablesAtenea(): array
 {
-    return ['usuario', 'docente', 'administracion_docente', 'admin'];
+    return ['usuario', 'docente', 'administrador_docente', 'admin'];
 }

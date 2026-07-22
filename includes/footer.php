@@ -40,12 +40,14 @@
       <div class="col-lg-4 col-md-12 footer-newsletter">
         <h4>Boletín de Atenea</h4>
         <p>Recibe novedades sobre programas, eventos y bienestar holístico.</p>
+        <?php $_SESSION['boletin_formulario_emitido']=time(); ?>
         <form action="<?= atenea_url('src/website/forms/newsletter.php') ?>" method="post" class="php-email-form">
           <input type="hidden" name="csrf_token" value="<?= atenea_e(obtenerTokenCsrf()) ?>">
+          <div class="visually-hidden" aria-hidden="true"><label>No completar<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
           <div class="newsletter-form"><input type="email" name="email" aria-label="Correo electrónico" required><input type="submit" value="Suscribirme"></div>
           <div class="loading">Enviando</div>
           <div class="error-message"></div>
-          <div class="sent-message">Tu solicitud fue enviada. ¡Gracias!</div>
+          <div class="sent-message">Suscripción completada. Recibirás únicamente novedades relevantes de Atenea.</div>
         </form>
       </div>
     </div>

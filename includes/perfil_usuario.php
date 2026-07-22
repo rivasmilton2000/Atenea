@@ -165,7 +165,7 @@ function etiquetaRol(string $rol): string
     return match ($rol) {
         'admin' => 'Administrador',
           'docente' => 'Docente',
-          'administracion_docente' => 'Administración_Docente',
+          'administracion_docente', 'administrador_docente' => 'Administrador docente',
         default => 'Estudiante',
     };
 }

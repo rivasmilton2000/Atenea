@@ -6,22 +6,30 @@ require_once dirname(__DIR__, 3) . '/includes/mailer.php';
 
 $id = cmsId($_POST['id'] ?? 0);
 $accion = (string)($_POST['accion'] ?? '');
-$retorno = 'detalle.php?id=' . $id;
+$retorno = $accion==='crear'?'index.php':'detalle.php?id=' . $id;
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !validarTokenCsrf(isset($_POST['csrf_token'])?(string)$_POST['csrf_token']:null)) {
     registrarAuditoria(['actor_user_id'=>isset($_SESSION['usuario_id'])?(int)$_SESSION['usuario_id']:null,'target_user_id'=>$id?:null,'event_type'=>'user.admin_action_blocked','module'=>'users','entity_type'=>$id?'user':null,'entity_id'=>$id?:null,'action'=>$accion?:'unknown','result'=>'blocked','description'=>'Se bloqueo una accion administrativa por metodo o token CSRF invalido.']);
     cmsFlash('error', 'Solicitud invalida o token CSRF vencido.'); header('Location: index.php'); exit;
 }
-if (!$id) { cmsFlash('error', 'La cuenta indicada no es valida.'); header('Location: index.php'); exit; }
+if (!$id && $accion!=='crear') { cmsFlash('error', 'La cuenta indicada no es valida.'); header('Location: index.php'); exit; }
 $pdo = obtenerConexion();
 $actorId = (int)($_SESSION['usuario_id'] ?? 0);
 
 try {
-    if(($_SESSION['usuario_rol']??'')==='administracion_docente'){
+    if(esRolAdministradorDocenteAtenea($_SESSION['usuario_rol']??null)&&$id>0){
         $qObjetivo=$pdo->prepare('SELECT rol,es_superadmin FROM usuarios WHERE id=:id');$qObjetivo->execute(['id'=>$id]);$objetivo=$qObjetivo->fetch();
         if(!$objetivo)throw new RuntimeException('La cuenta no existe.');
         if($objetivo['rol']==='admin'||(int)$objetivo['es_superadmin']===1)throw new RuntimeException('No puedes modificar cuentas administrativas principales.');
     }
-    if ($accion === 'guardar_permisos_hibridos') {
+    if($accion==='crear'){
+        exigirPermiso('users.change_role');
+        $nombre=mb_substr(trim(strip_tags((string)($_POST['nombre']??''))),0,100);$apellido=mb_substr(trim(strip_tags((string)($_POST['apellido']??''))),0,100);$correo=strtolower(trim((string)($_POST['correo']??'')));$password=(string)($_POST['password']??'');$nuevoRol=(string)($_POST['rol']??'usuario');$estado=(string)($_POST['estado']??'activo');
+        if($nombre===''||$apellido===''||filter_var($correo,FILTER_VALIDATE_EMAIL)===false||!in_array($nuevoRol,rolesAdministrablesAtenea(),true)||!in_array($estado,['activo','inactivo'],true))throw new RuntimeException('Completa los datos de la cuenta con valores válidos.');
+        if($errorPassword=validarPasswordRobustaAtenea($password))throw new RuntimeException($errorPassword);
+        $pdo->beginTransaction();$q=$pdo->prepare('SELECT 1 FROM usuarios WHERE correo=:correo LIMIT 1');$q->execute(['correo'=>$correo]);if($q->fetchColumn())throw new RuntimeException('Ya existe una cuenta con ese correo.');
+        $q=$pdo->prepare("INSERT INTO usuarios(nombre,apellido,correo,password,rol,es_superadmin,estado,email_verificado,perfil_estado,session_version) VALUES(:nombre,:apellido,:correo,:password,:rol,0,:estado,1,'pendiente',1)");$q->execute(['nombre'=>$nombre,'apellido'=>$apellido,'correo'=>$correo,'password'=>password_hash($password,PASSWORD_DEFAULT),'rol'=>$nuevoRol,'estado'=>$estado]);$id=(int)$pdo->lastInsertId();
+        if(!registrarAuditoria(['actor_user_id'=>$actorId,'target_user_id'=>$id,'event_type'=>'user.created_by_admin','module'=>'users','entity_type'=>'user','entity_id'=>$id,'action'=>'create','result'=>'success','description'=>'Un administrador creó una cuenta sin privilegios de SuperAdmin.','metadata'=>['role'=>$nuevoRol,'status'=>$estado]],$pdo))throw new RuntimeException('No fue posible auditar la creación.');$pdo->commit();$retorno='detalle.php?id='.$id;cmsFlash('exito','Cuenta creada. El usuario deberá completar su perfil.');
+    } elseif ($accion === 'guardar_permisos_hibridos') {
         exigirPermiso('users.change_role');
         if($id===$actorId)throw new RuntimeException('No puedes modificar tus propios permisos.');
         $qActor=$pdo->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol='admin' AND es_superadmin=1 AND estado='activo' AND deleted_at IS NULL");$qActor->execute(['id'=>$actorId]);
@@ -33,7 +41,7 @@ try {
         if($id===$actorId)throw new RuntimeException('No puedes revocar tu propia sesión desde esta acción.');
         if(!reautenticacionAdminValida($_POST['admin_password']??null))throw new RuntimeException('Debes confirmar tu contraseña administrativa.');
         $qActor=$pdo->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol='admin' AND es_superadmin=1 AND estado='activo' AND deleted_at IS NULL");$qActor->execute(['id'=>$actorId]);if(!$qActor->fetchColumn())throw new RuntimeException('Solo el administrador principal puede revocar estas sesiones.');
-        $pdo->beginTransaction();$usuario=adminUsuarioPorId($id,true,$pdo);if(!$usuario||$usuario['rol']!=='administracion_docente'||$usuario['deleted_at'])throw new RuntimeException('La cuenta híbrida no está disponible.');
+        $pdo->beginTransaction();$usuario=adminUsuarioPorId($id,true,$pdo);if(!$usuario||!esRolAdministradorDocenteAtenea($usuario['rol'])||$usuario['deleted_at'])throw new RuntimeException('La cuenta híbrida no está disponible.');
         $pdo->prepare('UPDATE usuarios SET session_version=session_version+1 WHERE id=:id')->execute(['id'=>$id]);
         if(!registrarAuditoria(['actor_user_id'=>$actorId,'target_user_id'=>$id,'event_type'=>'hybrid.sessions.revoked','module'=>'security','entity_type'=>'user','entity_id'=>$id,'action'=>'revoke_sessions','result'=>'success','description'=>'El administrador principal revocó todas las sesiones activas de la cuenta híbrida.'],$pdo))throw new RuntimeException('No fue posible auditar la revocación.');
         $pdo->commit();cmsFlash('exito','Las sesiones activas fueron revocadas.');
@@ -58,7 +66,7 @@ try {
         if ($rolAnterior === 'admin' && $nuevoRol !== 'admin' && cantidadAdministradoresActivos($pdo) <= 1) throw new RuntimeException('No se puede degradar al ultimo administrador activo.');
         if ($rolAnterior === 'admin' && $nuevoRol !== 'admin' && (int)$usuario['es_superadmin'] === 1 && cantidadSuperAdministradoresActivos($pdo) <= 1) throw new RuntimeException('No se puede degradar al ultimo SuperAdmin activo.');
         if ($rolAnterior === $nuevoRol) throw new RuntimeException('La cuenta ya tiene ese rol.');
-        $pdo->prepare('UPDATE usuarios SET rol=:rol,session_version=session_version+1,last_activity_at=NOW() WHERE id=:id')->execute(['rol'=>$nuevoRol,'id'=>$id]);
+        $pdo->prepare("UPDATE usuarios SET rol=:rol,es_superadmin=IF(:rol_super='admin',es_superadmin,0),session_version=session_version+1,last_activity_at=NOW() WHERE id=:id")->execute(['rol'=>$nuevoRol,'rol_super'=>$nuevoRol,'id'=>$id]);
         if (!registrarAuditoria(['actor_user_id'=>$actorId,'target_user_id'=>$id,'event_type'=>'user.role_changed','module'=>'users','entity_type'=>'user','entity_id'=>$id,'action'=>'change_role','result'=>'success','description'=>'Se actualizo el rol de una cuenta.','metadata'=>['previous_role'=>$rolAnterior,'new_role'=>$nuevoRol]], $pdo)) throw new RuntimeException('No fue posible auditar el cambio de rol.');
         $pdo->commit();
         try { enviarPlantillaCorreoAtenea('cambio_rol',(string)$usuario['correo'],trim((string)$usuario['nombre'].' '.(string)$usuario['apellido']),['rol'=>etiquetaRol($nuevoRol)],['usuario_id'=>$id,'idempotency_key'=>'user-role:'.$id.':'.$nuevoRol.':'.date('YmdHi')]); } catch(Throwable $e) { error_log('Correo cambio rol: '.$e->getMessage()); }

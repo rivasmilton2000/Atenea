@@ -8,7 +8,7 @@ require_once dirname(__DIR__, 2) . '/includes/audit.php';
 exigirRol(['usuario']);
 $pedidoId = filter_input(INPUT_GET, 'pedido', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
 $pedido = $pedidoId ? obtenerPedidoParaComprobante($pedidoId, (int) $_SESSION['usuario_id']) : null;
-if (!$pedido || $pedido['estado'] !== 'pagado' || ($pedido['payment_status'] ?? '') !== 'paid') {
+if (!$pedido || ($pedido['payment_status'] ?? '') !== 'paid') {
     http_response_code(404);
     $pedido = null;
 }
@@ -31,7 +31,8 @@ function contenidoComprobanteAtenea(array $pedido): string
       <tr><td><strong><?= atenea_e((string) $detalle['nombre_producto']) ?></strong><?php if ($detalle['sku']): ?><br><small class="text-muted">SKU <?= atenea_e((string) $detalle['sku']) ?></small><?php endif; ?></td><td class="text-center"><?= (int) $detalle['cantidad'] ?></td><td class="text-end">$<?= number_format((float) $detalle['precio_unitario'], 2) ?></td><td class="text-end">$<?= number_format((float) $detalle['subtotal'], 2) ?></td></tr>
     <?php endforeach; ?>
     </tbody><tfoot><tr><td colspan="3" class="text-end">Subtotal</td><td class="text-end">$<?= number_format((float) $pedido['subtotal'], 2) ?></td></tr><?php if ((float) $pedido['descuento'] > 0): ?><tr><td colspan="3" class="text-end">Descuento</td><td class="text-end">−$<?= number_format((float) $pedido['descuento'], 2) ?></td></tr><?php endif; ?><tr><td colspan="3" class="text-end"><strong>Total</strong></td><td class="text-end"><strong>$<?= number_format((float) $pedido['total'], 2) ?> <?= atenea_e(strtoupper((string) $pedido['moneda'])) ?></strong></td></tr></tfoot></table></div>
-    <p class="small text-muted mb-0">Este comprobante confirma una compra registrada en Atenea. No constituye un DTE ni una factura fiscal certificada.</p>
+    <div class="mt-4"><strong>Seguimiento del pedido</strong><div class="progress mt-2" style="height:10px"><div class="progress-bar bg-success" style="width:<?=progresoSeguimientoPedido($pedido['estado_pedido']??null)?>%"></div></div><div class="d-flex justify-content-between flex-wrap small mt-2"><?php foreach(estadosSeguimientoPedido() as$clave=>$etiqueta):?><span class="<?=($pedido['estado_pedido']??'')===$clave?'fw-bold text-success':'text-muted'?>"><?=atenea_e($etiqueta)?></span><?php endforeach;?></div></div>
+    <p class="small text-muted mt-4 mb-0">Este comprobante confirma una compra registrada en Atenea. No constituye un DTE ni una factura fiscal certificada.</p>
     <?php
     return (string) ob_get_clean();
 }
@@ -55,7 +56,7 @@ $portal = portalEstudianteCabecera('Comprobante de compra', 'pedidos', 'Consulta
 <?php if (!$pedido): ?>
   <div class="card"><div class="card-body text-center py-5"><i class="bi bi-file-earmark-x display-4 text-danger"></i><h1 class="h4 mt-3">Comprobante no disponible</h1><p class="text-muted">El pedido no existe, no pertenece a tu cuenta o todavía no tiene un pago confirmado.</p><a class="btn btn-primary" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>">Volver a mis pedidos</a></div></div>
 <?php else: ?>
-  <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><a class="btn btn-light" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="bi bi-arrow-left"></i> Mis pedidos</a><div class="d-flex gap-2"><button class="btn btn-outline-primary" type="button" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button><a class="btn btn-primary" href="<?= atenea_url('src/estudiantes/comprobante.php?pedido=' . $pedidoId . '&descargar=1') ?>"><i class="bi bi-download"></i> Descargar</a></div></div>
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><a class="btn btn-light" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="bi bi-arrow-left"></i> Mis pedidos</a><div class="d-flex gap-2"><button class="btn btn-outline-primary" type="button" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button><?php if(!empty($pedido['codigo_generacion'])&&!empty($pedido['pdf_relpath'])&&!empty($pedido['json_documento'])):?><a class="btn btn-outline-primary" href="<?=atenea_url('src/dte/documento.php?pedido='.$pedidoId.'&descargar=1')?>">Descargar PDF</a><a class="btn btn-outline-primary" href="<?=atenea_url('src/dte/documento.php?pedido='.$pedidoId.'&tipo=json&descargar=1')?>">Descargar JSON</a><?php endif;?><a class="btn btn-primary" href="<?= atenea_url('src/estudiantes/comprobante.php?pedido=' . $pedidoId . '&descargar=1') ?>"><i class="bi bi-download"></i> Descargar</a></div></div>
   <article class="card atenea-receipt"><div class="card-body p-4 p-lg-5"><?= contenidoComprobanteAtenea($pedido) ?></div></article>
 <?php endif; ?>
 </div></div>

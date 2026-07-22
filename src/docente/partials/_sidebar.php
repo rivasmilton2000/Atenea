@@ -1,5 +1,5 @@
 <?php
-if(($_SESSION['usuario_rol']??'')==='administracion_docente'){
+if(esRolAdministradorDocenteAtenea($_SESSION['usuario_rol']??null)){
   require ATENEA_ROOT.'/src/administador_docente/dashboard/partials/_sidebar.php';
   return;
 }

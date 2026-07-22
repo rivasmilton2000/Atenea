@@ -11,9 +11,9 @@ function denegarAccesoDocente(string $motivo='Recurso académico fuera de la asi
 
 function docenteSupervisadoAtenea(PDO $pdo): int
 {
-    $actual=(int)($_SESSION['usuario_id']??0);if(in_array(($_SESSION['usuario_rol']??''),['docente','administracion_docente'],true))return $actual;
+    $actual=(int)($_SESSION['usuario_id']??0);if(in_array(($_SESSION['usuario_rol']??''),['docente','administracion_docente','administrador_docente'],true))return $actual;
     $id=filter_var($_GET['docente_id']??$_POST['docente_id']??0,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])?:0;
-    if($id<1)return 0;$q=$pdo->prepare("SELECT id FROM usuarios WHERE id=:id AND rol IN('docente','administracion_docente') AND estado='activo' AND deleted_at IS NULL");$q->execute(['id'=>$id]);return (int)($q->fetchColumn()?:0);
+    if($id<1)return 0;$q=$pdo->prepare("SELECT id FROM usuarios WHERE id=:id AND rol IN('docente','administracion_docente','administrador_docente') AND estado='activo' AND deleted_at IS NULL");$q->execute(['id'=>$id]);return (int)($q->fetchColumn()?:0);
 }
 
 function docentePuedeCurso(PDO $pdo,int $docenteId,int $asignaturaId): bool

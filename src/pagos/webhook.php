@@ -51,6 +51,7 @@ function datosMetodoPagoStripe(object $sesion, array $configuracion): array
 $configuracion = configuracionStripe();
 $autoload = dirname(__DIR__, 2) . '/includes/stripe/vendor/autoload.php';
 if (!stripeConfigurado($configuracion) || !is_file($autoload)) {
+    error_log('Webhook Stripe no disponible: configuración o SDK incompletos.');
     http_response_code(503);
     exit;
 }
@@ -59,22 +60,35 @@ require_once $autoload;
 $raw = file_get_contents('php://input');
 $firma = (string) ($_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '');
 if (!is_string($raw) || $raw === '' || $firma === '') {
+    error_log('Webhook Stripe rechazado: cuerpo crudo o firma ausente.');
     http_response_code(400);
     exit;
 }
 try {
     $evento = Stripe\Webhook::constructEvent($raw, $firma, $configuracion['webhook_secret']);
-} catch (Throwable) {
+} catch (Throwable $error) {
+    error_log('Webhook Stripe rechazado: firma o payload inválido (' . get_class($error) . ').');
     http_response_code(400);
     exit;
 }
 
 $objeto = $evento->data->object;
+if ($evento->type === 'payment_intent.succeeded') {
+    try {
+        $sesiones = (new Stripe\StripeClient($configuracion['secret_key']))->checkout->sessions->all([
+            'payment_intent' => (string) ($objeto->id ?? ''), 'limit' => 1,
+        ]);
+        $objeto = $sesiones->data[0] ?? throw new RuntimeException('Checkout Session no localizada para el Payment Intent.');
+    } catch (Throwable $error) {
+        error_log('Webhook Stripe payment_intent.succeeded: ' . preg_replace('/[\r\n\t]+/', ' ', $error->getMessage()));
+        http_response_code(500); exit;
+    }
+}
 $esPagoCapacitacion = (string) ($objeto->metadata->tipo ?? '') === 'capacitacion';
 if ($esPagoCapacitacion) {
     require_once dirname(__DIR__, 2) . '/includes/capacitaciones.php';
     try {
-        if (in_array($evento->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true)) procesarWebhookCapacitacion($evento, $objeto);
+        if (in_array($evento->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'payment_intent.succeeded'], true)) procesarWebhookCapacitacion($evento, $objeto);
         else procesarEstadoWebhookCapacitacion($evento, $objeto);
         http_response_code(200);
     } catch (Throwable $error) {
@@ -84,7 +98,7 @@ if ($esPagoCapacitacion) {
     exit;
 }
 $pedidoId = (int) ($objeto->metadata->pedido_id ?? 0);
-$esConfirmacion = in_array($evento->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true);
+$esConfirmacion = in_array($evento->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'payment_intent.succeeded'], true);
 $metodoPago = $esConfirmacion ? datosMetodoPagoStripe($objeto, $configuracion) : ['payment_method_id' => null, 'brand' => null, 'last4' => null];
 $pdo = obtenerConexion();
 $enviarCorreoPedido = null;
@@ -96,7 +110,7 @@ try {
     $consulta->execute(['id' => $evento->id]);
     if ((int) $consulta->fetchColumn() === 1) {
         $pdo->commit();
-        if ($esConfirmacion && $pedidoId > 0) { try { $dte=generarDtePedido($pedidoId); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$pedidoId.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$pedidoId,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$pedidoId]); } enviarConfirmacionCompraAtenea($pedidoId); }
+        if ($esConfirmacion && $pedidoId > 0) { try { $dte=generarDtePedidoSeguro($pedidoId); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$pedidoId.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$pedidoId,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$pedidoId]); } enviarConfirmacionCompraAtenea($pedidoId); }
         http_response_code(200);
         exit;
     }
@@ -138,7 +152,7 @@ try {
                     ->execute(['producto' => $detalle['producto_id'], 'pedido' => $pedidoId, 'cantidad' => -(int) $detalle['cantidad'], 'anterior' => $stock['stock'], 'nuevo' => $nuevoStock]);
             }
             $paymentIntent = substr((string) ($objeto->payment_intent ?? ''), 0, 255);
-            $pdo->prepare("UPDATE pedidos SET estado='pagado',payment_status='paid',paid_at=COALESCE(paid_at,NOW()),stripe_payment_intent_id=:intent,payment_brand=:marca,payment_last4=:ultimos,stripe_payment_method_id=:metodo,last_stripe_event_id=:evento,receipt_generated_at=COALESCE(receipt_generated_at,NOW()),stock_procesado=1 WHERE id=:id")
+            $pdo->prepare("UPDATE pedidos SET estado='pagado',payment_status='paid',estado_pedido=COALESCE(estado_pedido,'pagado'),paid_at=COALESCE(paid_at,NOW()),stripe_payment_intent_id=:intent,payment_brand=:marca,payment_last4=:ultimos,stripe_payment_method_id=:metodo,last_stripe_event_id=:evento,receipt_generated_at=COALESCE(receipt_generated_at,NOW()),stock_procesado=1 WHERE id=:id")
                 ->execute(['intent' => $paymentIntent ?: null, 'marca' => $metodoPago['brand'], 'ultimos' => $metodoPago['last4'], 'metodo' => $metodoPago['payment_method_id'], 'evento' => $evento->id, 'id' => $pedidoId]);
             $referencia = json_encode(['checkout_session' => (string) $objeto->id, 'stripe_event' => (string) $evento->id], JSON_THROW_ON_ERROR);
             $pdo->prepare("INSERT INTO pagos(pedido_id,stripe_payment_intent_id,importe,moneda,estado,datos_referencia) VALUES(:pedido,:intent,:importe,:moneda,'pagado',:referencia) ON DUPLICATE KEY UPDATE estado='pagado',stripe_payment_intent_id=VALUES(stripe_payment_intent_id),importe=VALUES(importe),moneda=VALUES(moneda),datos_referencia=VALUES(datos_referencia)")
@@ -182,6 +196,7 @@ try {
         $mapa = [
             'checkout.session.completed'=>['pago_confirmado','Pago confirmado','exito'],
             'checkout.session.async_payment_succeeded'=>['pago_confirmado','Pago confirmado','exito'],
+            'payment_intent.succeeded'=>['pago_confirmado','Pago confirmado','exito'],
             'checkout.session.async_payment_failed'=>['pago_fallido','Pago fallido','error'],
             'payment_intent.payment_failed'=>['pago_fallido','Pago fallido','error'],
             'checkout.session.expired'=>['pedido_cancelado','Pedido cancelado','advertencia'],
@@ -189,7 +204,7 @@ try {
         ];
         if(isset($mapa[$evento->type])){$n=$mapa[$evento->type];notificarAdministracionAtenea($n[0],$n[1],'Stripe procesó el evento del pedido #'.$pedidoId.'.',$n[2]==='exito'?'informacion':$n[2],null,atenea_url('src/dashboard/pedidos/detalle.php?id='.$pedidoId),'stripe:notificacion:'.$evento->id,['category'=>'pagos','pedido_id'=>$pedidoId]);}
     }
-    if ($enviarCorreoPedido) { try { $dte=generarDtePedido($enviarCorreoPedido); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$enviarCorreoPedido.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$enviarCorreoPedido,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$enviarCorreoPedido]); } enviarConfirmacionCompraAtenea($enviarCorreoPedido); }
+    if ($enviarCorreoPedido) { try { $dte=generarDtePedidoSeguro($enviarCorreoPedido); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$enviarCorreoPedido.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$enviarCorreoPedido,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$enviarCorreoPedido]); } enviarConfirmacionCompraAtenea($enviarCorreoPedido); }
     http_response_code(200);
 } catch (Throwable $error) {
     if ($pdo->inTransaction()) $pdo->rollBack();

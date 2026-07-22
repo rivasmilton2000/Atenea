@@ -5,11 +5,11 @@ exigirPermiso('system_errors.manage');
 $pdo=obtenerConexion();
 $estado=in_array($_GET['estado']??'', ['nuevo','revisando','resuelto'],true)?(string)$_GET['estado']:'';
 $nivel=in_array($_GET['nivel']??'', ['advertencia','error','critico'],true)?(string)$_GET['nivel']:'';
-$soloHibridos=($_GET['rol']??'')==='administracion_docente';
+$soloHibridos=in_array(($_GET['rol']??''),['administracion_docente','administrador_docente'],true);
 $pagina=max(1,(int)($_GET['pagina']??1));$limite=25;$where=[];$params=[];
 if($estado!==''){$where[]='e.estado=:estado';$params['estado']=$estado;}
 if($nivel!==''){$where[]='e.nivel=:nivel';$params['nivel']=$nivel;}
-if($soloHibridos)$where[]="u.rol='administracion_docente'";
+if($soloHibridos)$where[]="u.rol IN('administracion_docente','administrador_docente')";
 $filtro=$where?' WHERE '.implode(' AND ',$where):'';
 $q=$pdo->prepare('SELECT COUNT(*) FROM errores_sistema e LEFT JOIN usuarios u ON u.id=e.usuario_id'.$filtro);$q->execute($params);$total=(int)$q->fetchColumn();
 $q=$pdo->prepare('SELECT e.*,CONCAT_WS(" ",u.nombre,u.apellido) usuario,u.rol FROM errores_sistema e LEFT JOIN usuarios u ON u.id=e.usuario_id'.$filtro.' ORDER BY e.ultima_ocurrencia_at DESC,e.id DESC LIMIT :limite OFFSET :offset');

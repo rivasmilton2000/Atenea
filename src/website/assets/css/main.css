@@ -1844,6 +1844,34 @@ section,
   color: var(--accent-color);
 }
 
+/* Tarjetas de capacitaciones: composición estable en escritorio, tablet y móvil. */
+.courses-page .courses .course-item {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(31, 55, 39, .08);
+}
+.courses-page .course-cover { display: block; aspect-ratio: 16 / 10; }
+.courses-page .courses .course-content { min-width: 0; padding: 24px; gap: 15px; }
+.courses-page .course-title { margin: 0; font-size: clamp(1.2rem, 1.8vw, 1.45rem); line-height: 1.35; overflow-wrap: anywhere; }
+.courses-page .course-title a { color: var(--heading-color); }
+.courses-page .courses .description { display: -webkit-box; min-height: 5.1em; margin: 0; overflow: hidden; font-size: 15px; line-height: 1.7; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.courses-page .course-badges .course-promo { color: #6d4d00; background: color-mix(in srgb, var(--atenea-dorado), transparent 72%); }
+.courses-page .course-price-block { display: flex; min-width: 0; flex-wrap: wrap; align-items: baseline; gap: 5px 10px; padding: 15px 0; border-block: 1px solid color-mix(in srgb, var(--default-color), transparent 88%); }
+.courses-page .course-price-label { width: 100%; color: color-mix(in srgb, var(--default-color), transparent 35%); font-size: 13px; font-weight: 700; text-transform: uppercase; }
+.courses-page .course-price-block del { color: #7a817b; font-size: 14px; }
+.courses-page .course-price-block strong { max-width: 100%; color: var(--atenea-verde); font-size: clamp(1.45rem, 2.4vw, 1.85rem); line-height: 1.15; overflow-wrap: anywhere; }
+.courses-page .course-price-block small { font-size: .48em; letter-spacing: .04em; }
+.courses-page .course-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; width: 100%; }
+.courses-page .course-actions .btn, .courses-page .course-actions .course-action { min-width: 0; margin: 0; padding: 11px 12px; white-space: normal; text-align: center; }
+.courses-page .course-details-button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--atenea-verde); border-radius: 50px; color: var(--atenea-verde); font-weight: 700; }
+.courses-page .course-details-button:hover { color: #fff; background: var(--atenea-verde); }
+@media (max-width: 575px) {
+  .courses-page .courses .course-content { padding: 20px; }
+  .courses-page .courses .description { min-height: 0; -webkit-line-clamp: 4; }
+  .courses-page .course-actions { grid-template-columns: 1fr; }
+}
+
 .courses .trainer .trainer-rank {
   font-size: 18px;
   color: color-mix(in srgb, var(--default-color), transparent 60%);

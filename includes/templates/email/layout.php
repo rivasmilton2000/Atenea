@@ -41,19 +41,26 @@ function reemplazarLogoCorreoPorTexto(string $html): string
     ) ?: $html;
 }
 
+function urlPublicaLogoCorreoAtenea(): string
+{
+    $sitio=obtenerConfiguracionSitio();$logo=trim((string)($sitio['logo']??'img/atenea-logo.png'));
+    if(filter_var($logo,FILTER_VALIDATE_URL))return$logo;
+    return atenea_url_absoluta(ltrim($logo,'/'));
+}
+
 function renderizarLayoutCorreoAtenea(string $titulo, string $preencabezado, string $contenidoHtml, string $contenidoTexto): array
 {
     $sitio = obtenerConfiguracionSitio();
     $nombre = (string) ($sitio['nombre_sitio'] ?? 'Atenea Escuela de Naturopatía Holística');
-    $logoDisponible = rutaFisicaLogoCorreoAtenea() !== null;
+    $logoUrl = urlPublicaLogoCorreoAtenea();
     $correo = (string) ($sitio['correo'] ?? '');
     $direccion = (string) ($sitio['direccion'] ?? 'El Salvador');
     $fecha = date('d/m/Y H:i');
     $tituloHtml = atenea_e($titulo);
     $preencabezadoHtml = atenea_e($preencabezado);
     $nombreHtml = atenea_e($nombre);
-    $cabeceraLogo = $logoDisponible
-        ? '<img data-atenea-email-logo="1" src="cid:' . ATENEA_EMAIL_LOGO_CID . '" width="150" alt="' . $nombreHtml . '" style="display:block;margin:0 auto;max-width:150px;height:auto;border:0;outline:none;text-decoration:none;">'
+    $cabeceraLogo = $logoUrl !== ''
+        ? '<img src="' . atenea_e($logoUrl) . '" width="150" alt="' . $nombreHtml . '" style="display:block;margin:0 auto;max-width:150px;height:auto;border:0;outline:none;text-decoration:none;">'
         : '<strong style="display:block;color:#ffffff;font-size:22px;line-height:1.3;">' . $nombreHtml . '</strong>';
     $pie = atenea_e(trim($direccion . ($correo !== '' ? ' · ' . $correo : '')));
 

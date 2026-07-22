@@ -116,7 +116,7 @@ function validarEntradaRecursoContenido(string $tipoRecurso, string $url, bool $
 function contenidoClasePuedeAdministrar(PDO $pdo, array $contenido, int $usuarioId, string $rol): bool
 {
     if ($rol === 'admin') return true;
-    return in_array($rol, ['docente','administracion_docente'], true)
+    return in_array($rol, ['docente','administracion_docente','administrador_docente'], true)
         && (int) $contenido['docente_id'] === $usuarioId
         && docentePoseeSeccion($pdo, $usuarioId, (int) $contenido['seccion_id']);
 }

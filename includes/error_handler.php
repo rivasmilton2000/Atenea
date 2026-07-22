@@ -66,7 +66,7 @@ function mostrarPaginaErrorAtenea(int $status, ?string $trackingId = null, strin
     $datos = datosPaginaErrorAtenea($status,$tipo);
     $inicio = atenea_url('index.php');
     $panel = null;
-    if (isset($_SESSION['usuario_rol']) && in_array($_SESSION['usuario_rol'], ['admin', 'docente', 'usuario', 'administracion_docente'], true)
+    if (isset($_SESSION['usuario_rol']) && in_array($_SESSION['usuario_rol'], ['admin', 'docente', 'usuario', 'administracion_docente', 'administrador_docente'], true)
         && function_exists('rutaPanelPorRol')) {
         $panel = rutaPanelPorRol((string) $_SESSION['usuario_rol']);
     }

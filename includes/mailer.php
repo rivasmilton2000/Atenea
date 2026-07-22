@@ -156,7 +156,7 @@ function entregarCorreoSmtpAtenea(array $registro): void
         if ($ruta !== '' && is_file($ruta)) $correo->addAttachment($ruta, (string)($adjunto['name'] ?? basename($ruta)));
     }
     $html = (string) $registro['contenido_html'];
-    $logo = rutaFisicaLogoCorreoAtenea();
+    $logo = str_contains($html,'data-atenea-email-logo="1"') ? rutaFisicaLogoCorreoAtenea() : null;
     $embebido = false;
     if ($logo !== null) {
         try { $embebido = $correo->addEmbeddedImage($logo, ATENEA_EMAIL_LOGO_CID, 'logo-atenea.png'); }

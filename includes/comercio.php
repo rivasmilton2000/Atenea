@@ -8,4 +8,7 @@ function productoPublico(int $id):?array{foreach(catalogoProductos() as$p)if((in
 function galeriaProductoPublica(int $productoId):array{$filas=[];foreach(filasEstadoWebsite('producto_imagenes') as$f)if((int)($f['producto_id']??0)===$productoId)$filas[]=$f;usort($filas,static fn($a,$b)=>[(int)($a['orden']??0),(int)($a['id']??0)]<=>[(int)($b['orden']??0),(int)($b['id']??0)]);return array_values(array_filter(array_column($filas,'ruta')));}
 function numeroPedido():string{return 'AT-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(4)));}
 function registrarHistorialPedido(PDO $pdo,int $pedidoId,?string $anterior,string $nuevo,string $origen,?int $usuario=null,?string $nota=null):void{$q=$pdo->prepare('INSERT INTO pedido_historial(pedido_id,estado_anterior,estado_nuevo,origen,usuario_id,nota)VALUES(:p,:a,:n,:o,:u,:nota)');$q->execute(['p'=>$pedidoId,'a'=>$anterior,'n'=>$nuevo,'o'=>$origen,'u'=>$usuario,'nota'=>$nota]);}
+function estadosSeguimientoPedido():array{return ['pagado'=>'Pago completado','en_proceso_envio'=>'En proceso de envío','saliendo_almacen'=>'Saliendo de almacén','entregado'=>'Entregado'];}
+function etiquetaSeguimientoPedido(?string $estado):string{return estadosSeguimientoPedido()[$estado??'']??'Pendiente de pago';}
+function progresoSeguimientoPedido(?string $estado):int{$orden=array_keys(estadosSeguimientoPedido());$pos=array_search($estado,$orden,true);return $pos===false?0:(int)round((($pos+1)/count($orden))*100);}
 function imagenProducto(?string $ruta):string{return rutaImagenContenido($ruta,'src/website/assets/img/course-1.jpg');}

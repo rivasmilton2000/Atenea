@@ -27,7 +27,7 @@ $destino=$accion==='editar'&&$seccionId?'seccion-detalle.php?id='.$seccionId:'se
 
 function validarDocenteSeccion(PDO $pdo,int $docente,int $capacitacion): void
 {
- $q=$pdo->prepare("SELECT 1 FROM docentes_asignaturas da JOIN usuarios u ON u.id=da.docente_id WHERE da.docente_id=:d AND da.asignatura_id=:a AND da.estado='activo' AND u.rol IN('docente','administracion_docente') AND u.estado='activo' AND u.deleted_at IS NULL");$q->execute(['d'=>$docente,'a'=>$capacitacion]);if(!$q->fetchColumn())throw new DomainException('El docente no está autorizado para esta capacitación.');
+ $q=$pdo->prepare("SELECT 1 FROM docentes_asignaturas da JOIN usuarios u ON u.id=da.docente_id WHERE da.docente_id=:d AND da.asignatura_id=:a AND da.estado='activo' AND u.rol IN('docente','administracion_docente','administrador_docente') AND u.estado='activo' AND u.deleted_at IS NULL");$q->execute(['d'=>$docente,'a'=>$capacitacion]);if(!$q->fetchColumn())throw new DomainException('El docente no está autorizado para esta capacitación.');
 }
 function actualizarDocenteSeccion(PDO $pdo,array $seccion,int $docente,int $admin): void
 {

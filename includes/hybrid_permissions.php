@@ -4,7 +4,18 @@ declare(strict_types=1);
 require_once __DIR__ . '/conexion.php';
 require_once __DIR__ . '/audit.php';
 
-const ATENEA_HYBRID_ROLE = 'administracion_docente';
+const ATENEA_HYBRID_ROLE = 'administrador_docente';
+const ATENEA_HYBRID_LEGACY_ROLE = 'administracion_docente';
+
+function esRolAdministradorDocenteAtenea(?string $rol): bool
+{
+    return in_array($rol, [ATENEA_HYBRID_ROLE, ATENEA_HYBRID_LEGACY_ROLE], true);
+}
+
+function permisosBaseAdministradorDocenteAtenea(): array
+{
+    return ['hybrid.admin.access','hybrid.docente.access','dashboard.view','users.view','orders.view','orders.manage','audit.view','academic.courses.view','academic.students.view','academic.content.manage','academic.tasks.manage','academic.evaluations.manage','academic.grades.manage','academic.communications.send','academic.calendar.view','academic.notifications.view','academic.tracking.view'];
+}
 
 function catalogoPermisosHibridosAtenea(): array
 {
@@ -27,6 +38,9 @@ function catalogoPermisosHibridosAtenea(): array
             'orders.manage' => 'Actualizar estados de compras',
             'communications.view' => 'Ver correos',
             'communications.reply' => 'Responder correos',
+            'newsletter.view' => 'Consultar boletín y campañas',
+            'newsletter.manage' => 'Gestionar campañas del boletín',
+            'newsletter.export' => 'Exportar suscriptores del boletín',
             'reports.view' => 'Ver reportes',
             'notifications.view' => 'Ver notificaciones',
             'audit.view' => 'Ver bitácoras limitadas',
@@ -60,7 +74,8 @@ function permisoHibridoUsuarioAtenea(int $usuarioId, string $permiso, ?PDO $pdo 
         $pdo ??= obtenerConexion();
         $q = $pdo->prepare('SELECT habilitado FROM usuario_permisos WHERE usuario_id=:usuario AND permiso=:permiso LIMIT 1');
         $q->execute(['usuario' => $usuarioId, 'permiso' => $permiso]);
-        return (int)$q->fetchColumn() === 1;
+        $valor=$q->fetchColumn();
+        return $valor===false ? in_array($permiso,permisosBaseAdministradorDocenteAtenea(),true) : (int)$valor===1;
     } catch (Throwable $e) {
         error_log('Permiso híbrido Atenea: ' . $e->getMessage());
         return false;
@@ -70,6 +85,7 @@ function permisoHibridoUsuarioAtenea(int $usuarioId, string $permiso, ?PDO $pdo 
 function permisosHibridosUsuarioAtenea(int $usuarioId, ?PDO $pdo = null): array
 {
     $resultado = array_fill_keys(clavesPermisosHibridosAtenea(), false);
+    foreach(permisosBaseAdministradorDocenteAtenea() as$permiso)if(array_key_exists($permiso,$resultado))$resultado[$permiso]=true;
     if ($usuarioId < 1) return $resultado;
     $pdo ??= obtenerConexion();
     $q = $pdo->prepare('SELECT permiso,habilitado FROM usuario_permisos WHERE usuario_id=:usuario');
@@ -85,7 +101,7 @@ function guardarPermisosHibridosAtenea(int $usuarioId, array $habilitados, int $
     $q = $pdo->prepare("SELECT rol,estado,deleted_at FROM usuarios WHERE id=:id FOR UPDATE");
     $q->execute(['id' => $usuarioId]);
     $usuario = $q->fetch();
-    if (!$usuario || $usuario['rol'] !== ATENEA_HYBRID_ROLE || $usuario['estado'] !== 'activo' || $usuario['deleted_at']) throw new DomainException('La cuenta híbrida no está disponible.');
+    if (!$usuario || !esRolAdministradorDocenteAtenea((string)$usuario['rol']) || $usuario['estado'] !== 'activo' || $usuario['deleted_at']) throw new DomainException('La cuenta híbrida no está disponible.');
 
     $actuales = permisosHibridosUsuarioAtenea($usuarioId, $pdo);
     $permitidos = array_fill_keys(array_intersect(array_map('strval', $habilitados), clavesPermisosHibridosAtenea()), true);
@@ -107,7 +123,7 @@ function guardarPermisosHibridosAtenea(int $usuarioId, array $habilitados, int $
 
 function modoHibridoActualAtenea(): ?string
 {
-    if (($_SESSION['usuario_rol'] ?? '') !== ATENEA_HYBRID_ROLE) return null;
+    if (!esRolAdministradorDocenteAtenea($_SESSION['usuario_rol'] ?? null)) return null;
     $modo = (string)($_SESSION['hybrid_mode'] ?? '');
     if (!in_array($modo, ['admin', 'docente'], true)) return null;
     return permisoHibridoUsuarioAtenea((int)$_SESSION['usuario_id'], 'hybrid.' . $modo . '.access') ? $modo : null;
@@ -115,7 +131,7 @@ function modoHibridoActualAtenea(): ?string
 
 function exigirModoHibridoAtenea(string $modo): void
 {
-    if (($_SESSION['usuario_rol'] ?? '') !== ATENEA_HYBRID_ROLE) return;
+    if (!esRolAdministradorDocenteAtenea($_SESSION['usuario_rol'] ?? null)) return;
     if (modoHibridoActualAtenea() !== $modo) {
         registrarFalloGlobalAtenea('Contexto híbrido no autorizado: ' . $modo, 403);
         mostrarPaginaErrorAtenea(403);
@@ -124,7 +140,7 @@ function exigirModoHibridoAtenea(string $modo): void
 
 function cambiarModoHibridoAtenea(string $modo): string
 {
-    if (($_SESSION['usuario_rol'] ?? '') !== ATENEA_HYBRID_ROLE || !in_array($modo, ['admin','docente'], true)) throw new DomainException('El modo solicitado no es válido.');
+    if (!esRolAdministradorDocenteAtenea($_SESSION['usuario_rol'] ?? null) || !in_array($modo, ['admin','docente'], true)) throw new DomainException('El modo solicitado no es válido.');
     if (!permisoHibridoUsuarioAtenea((int)$_SESSION['usuario_id'], 'hybrid.' . $modo . '.access')) throw new DomainException('Ese modo no está habilitado para tu cuenta.');
     $_SESSION['hybrid_mode'] = $modo;
     registrarAuditoria(['actor_user_id'=>(int)$_SESSION['usuario_id'],'target_user_id'=>(int)$_SESSION['usuario_id'],'event_type'=>'hybrid.mode_changed','module'=>'auth','entity_type'=>'session','action'=>'switch_mode','result'=>'success','description'=>'La cuenta híbrida cambió de contexto.','metadata'=>['mode'=>$modo]]);
@@ -144,6 +160,7 @@ function permisoRutaAdministrativaHibridaAtenea(string $ruta, string $metodo = '
     if (preg_match('~/src/dashboard/(?:pedidos|facturas)/~', $ruta)) return $esEscritura ? 'orders.manage' : 'orders.view';
     if (str_contains($ruta, '/src/dashboard/notificaciones/')) return 'notifications.view';
     if (str_contains($ruta, '/src/dashboard/comunicaciones/')) return $esEscritura ? 'communications.reply' : 'communications.view';
+    if (str_contains($ruta, '/src/dashboard/newsletter/')) return $esEscritura ? 'newsletter.manage' : 'newsletter.view';
     if (str_contains($ruta, '/src/dashboard/bitacora/')) return str_ends_with($ruta,'/detalle.php') ? null : 'audit.view';
     if ($ruta === '' || str_ends_with($ruta, '/src/dashboard/index.php')) return 'dashboard.view';
     return null;
@@ -168,7 +185,7 @@ function permisoRutaDocenteHibridaAtenea(string $ruta): ?string
 
 function renderizarSelectorModoHibridoAtenea(): void
 {
-    if (($_SESSION['usuario_rol'] ?? '') !== ATENEA_HYBRID_ROLE) return;
+    if (!esRolAdministradorDocenteAtenea($_SESSION['usuario_rol'] ?? null)) return;
     $actual = modoHibridoActualAtenea();
     $admin = permisoHibridoUsuarioAtenea((int)$_SESSION['usuario_id'], 'hybrid.admin.access');
     $docente = permisoHibridoUsuarioAtenea((int)$_SESSION['usuario_id'], 'hybrid.docente.access');
