@@ -25,7 +25,7 @@ function capacitacionesPublicasWebsite():array{$filas=array_values(array_filter(
 
 function docentePuedeAsumirCapacitacion(PDO $pdo, int $docenteId, int $asignaturaId, ?int $excluirRelacion = null): bool
 {
-    $q = $pdo->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol='docente' AND estado='activo' AND deleted_at IS NULL FOR UPDATE");
+    $q = $pdo->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol IN('docente','administracion_docente') AND estado='activo' AND deleted_at IS NULL FOR UPDATE");
     $q->execute(['id' => $docenteId]);
     if (!$q->fetchColumn()) return false;
     $sql = "SELECT COUNT(DISTINCT da.asignatura_id) FROM docentes_asignaturas da INNER JOIN asignaturas a ON a.id=da.asignatura_id WHERE da.docente_id=:docente AND da.estado='activo' AND a.activo=1 AND a.estado_capacitacion IN('publicada','cerrada') AND a.deleted_at IS NULL AND da.asignatura_id<>:asignatura";
@@ -38,7 +38,7 @@ function docentePuedeAsumirCapacitacion(PDO $pdo, int $docenteId, int $asignatur
 
 function docentesElegiblesCapacitacion(PDO $pdo, int $asignaturaId): array
 {
-    $q = $pdo->prepare("SELECT da.docente_id FROM docentes_asignaturas da INNER JOIN usuarios u ON u.id=da.docente_id AND u.rol='docente' AND u.estado='activo' AND u.deleted_at IS NULL WHERE da.asignatura_id=:a AND da.estado='activo' AND (SELECT COUNT(DISTINCT da2.asignatura_id) FROM docentes_asignaturas da2 INNER JOIN asignaturas a2 ON a2.id=da2.asignatura_id WHERE da2.docente_id=da.docente_id AND da2.estado='activo' AND a2.activo=1 AND a2.estado_capacitacion IN('publicada','cerrada') AND a2.deleted_at IS NULL)<=2");
+    $q = $pdo->prepare("SELECT da.docente_id FROM docentes_asignaturas da INNER JOIN usuarios u ON u.id=da.docente_id AND u.rol IN('docente','administracion_docente') AND u.estado='activo' AND u.deleted_at IS NULL WHERE da.asignatura_id=:a AND da.estado='activo' AND (SELECT COUNT(DISTINCT da2.asignatura_id) FROM docentes_asignaturas da2 INNER JOIN asignaturas a2 ON a2.id=da2.asignatura_id WHERE da2.docente_id=da.docente_id AND da2.estado='activo' AND a2.activo=1 AND a2.estado_capacitacion IN('publicada','cerrada') AND a2.deleted_at IS NULL)<=2");
     $q->execute(['a' => $asignaturaId]);
     return array_map('intval', $q->fetchAll(PDO::FETCH_COLUMN));
 }
@@ -59,7 +59,7 @@ function registrarHistorialSeccionCapacitacion(PDO $pdo,int $seccionId,string $a
 
 function buscarSeccionDisponibleCapacitacion(PDO $pdo,int $asignaturaId): ?array
 {
-    $q=$pdo->prepare("SELECT s.* FROM capacitacion_secciones s JOIN usuarios u ON u.id=s.docente_id AND u.rol='docente' AND u.estado='activo' AND u.deleted_at IS NULL JOIN docentes_asignaturas da ON da.docente_id=s.docente_id AND da.asignatura_id=s.asignatura_id AND da.estado='activo' WHERE s.asignatura_id=:a AND s.estado='abierta' AND s.cantidad_actual<s.capacidad_maxima ORDER BY (s.cantidad_actual/NULLIF(s.capacidad_maxima,0)),COALESCE(s.fecha_inicio,'9999-12-31'),s.id FOR UPDATE");
+    $q=$pdo->prepare("SELECT s.* FROM capacitacion_secciones s JOIN usuarios u ON u.id=s.docente_id AND u.rol IN('docente','administracion_docente') AND u.estado='activo' AND u.deleted_at IS NULL JOIN docentes_asignaturas da ON da.docente_id=s.docente_id AND da.asignatura_id=s.asignatura_id AND da.estado='activo' WHERE s.asignatura_id=:a AND s.estado='abierta' AND s.cantidad_actual<s.capacidad_maxima ORDER BY (s.cantidad_actual/NULLIF(s.capacidad_maxima,0)),COALESCE(s.fecha_inicio,'9999-12-31'),s.id FOR UPDATE");
     $q->execute(['a'=>$asignaturaId]);return$q->fetch()?:null;
 }
 

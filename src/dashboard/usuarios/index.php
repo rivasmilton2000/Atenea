@@ -26,7 +26,7 @@ $q = $pdo->prepare('SELECT COUNT(*) FROM usuarios' . $filtro); $q->execute($para
 $q = $pdo->prepare('SELECT id,nombre,apellido,nombre_usuario,correo,rol,es_superadmin,estado,proveedor,google_id,created_at,ultimo_acceso,last_activity_at,deleted_at,foto FROM usuarios' . $filtro . ' ORDER BY created_at DESC,id DESC LIMIT ' . $porPagina . ' OFFSET ' . (($pagina - 1) * $porPagina));
 $q->execute($params); $usuarios = $q->fetchAll();
 $paginas = max(1, (int) ceil($total / $porPagina));
-$titulo = $rol === '' ? 'Usuarios' : match ($rol) { 'usuario' => 'Estudiantes', 'docente' => 'Docentes', 'admin' => 'Administradores' };
+$titulo = $rol === '' ? 'Usuarios' : match ($rol) { 'usuario' => 'Estudiantes', 'docente' => 'Docentes', 'administracion_docente' => 'Administración_Docente', 'admin' => 'Administradores' };
 cmsCabecera($titulo, 'usuarios/index.php', 'Consulta cuentas, actividad, permisos y ciclo de vida sin exponer credenciales.');
 ?>
 <div class="card card-rounded"><div class="card-body">

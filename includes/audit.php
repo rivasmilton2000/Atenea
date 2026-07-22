@@ -63,9 +63,16 @@ function registrarAuditoria(array $evento, ?PDO $pdo = null): bool
         $pdo ??= obtenerConexion();
         $metadata = sanitizarMetadataAuditoria($evento['metadata'] ?? []);
         $json = $metadata === [] ? null : json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        $consulta = $pdo->prepare('INSERT INTO audit_logs(actor_user_id,target_user_id,event_type,module,entity_type,entity_id,action,result,description,metadata,ip_address,user_agent,request_id) VALUES(:actor,:target,:event_type,:module,:entity_type,:entity_id,:action,:result,:description,:metadata,:ip,:agent,:request_id)');
+        $actorRole = (string)($evento['actor_role'] ?? ($_SESSION['usuario_rol'] ?? ''));
+        $activeMode = (string)($evento['active_mode'] ?? ($_SESSION['hybrid_mode'] ?? ''));
+        $route = mb_substr((string)($evento['route'] ?? ($_SERVER['REQUEST_URI'] ?? 'CLI')), 0, 255);
+        $correlationId = strtolower((string)($evento['correlation_id'] ?? requestIdAtenea()));
+        if (!preg_match('/^[a-f0-9]{32}$/', $correlationId)) $correlationId = requestIdAtenea();
+        $consulta = $pdo->prepare('INSERT INTO audit_logs(actor_user_id,actor_role,active_mode,target_user_id,event_type,module,entity_type,entity_id,action,result,description,metadata,ip_address,user_agent,route,request_id) VALUES(:actor,:actor_role,:active_mode,:target,:event_type,:module,:entity_type,:entity_id,:action,:result,:description,:metadata,:ip,:agent,:route,:request_id)');
         $consulta->execute([
             'actor' => isset($evento['actor_user_id']) ? (int) $evento['actor_user_id'] : ($_SESSION['usuario_id'] ?? null),
+            'actor_role' => $actorRole !== '' ? mb_substr($actorRole, 0, 40) : null,
+            'active_mode' => in_array($activeMode, ['admin','docente'], true) ? $activeMode : null,
             'target' => isset($evento['target_user_id']) ? (int) $evento['target_user_id'] : null,
             'event_type' => mb_substr((string) ($evento['event_type'] ?? 'system.event'), 0, 100),
             'module' => mb_substr((string) ($evento['module'] ?? 'system'), 0, 80),
@@ -77,7 +84,8 @@ function registrarAuditoria(array $evento, ?PDO $pdo = null): bool
             'metadata' => $json,
             'ip' => ipAuditoriaAtenea(),
             'agent' => resumirUserAgentAtenea((string) ($_SERVER['HTTP_USER_AGENT'] ?? 'CLI')),
-            'request_id' => requestIdAtenea(),
+            'route' => sanitizarTextoAuditoria($route, 255),
+            'request_id' => $correlationId,
         ]);
         return true;
     } catch (Throwable $error) {

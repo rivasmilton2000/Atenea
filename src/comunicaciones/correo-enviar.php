@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__,2).'/includes/comunicacion_centro.php';
 require_once dirname(__DIR__,2).'/includes/mailer.php';
 exigirAutenticacion();
+exigirComunicacionHibridaAtenea(true);
 if(($_SERVER['REQUEST_METHOD']??'')!=='POST'||!validarTokenCsrf((string)($_POST['csrf_token']??''))){http_response_code(400);exit;}
 $pdo=obtenerConexion();$actor=(int)$_SESSION['usuario_id'];$destino=(int)($_POST['destinatario_id']??0);$hilo=(int)($_POST['hilo_id']??0);$asunto=trim(strip_tags((string)($_POST['asunto']??'')));$texto=textoChatSeguro((string)($_POST['mensaje']??''));$adj=null;$ruta=null;
 try{

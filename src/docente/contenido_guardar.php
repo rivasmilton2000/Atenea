@@ -64,7 +64,7 @@ try {
         'actor_user_id'=>(int)$_SESSION['usuario_id'], 'target_user_id'=>$docenteId,
         'event_type'=>'academic.content.created', 'module'=>'academic', 'entity_type'=>'content',
         'entity_id'=>$contenidoId, 'action'=>'create', 'result'=>'success',
-        'description'=>'Se creó una publicación de clase en una sección asignada.',
+        'description'=>'Se creó una publicación de clase en una sección asignada.','metadata'=>['content_type'=>$tipo,'resource_type'=>$tipoRecurso,'status'=>$estado],
         'metadata'=>['estado'=>$estado,'tipo_recurso'=>$tipoRecurso,'seccion_id'=>$seccionId],
     ], $pdo);
     $pdo->commit();

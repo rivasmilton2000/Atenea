@@ -1,4 +1,8 @@
 <?php
+if(($_SESSION['usuario_rol']??'')==='administracion_docente'){
+  require ATENEA_ROOT.'/src/administador_docente/dashboard/partials/_sidebar.php';
+  return;
+}
 if(!function_exists('docenteUrl'))require_once dirname(__DIR__).'/_layout.php';
 require_once dirname(__DIR__,3).'/includes/notificaciones.php';
 $activo=$GLOBALS['docenteActivo']??'inicio';

@@ -35,7 +35,7 @@ final class AdminNotificationService
         $noticeLevel = $level === 'critico' ? 'error' : $level;
         $category = mb_substr((string)($context['category'] ?? 'sistema'), 0, 50);
 
-        crearNotificacionAtenea([
+        if (empty($context['skip_internal'])) crearNotificacionAtenea([
             'rol' => 'admin',
             'created_by' => $context['created_by'] ?? null,
             'tipo' => $eventType,

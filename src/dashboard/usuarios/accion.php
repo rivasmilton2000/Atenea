@@ -16,7 +16,28 @@ $pdo = obtenerConexion();
 $actorId = (int)($_SESSION['usuario_id'] ?? 0);
 
 try {
-    if ($accion === 'revelar_sensible') {
+    if(($_SESSION['usuario_rol']??'')==='administracion_docente'){
+        $qObjetivo=$pdo->prepare('SELECT rol,es_superadmin FROM usuarios WHERE id=:id');$qObjetivo->execute(['id'=>$id]);$objetivo=$qObjetivo->fetch();
+        if(!$objetivo)throw new RuntimeException('La cuenta no existe.');
+        if($objetivo['rol']==='admin'||(int)$objetivo['es_superadmin']===1)throw new RuntimeException('No puedes modificar cuentas administrativas principales.');
+    }
+    if ($accion === 'guardar_permisos_hibridos') {
+        exigirPermiso('users.change_role');
+        if($id===$actorId)throw new RuntimeException('No puedes modificar tus propios permisos.');
+        $qActor=$pdo->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol='admin' AND es_superadmin=1 AND estado='activo' AND deleted_at IS NULL");$qActor->execute(['id'=>$actorId]);
+        if(!$qActor->fetchColumn())throw new RuntimeException('Solo el administrador principal puede gestionar estos permisos.');
+        $pdo->beginTransaction();guardarPermisosHibridosAtenea($id,(array)($_POST['permisos']??[]),$actorId,$pdo);$pdo->commit();
+        cmsFlash('exito','Permisos individuales actualizados. Las sesiones anteriores fueron revocadas.');
+    } elseif ($accion === 'revocar_sesiones') {
+        exigirPermiso('users.edit');
+        if($id===$actorId)throw new RuntimeException('No puedes revocar tu propia sesión desde esta acción.');
+        if(!reautenticacionAdminValida($_POST['admin_password']??null))throw new RuntimeException('Debes confirmar tu contraseña administrativa.');
+        $qActor=$pdo->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol='admin' AND es_superadmin=1 AND estado='activo' AND deleted_at IS NULL");$qActor->execute(['id'=>$actorId]);if(!$qActor->fetchColumn())throw new RuntimeException('Solo el administrador principal puede revocar estas sesiones.');
+        $pdo->beginTransaction();$usuario=adminUsuarioPorId($id,true,$pdo);if(!$usuario||$usuario['rol']!=='administracion_docente'||$usuario['deleted_at'])throw new RuntimeException('La cuenta híbrida no está disponible.');
+        $pdo->prepare('UPDATE usuarios SET session_version=session_version+1 WHERE id=:id')->execute(['id'=>$id]);
+        if(!registrarAuditoria(['actor_user_id'=>$actorId,'target_user_id'=>$id,'event_type'=>'hybrid.sessions.revoked','module'=>'security','entity_type'=>'user','entity_id'=>$id,'action'=>'revoke_sessions','result'=>'success','description'=>'El administrador principal revocó todas las sesiones activas de la cuenta híbrida.'],$pdo))throw new RuntimeException('No fue posible auditar la revocación.');
+        $pdo->commit();cmsFlash('exito','Las sesiones activas fueron revocadas.');
+    } elseif ($accion === 'revelar_sensible') {
         exigirPermiso('users.view_sensitive');
         $usuario = adminUsuarioPorId($id);
         if (!$usuario) throw new RuntimeException('La cuenta no existe.');

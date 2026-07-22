@@ -9,7 +9,7 @@ require_once dirname(__DIR__, 3) . '/includes/permissions.php';
 require_once dirname(__DIR__, 3) . '/includes/audit.php';
 require_once dirname(__DIR__, 3) . '/includes/website_versionado.php';
 require_once dirname(__DIR__, 3) . '/includes/alerts.php';
-exigirRol(['admin']);
+require_once dirname(__DIR__) . '/_auth_guard.php';
 registrarCapturaAutomaticaCms();
 
 function cmsFlash(string $tipo, string $mensaje): void

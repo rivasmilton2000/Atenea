@@ -1,4 +1,8 @@
 <?php
+if(($_SESSION['usuario_rol']??'')==='administracion_docente'){
+  require ATENEA_ROOT.'/src/administador_docente/dashboard/partials/_sidebar.php';
+  return;
+}
 require_once __DIR__ . '/../_auth_guard.php';
 
 $scriptPath = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
@@ -17,7 +21,7 @@ $usuariosAbierto = str_starts_with($dashboardActive, 'usuarios/');
 $bitacoraActiva = str_starts_with($dashboardActive, 'bitacora/');
 $academicoActivo = str_starts_with($dashboardActive, 'academico/') || str_starts_with($dashboardActive, 'capacitaciones/');
 $noticiasActivo = str_starts_with($dashboardActive, 'noticias/');
-$rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'admin'], true) ? (string) $_GET['rol'] : '';
+$rolUsuarios = in_array((string) ($_GET['rol'] ?? ''), ['usuario', 'docente', 'administracion_docente', 'admin'], true) ? (string) $_GET['rol'] : '';
 ?>
 <nav class="sidebar sidebar-offcanvas" id="sidebar" data-active-managed="server" aria-label="Navegación administrativa">
   <ul class="nav">

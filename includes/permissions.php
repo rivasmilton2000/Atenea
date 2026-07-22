@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/hybrid_permissions.php';
 
 /**
  * Permisos administrativos disponibles. Las acciones especialmente sensibles
@@ -59,6 +60,9 @@ function permisosPorRolAtenea(string $rol): array
 function usuarioTienePermiso(string $permiso, ?array $usuario = null): bool
 {
     $usuario ??= obtenerUsuarioActual();
+    if ($usuario !== null && ($usuario['rol'] ?? '') === ATENEA_HYBRID_ROLE) {
+        return permisoHibridoUsuarioAtenea((int)$usuario['id'], $permiso);
+    }
     if ($usuario === null || !in_array($permiso, permisosPorRolAtenea((string) ($usuario['rol'] ?? '')), true)) return false;
     if (!in_array($permiso, ['users.delete_admin','backups.restore'], true)) return true;
     $consulta = obtenerConexion()->prepare("SELECT 1 FROM usuarios WHERE id=:id AND rol='admin' AND es_superadmin=1 AND estado='activo' AND deleted_at IS NULL");
@@ -77,5 +81,5 @@ function exigirPermiso(string $permiso): void
 
 function rolesAdministrablesAtenea(): array
 {
-    return ['usuario', 'docente', 'admin'];
+    return ['usuario', 'docente', 'administracion_docente', 'admin'];
 }

@@ -5,6 +5,7 @@ exigirPermiso('audit.view');
 
 $usuarioId=cmsId($_GET['usuario_id']??0);
 if(!$usuarioId){http_response_code(400);echo '<div class="alert alert-danger">El usuario indicado no es valido.</div>';exit;}
+if(($_SESSION['usuario_rol']??'')==='administracion_docente'&&$usuarioId!==(int)$_SESSION['usuario_id']){registrarFalloGlobalAtenea('Bitácora híbrida fuera de alcance.',403);mostrarPaginaErrorAtenea(403);}
 $pdo=obtenerConexion();
 $q=$pdo->prepare('SELECT id,nombre,apellido,nombre_usuario,correo,rol,estado,deleted_at FROM usuarios WHERE id=:id LIMIT 1');$q->execute(['id'=>$usuarioId]);$usuario=$q->fetch();
 if(!$usuario){http_response_code(404);echo '<div class="alert alert-warning">El usuario ya no existe.</div>';exit;}

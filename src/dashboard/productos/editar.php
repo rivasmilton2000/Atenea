@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__).'/includes/cms.php';
+require_once dirname(__DIR__,3).'/includes/audit.php';
 $pdo=obtenerConexion();
 $id=cmsId($_GET['id']??$_POST['id']??0);
 $producto=['nombre'=>'','sku'=>'','descripcion_corta'=>'','descripcion'=>'','tipo_producto'=>'producto','caracteristicas'=>'','informacion_entrega'=>'','precio'=>'0.00','stock'=>0,'stock_reservado'=>0,'stock_minimo'=>0,'disponible'=>1,'activo'=>1,'imagen_principal'=>'','categoria_id'=>null];
@@ -49,6 +50,7 @@ if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
             $pdo->prepare('UPDATE promociones SET activa=0,actualizado_por=:admin WHERE producto_id=:producto AND activa=1')->execute(['admin'=>$_SESSION['usuario_id'],'producto'=>$id]);
             if($promocionActiva){$porcentaje=round((1-(float)$precioPromocional/(float)$precio)*100,2);$q=$pdo->prepare('INSERT INTO promociones(producto_id,etiqueta,precio_promocional,porcentaje_descuento,fecha_inicio,fecha_fin,activa,creado_por,actualizado_por) VALUES(:producto,:etiqueta,:precio,:porcentaje,:inicio,:fin,1,:creado,:actualizado)');$q->execute(['producto'=>$id,'etiqueta'=>trim(strip_tags((string)($_POST['promo_etiqueta']??'')))?:null,'precio'=>$precioPromocional,'porcentaje'=>$porcentaje,'inicio'=>$inicio,'fin'=>$fin,'creado'=>$_SESSION['usuario_id'],'actualizado'=>$_SESSION['usuario_id']]);}
             if((int)($producto['stock']??0)!==(int)$stock){$q=$pdo->prepare("INSERT INTO inventario_movimientos(producto_id,usuario_admin_id,tipo,cantidad,stock_anterior,stock_nuevo,nota) VALUES(:producto,:admin,'ajuste',:cantidad,:anterior,:nuevo,'Ajuste desde edición de producto')");$q->execute(['producto'=>$id,'admin'=>$_SESSION['usuario_id'],'cantidad'=>(int)$stock-(int)($producto['stock']??0),'anterior'=>(int)($producto['stock']??0),'nuevo'=>(int)$stock]);}
+            registrarAuditoria(['actor_user_id'=>(int)$_SESSION['usuario_id'],'event_type'=>$producto['nombre']!==''?'product.updated':'product.created','module'=>'products','entity_type'=>'product','entity_id'=>$id,'action'=>$producto['nombre']!==''?'update':'create','result'=>'success','description'=>'Producto guardado desde el panel administrativo.','metadata'=>['previous'=>['price'=>$producto['precio']??null,'stock'=>$producto['stock']??null,'active'=>$producto['activo']??null],'new'=>['price'=>$precio,'stock'=>$stock,'active'=>$activo]]],$pdo);
             $pdo->commit();
             if($nuevaImagen&&!empty($producto['imagen_principal']))cmsEliminarImagenSiNoSeUsa((string)$producto['imagen_principal']);
             cmsFlash('exito','Producto guardado correctamente.');header('Location:index.php');exit;

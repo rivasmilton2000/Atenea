@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__,2).'/includes/comunicacion_layout.php';
-$pdo=obtenerConexion();$actor=(int)$_SESSION['usuario_id'];$vista=in_array($_GET['vista']??'',['entrada','enviados','no-leidos'],true)?$_GET['vista']:'entrada';$buscar=mb_substr(trim((string)($_GET['q']??'')),0,190);$yo=comunicacionUsuario($pdo,$actor);$esAdmin=$_SESSION['usuario_rol']==='admin';
+$pdo=obtenerConexion();$actor=(int)$_SESSION['usuario_id'];$vista=in_array($_GET['vista']??'',['entrada','enviados','no-leidos'],true)?$_GET['vista']:'entrada';$buscar=mb_substr(trim((string)($_GET['q']??'')),0,190);$yo=comunicacionUsuario($pdo,$actor);$esAdmin=esAdministracionComunicacionAtenea();
 $where=$vista==='enviados'?($esAdmin?"m.direccion='salida'":"m.direccion='salida' AND m.autor_usuario_id=:u"):($esAdmin?"m.direccion='entrada'":"m.direccion='entrada' AND (h.usuario_relacionado_id=:u OR m.destinatario=:correo)");$p=[];if(!$esAdmin)$p['u']=$actor;if($vista!=='enviados'&&!$esAdmin)$p['correo']=$yo['correo'];if($vista==='no-leidos')$where.=' AND m.leido_at IS NULL';if($buscar!==''){$where.=' AND (m.asunto LIKE :q1 OR m.contenido_texto LIKE :q2 OR m.remitente LIKE :q3 OR m.destinatario LIKE :q4)';$p['q1']=$p['q2']=$p['q3']=$p['q4']='%'.$buscar.'%';}
 $q=$pdo->prepare("SELECT m.*,h.asunto hilo_asunto,(SELECT COUNT(*) FROM correo_centro_adjuntos a WHERE a.mensaje_id=m.id) adjuntos FROM correo_centro_mensajes m JOIN correo_centro_hilos h ON h.id=m.hilo_id WHERE $where ORDER BY m.enviado_recibido_at DESC LIMIT 200");$q->execute($p);$mensajes=$q->fetchAll();comunicacionCabecera($vista==='enviados'?'Correos enviados':'Bandeja de entrada',$vista,'Centro de correo institucional.');comunicacionNav($vista);
 ?>

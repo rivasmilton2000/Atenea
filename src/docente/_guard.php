@@ -5,4 +5,13 @@ require_once dirname(__DIR__,2).'/includes/permissions.php';
 require_once dirname(__DIR__,2).'/includes/contenido.php';
 require_once dirname(__DIR__,2).'/includes/perfil_modal.php';
 require_once dirname(__DIR__,2).'/includes/alerts.php';
-exigirRol(['docente','admin']);
+exigirRol(['docente','admin','administracion_docente']);
+if(($_SESSION['usuario_rol']??'')==='administracion_docente'){
+    require_once dirname(__DIR__,2).'/includes/hybrid_permissions.php';
+    exigirModoHibridoAtenea('docente');
+    $permiso=permisoRutaDocenteHibridaAtenea((string)($_SERVER['SCRIPT_NAME']??''));
+    if($permiso!==null&&!usuarioTienePermiso($permiso)){
+        registrarFalloGlobalAtenea('Ruta docente híbrida denegada.',403);
+        mostrarPaginaErrorAtenea(403);
+    }
+}

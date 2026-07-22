@@ -10,6 +10,7 @@ $buscar=mb_substr(trim((string)($_GET['q']??'')),0,100);
 $rol=in_array($_GET['rol']??'',rolesAdministrablesAtenea(),true)?(string)$_GET['rol']:'';
 $estado=in_array($_GET['estado']??'',['activo','inactivo','eliminado'],true)?(string)$_GET['estado']:'';
 $where=[];$params=[];
+if(($_SESSION['usuario_rol']??'')==='administracion_docente'){$where[]='id=:hybrid_usuario';$params['hybrid_usuario']=(int)$_SESSION['usuario_id'];}
 if($buscar!==''){
     $where[]='(nombre LIKE :q_nombre OR apellido LIKE :q_apellido OR nombre_usuario LIKE :q_usuario OR correo LIKE :q_correo OR CAST(rol AS CHAR) LIKE :q_rol'.(ctype_digit($buscar)?' OR id=:id':'').')';
     $valorBusqueda='%'.$buscar.'%';

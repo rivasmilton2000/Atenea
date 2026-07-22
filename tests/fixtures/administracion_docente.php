@@ -1,0 +1,8 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__,2).'/includes/auth.php';
+require_once dirname(__DIR__,2).'/includes/permissions.php';
+$pdo=obtenerConexion();$accion=$argv[1]??'';$correo='layout.hibrido@example.invalid';
+$limpiar=static function()use($pdo,$correo):void{$q=$pdo->prepare('SELECT id FROM usuarios WHERE correo=:correo');$q->execute(['correo'=>$correo]);$id=(int)$q->fetchColumn();if(!$id)return;$pdo->prepare('DELETE FROM audit_logs WHERE actor_user_id=:id OR target_user_id=:id2')->execute(['id'=>$id,'id2'=>$id]);$pdo->prepare('DELETE FROM usuarios WHERE id=:id')->execute(['id'=>$id]);};
+if($accion==='cleanup'){$limpiar();echo "OK cleanup\n";exit;}if($accion!=='setup'){fwrite(STDERR,"Uso: setup|cleanup\n");exit(2);}$limpiar();
+$q=$pdo->prepare("INSERT INTO usuarios(nombre,apellido,nombre_usuario,correo,password,rol,estado,email_verificado,perfil_estado,terminos_aceptados_at) VALUES('Administración','Docente','layout.hibrido',:correo,:password,'administracion_docente','activo',1,'completo',NOW())");$q->execute(['correo'=>$correo,'password'=>password_hash('HibridoLayout!2026',PASSWORD_DEFAULT)]);$id=(int)$pdo->lastInsertId();$actor=(int)$pdo->query("SELECT id FROM usuarios WHERE rol='admin' AND es_superadmin=1 AND estado='activo' AND deleted_at IS NULL ORDER BY id LIMIT 1")->fetchColumn();$pdo->beginTransaction();guardarPermisosHibridosAtenea($id,['hybrid.admin.access','hybrid.docente.access','dashboard.view','users.view','academic.courses.view'],$actor,$pdo);$pdo->commit();$q=$pdo->prepare('SELECT session_version FROM usuarios WHERE id=:id');$q->execute(['id'=>$id]);echo json_encode(['correo'=>$correo,'password'=>'HibridoLayout!2026','id'=>$id,'session_version'=>(int)$q->fetchColumn()],JSON_UNESCAPED_SLASHES)."\n";

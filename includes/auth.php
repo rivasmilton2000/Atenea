@@ -11,7 +11,7 @@ const ATENEA_SESSION_TIMEOUT_SECONDS = 600;
 
 function limpiarAutenticacionSesionAtenea(): void
 {
-    unset($_SESSION['usuario_id'],$_SESSION['usuario_nombre'],$_SESSION['usuario_apellido'],$_SESSION['usuario_correo'],$_SESSION['usuario_rol'],$_SESSION['usuario_foto'],$_SESSION['usuario_perfil_completo'],$_SESSION['usuario_session_version'],$_SESSION['usuario_inicio_sesion'],$_SESSION['usuario_ultima_actividad'],$_SESSION['usuario_actividad_persistida']);
+    unset($_SESSION['usuario_id'],$_SESSION['usuario_nombre'],$_SESSION['usuario_apellido'],$_SESSION['usuario_correo'],$_SESSION['usuario_rol'],$_SESSION['usuario_foto'],$_SESSION['usuario_perfil_completo'],$_SESSION['usuario_session_version'],$_SESSION['usuario_inicio_sesion'],$_SESSION['usuario_ultima_actividad'],$_SESSION['usuario_actividad_persistida'],$_SESSION['hybrid_mode']);
 }
 
 function solicitudConActividadHumanaAtenea(): bool
@@ -35,7 +35,7 @@ function usuarioAutenticado(): bool
 {
     $estructuraValida = isset($_SESSION['usuario_id'], $_SESSION['usuario_rol'], $_SESSION['usuario_session_version'])
         && is_int($_SESSION['usuario_id'])
-        && in_array($_SESSION['usuario_rol'], ['admin', 'usuario', 'docente'], true);
+        && in_array($_SESSION['usuario_rol'], ['admin', 'usuario', 'docente', 'administracion_docente'], true);
     if(!$estructuraValida&&!isset($_SESSION['recordarme_intentado'])){
         $_SESSION['recordarme_intentado']=true;
         try{$recordado=usuarioDesdeTokenRecuerdoAtenea(obtenerConexion());if($recordado){iniciarSesionUsuario($recordado);$estructuraValida=true;$_SESSION['mensaje_auth']='Tu acceso se restauró de forma segura.';$_SESSION['mensaje_auth_tipo']='info';}}catch(Throwable $e){error_log('Acceso recordado Atenea: '.$e->getMessage());borrarCookieRecuerdoAtenea();}
@@ -102,7 +102,7 @@ function iniciarSesionUsuario(array $usuario): void
     $_SESSION['usuario_inicio_sesion'] = time();
     $_SESSION['usuario_ultima_actividad'] = time();
     $_SESSION['usuario_actividad_persistida'] = time();
-    unset($_SESSION['recordarme_intentado']);
+    unset($_SESSION['recordarme_intentado'], $_SESSION['hybrid_mode']);
 }
 
 function rutaPanelPorRol(string $rol): string
@@ -113,6 +113,7 @@ function rutaPanelPorRol(string $rol): string
             ? atenea_url('src/estudiantes/perfil.php?completar=1')
             : atenea_url('src/estudiantes/index.php'),
         'docente' => atenea_url('src/docente/index.php'),
+        'administracion_docente' => atenea_url('src/administador_docente/dashboard/index.php'),
         default => atenea_url('src/login/sign-in.php'),
     };
 }
@@ -170,7 +171,7 @@ function exigirAutenticacion(): void
 function exigirRol(array $roles): void
 {
     exigirAutenticacion();
-    $permitidos = array_values(array_intersect($roles, ['admin', 'usuario', 'docente']));
+    $permitidos = array_values(array_intersect($roles, ['admin', 'usuario', 'docente', 'administracion_docente']));
 
     if (!in_array((string) $_SESSION['usuario_rol'], $permitidos, true)) {
         registrarFalloGlobalAtenea('Intento de acceso a una ruta no autorizada.', 403);

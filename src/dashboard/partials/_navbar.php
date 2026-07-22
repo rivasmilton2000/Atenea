@@ -39,7 +39,8 @@ $resumenNotificaciones = notificacionesAdminResumen((int)($usuarioAdmin['id'] ??
         <h3 class="welcome-sub-text">Resumen de la actividad de Atenea esta semana </h3>
       </li>
     </ul>
-    <ul class="navbar-nav ms-auto">
+    <ul class="navbar-nav ms-auto align-items-center">
+      <?php if(($_SESSION['usuario_rol']??'')==='administracion_docente'):?><li class="nav-item d-flex"><?php renderizarSelectorModoHibridoAtenea();?></li><?php endif;?>
       <li class="nav-item dropdown d-none d-lg-block">
         <button class="nav-link dropdown-bordered dropdown-toggle dropdown-toggle-split border-0" id="messageDropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"> Accesos rápidos </button>
         <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="messageDropdown">
