@@ -4,8 +4,8 @@ require_once dirname(__DIR__,2).'/includes/portal_estudiante_layout.php';
 require_once dirname(__DIR__,2).'/includes/comercio.php';
 exigirRol(['usuario']);
 $pdo=obtenerConexion();$pagina=max(1,(int)($_GET['pagina']??1));$limite=10;
-$q=$pdo->prepare('SELECT COUNT(*) FROM pedidos WHERE usuario_id=:u');$q->execute(['u'=>$_SESSION['usuario_id']]);$total=(int)$q->fetchColumn();
-$q=$pdo->prepare('SELECT p.*,c.codigo_generacion,c.numero comprobante_numero,c.pdf_relpath,c.json_relpath FROM pedidos p LEFT JOIN comprobante_documentos c ON c.pedido_id=p.id WHERE p.usuario_id=:u ORDER BY p.created_at DESC LIMIT :lim OFFSET :off');
+$q=$pdo->prepare("SELECT COUNT(*) FROM pedidos WHERE usuario_id=:u AND es_intencion_checkout=0 AND payment_status='paid'");$q->execute(['u'=>$_SESSION['usuario_id']]);$total=(int)$q->fetchColumn();
+$q=$pdo->prepare("SELECT p.*,c.codigo_generacion,c.numero comprobante_numero,c.pdf_relpath,c.json_relpath FROM pedidos p LEFT JOIN comprobante_documentos c ON c.pedido_id=p.id WHERE p.usuario_id=:u AND p.es_intencion_checkout=0 AND p.payment_status='paid' ORDER BY p.created_at DESC LIMIT :lim OFFSET :off");
 $q->bindValue(':u',(int)$_SESSION['usuario_id'],PDO::PARAM_INT);$q->bindValue(':lim',$limite,PDO::PARAM_INT);$q->bindValue(':off',($pagina-1)*$limite,PDO::PARAM_INT);$q->execute();$pedidos=$q->fetchAll();
 $portal=portalEstudianteCabecera('Mis pedidos y pagos','pedidos','Consulta el pago, seguimiento y documentos de tus compras.');
 ?>

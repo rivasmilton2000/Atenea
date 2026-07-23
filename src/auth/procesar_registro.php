@@ -14,7 +14,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 $nombre = trim((string) ($_POST['nombre'] ?? ''));
 $apellido = trim((string) ($_POST['apellido'] ?? ''));
 $correo = strtolower(trim((string) ($_POST['correo'] ?? '')));
-$fechaNacimiento = trim((string) ($_POST['fecha_nacimiento'] ?? ''));
+$fechaNacimientoOriginal = trim((string) ($_POST['fecha_nacimiento'] ?? ''));
+$fechaNacimiento = normalizarFechaNacimiento($fechaNacimientoOriginal) ?? '';
 $dui = normalizarDui(isset($_POST['dui']) ? (string) $_POST['dui'] : null);
 $codigoTelefono = normalizarCodigoTelefono(isset($_POST['codigo_telefono']) ? (string) $_POST['codigo_telefono'] : null);
 $telefono = normalizarTelefono(isset($_POST['telefono']) ? (string) $_POST['telefono'] : null);
@@ -30,7 +31,7 @@ if (!validarTokenCsrf(isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'
 if ($nombre === '' || mb_strlen($nombre) > 100) $errores[] = 'Ingresa un nombre válido.';
 if ($apellido === '' || mb_strlen($apellido) > 100) $errores[] = 'Ingresa un apellido válido.';
 if (strlen($correo) > 190 || !filter_var($correo, FILTER_VALIDATE_EMAIL)) $errores[] = 'Ingresa un correo electrónico válido.';
-if (!fechaNacimientoValida($fechaNacimiento)) $errores[] = 'La fecha de nacimiento no es válida ni puede estar en el futuro.';
+if (!fechaNacimientoValida($fechaNacimiento)) $errores[] = 'Debes tener al menos 18 años para registrarte.';
 if ($dui === null || $dui === '') $errores[] = 'El DUI debe contener 9 dígitos y usar el formato 00000000-0.';
 if (!telefonoValido($codigoTelefono, $telefono)) $errores[] = $codigoTelefono === '+503' ? 'El teléfono salvadoreño debe contener 8 dígitos y comenzar con 2, 6 o 7.' : 'Ingresa un teléfono internacional válido.';
 if (mb_strlen($direccion) > 500) $errores[] = 'La dirección no puede superar 500 caracteres.';

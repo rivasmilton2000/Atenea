@@ -57,7 +57,8 @@ if ($completar && !datosPerfilCompletos($perfil)):
           </div>
           <div class="col-md-6">
             <label class="form-label" for="gp_fecha">Fecha de nacimiento</label>
-            <input class="form-control<?=$clase('fecha_nacimiento')?>" type="date" id="gp_fecha" name="fecha_nacimiento" min="<?=$fechaMinima?>" max="<?=$fechaMaxima?>" data-profile-birthdate value="<?=atenea_e($valor('fecha_nacimiento'))?>" required>
+            <div class="atenea-birthdate-wrap"><input class="form-control<?=$clase('fecha_nacimiento')?>" type="text" id="gp_fecha" name="fecha_nacimiento" placeholder="dd/mm/aaaa" autocomplete="bday" inputmode="numeric" data-profile-birthdate data-atenea-birthdate data-min-date="<?=$fechaMinima?>" data-max-date="<?=$fechaMaxima?>" value="<?=atenea_e($valor('fecha_nacimiento'))?>" required></div>
+            <div class="invalid-feedback" data-birthdate-error></div>
             <div class="form-text">Formato visual: dd/mm/aaaa. Debes tener al menos 18 años.</div>
             <?php $mensaje('fecha_nacimiento'); ?>
           </div>

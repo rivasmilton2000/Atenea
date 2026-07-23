@@ -36,7 +36,7 @@ try {
     $q->execute(['u' => $_SESSION['usuario_id'], 'a' => $asignaturaId]);
     if ($previo = $q->fetchColumn()) throw new DomainException($previo === 'pagado' ? 'Ya tienes una inscripción pagada para esta capacitación.' : 'Ya existe un pago pendiente. No inicies otro cobro.');
     $clave = bin2hex(random_bytes(32));
-    $q = $pdo->prepare("INSERT INTO capacitacion_pagos(usuario_id,asignatura_id,checkout_key,importe,moneda,estado) VALUES(:u,:a,:clave,:importe,:moneda,'pendiente')");
+    $q = $pdo->prepare("INSERT INTO capacitacion_pagos(usuario_id,asignatura_id,checkout_key,es_intencion_checkout,importe,moneda,estado) VALUES(:u,:a,:clave,1,:importe,:moneda,'pendiente')");
     $q->execute(['u' => $_SESSION['usuario_id'], 'a' => $asignaturaId, 'clave' => $clave, 'importe' => $capacitacion['precio'], 'moneda' => strtolower((string) $config['currency'])]);
     $pagoId = (int) $pdo->lastInsertId();
     $pdo->commit();

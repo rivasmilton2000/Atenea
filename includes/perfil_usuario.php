@@ -33,11 +33,20 @@ function nombrePersonaValido(?string $valor): bool
         && preg_match("/^(?=.*\\p{L})[\\p{L}\\p{M} '\\x{2019}-]+$/u", $normalizado) === 1;
 }
 
+function normalizarFechaNacimiento(?string $fecha): ?string
+{
+    $fecha=trim((string)$fecha);
+    foreach(['!Y-m-d','!d/m/Y'] as$formato){
+        $valor=DateTimeImmutable::createFromFormat($formato,$fecha,new DateTimeZone('America/El_Salvador'));
+        if($valor!==false&&$valor->format($formato==='!Y-m-d'?'Y-m-d':'d/m/Y')===$fecha)return $valor->format('Y-m-d');
+    }
+    return null;
+}
+
 function fechaNacimientoValida(?string $fecha): bool
 {
-    if (!is_string($fecha) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-        return false;
-    }
+    $fecha=normalizarFechaNacimiento($fecha);
+    if($fecha===null)return false;
 
     $zona = new DateTimeZone('America/El_Salvador');
     $valor = DateTimeImmutable::createFromFormat('!Y-m-d', $fecha, $zona);

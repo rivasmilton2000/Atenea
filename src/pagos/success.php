@@ -1,30 +1,8 @@
 <?php
 declare(strict_types=1);
-require_once dirname(__DIR__, 2) . '/includes/auth.php';
-require_once dirname(__DIR__, 2) . '/includes/pedidos_pago.php';
-exigirRol(['usuario']);
-$sesion = substr((string) ($_GET['session_id'] ?? ''), 0, 255);
-$sincronizado = null; // Solo el webhook firmado confirma pagos y genera documentos.
-if ($sincronizado) {
-    try { generarDtePedidoSeguro((int)$sincronizado['pedido_id']); enviarConfirmacionCompraAtenea((int)$sincronizado['pedido_id']); }
-    catch(Throwable $error) { error_log('Documentos después del retorno Stripe: '.preg_replace('/[\r\n\t]+/',' ',$error->getMessage())); }
-}
-$consulta = obtenerConexion()->prepare('SELECT id,numero,total,moneda,estado,payment_status FROM pedidos WHERE stripe_checkout_session_id=:sesion AND usuario_id=:usuario LIMIT 1');
-$consulta->execute(['sesion' => $sesion, 'usuario' => $_SESSION['usuario_id']]);
-$pedido = $consulta->fetch();
-$pageTitle = 'Estado del pedido | Atenea';
-$activePage = 'productos';
-require dirname(__DIR__, 2) . '/includes/header.php';
-?>
-<main class="main"><section class="section"><div class="container"><div class="payment-result-card mx-auto text-center">
-<?php if ($pedido): ?>
-  <?php if ($pedido['payment_status'] === 'paid'): ?>
-    <span class="payment-result-icon is-success"><i class="bi bi-check-lg"></i></span><h1>Pago completado</h1><p>Tu pedido <strong><?= atenea_e((string) $pedido['numero']) ?></strong> fue confirmado por Stripe.</p><p class="fs-5">$<?= number_format((float) $pedido['total'], 2) ?> <?= atenea_e(strtoupper((string) $pedido['moneda'])) ?></p><a class="btn-atenea" href="<?= atenea_url('src/estudiantes/comprobante.php?pedido=' . (int) $pedido['id']) ?>">Ver comprobante</a>
-  <?php else: ?>
-    <span class="payment-result-icon is-pending"><i class="bi bi-hourglass-split"></i></span><h1>Pago en verificación</h1><p>El pago sigue pendiente. Puedes volver a consultar su estado sin realizar otro pago.</p><p>Pedido <?= atenea_e((string) $pedido['numero']) ?> · $<?= number_format((float) $pedido['total'], 2) ?> <?= atenea_e(strtoupper((string) $pedido['moneda'])) ?></p><a class="btn-atenea" href="?session_id=<?=rawurlencode($sesion)?>">Volver a consultar</a>
-  <?php endif; ?>
-<?php else: ?>
-  <span class="payment-result-icon is-error"><i class="bi bi-exclamation-lg"></i></span><h1>Pedido no encontrado</h1><p>No pudimos relacionar esta sesión con un pedido de tu cuenta.</p><a class="btn-atenea" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>">Ver mis pedidos</a>
-<?php endif; ?>
-</div></div></section></main>
-<?php require dirname(__DIR__, 2) . '/includes/footer.php'; ?>
+require_once dirname(__DIR__,2).'/includes/auth.php';require_once dirname(__DIR__,2).'/includes/stripe_finalizacion.php';exigirRol(['usuario']);
+$sessionId=substr(trim((string)($_GET['session_id']??'')),0,255);$resultado=null;$errorTemporal=false;
+try{$resultado=finalizarCompraStripe($sessionId,(int)$_SESSION['usuario_id']);}catch(DomainException $e){$errorTemporal=true;}catch(Throwable $e){$errorTemporal=true;error_log('Retorno Stripe producto: '.preg_replace('/[\r\n\t]+/',' ',$e->getMessage()));}
+$pedido=null;if($resultado){$q=obtenerConexion()->prepare("SELECT id,numero,total,moneda FROM pedidos WHERE id=:id AND usuario_id=:u AND payment_status='paid' AND es_intencion_checkout=0");$q->execute(['id'=>$resultado['pedido_id'],'u'=>$_SESSION['usuario_id']]);$pedido=$q->fetch();}
+$pageTitle='Pago completado | Atenea';require dirname(__DIR__,2).'/includes/header.php';
+?><main class="main"><section class="section"><div class="container"><div class="payment-result-card mx-auto text-center"><?php if($pedido):?><span class="payment-result-icon is-success"><i class="bi bi-check-lg"></i></span><h1>¡Pago completado!</h1><p>Tu compra fue procesada correctamente. Tu comprobante y los datos de la compra ya están disponibles.</p><p><strong>Pedido <?=atenea_e($pedido['numero'])?></strong> · $<?=number_format((float)$pedido['total'],2)?> <?=atenea_e(strtoupper($pedido['moneda']))?></p><div class="d-flex flex-wrap gap-2 justify-content-center"><a class="btn-atenea" href="<?=atenea_url('src/estudiantes/comprobante.php?pedido='.(int)$pedido['id'])?>">Ver pedido</a><a class="btn btn-outline-secondary" href="<?=atenea_url('src/comprobantes/descargar.php?pedido='.(int)$pedido['id'].'&tipo=pdf')?>">Descargar PDF</a><a class="btn btn-outline-secondary" href="<?=atenea_url('src/comprobantes/descargar.php?pedido='.(int)$pedido['id'].'&tipo=json')?>">Descargar JSON</a><a class="btn btn-link" href="<?=atenea_url('src/estudiantes/pedidos.php')?>">Mis pedidos</a></div><?php else:?><span class="payment-result-icon is-pending"><i class="bi bi-shield-exclamation"></i></span><h1>No pudimos sincronizar tu pago en este momento</h1><p>No vuelvas a pagar. Estamos verificando la operación de forma segura con Stripe.</p><a class="btn-atenea" href="?session_id=<?=rawurlencode($sessionId)?>">Volver a verificar</a><?php endif;?></div></div></section></main><?php require dirname(__DIR__,2).'/includes/footer.php';

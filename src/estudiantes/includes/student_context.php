@@ -8,10 +8,10 @@ require_once ATENEA_ROOT.'/includes/portal_estudiante_aula.php';
 function datosPortalEstudiante(int $usuarioId): array
 {
     $pdo=obtenerConexion();
-    $q=$pdo->prepare("SELECT COUNT(*) pedidos,COALESCE(SUM(estado='pagado'),0) pagados,COALESCE(SUM(CASE WHEN estado='pagado' THEN total ELSE 0 END),0) invertido FROM pedidos WHERE usuario_id=:u");
+    $q=$pdo->prepare("SELECT COUNT(*) pedidos,COALESCE(SUM(payment_status='paid'),0) pagados,COALESCE(SUM(CASE WHEN payment_status='paid' THEN total ELSE 0 END),0) invertido FROM pedidos WHERE usuario_id=:u AND es_intencion_checkout=0 AND payment_status IN('paid','refunded')");
     $q->execute(['u'=>$usuarioId]);
     $resumen=$q->fetch()?:['pedidos'=>0,'pagados'=>0,'invertido'=>0];
-    $q=$pdo->prepare('SELECT id,numero,total,moneda,estado,created_at FROM pedidos WHERE usuario_id=:u ORDER BY created_at DESC LIMIT 8');
+    $q=$pdo->prepare("SELECT id,numero,total,moneda,estado,created_at FROM pedidos WHERE usuario_id=:u AND es_intencion_checkout=0 AND payment_status IN('paid','refunded') ORDER BY created_at DESC LIMIT 8");
     $q->execute(['u'=>$usuarioId]);
     $pedidos=$q->fetchAll();
     $q=$pdo->prepare("SELECT COUNT(*) FROM admin_notices WHERE user_id=:u AND status='pendiente'");

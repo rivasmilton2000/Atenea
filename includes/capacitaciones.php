@@ -158,6 +158,7 @@ function procesarWebhookCapacitacionUnaVez(object $evento, object $sesion): int
         $monto = (int) round((float) $pago['importe'] * 100);
         if (!hash_equals((string) $pago['stripe_checkout_session_id'], (string) ($sesion->id ?? '')) ||
             !hash_equals((string) $pagoId, (string) ($sesion->client_reference_id ?? '')) ||
+            (isset($sesion->metadata->asignatura_id) && !hash_equals((string) $pago['asignatura_id'], (string) $sesion->metadata->asignatura_id)) ||
             (int) ($sesion->amount_total ?? -1) !== $monto ||
             strtolower((string) ($sesion->currency ?? '')) !== strtolower((string) $pago['moneda']) ||
             (string) ($sesion->payment_status ?? '') !== 'paid') {
@@ -165,7 +166,7 @@ function procesarWebhookCapacitacionUnaVez(object $evento, object $sesion): int
         }
         if ($pago['estado'] !== 'pagado') {
             $intent = substr((string) ($sesion->payment_intent ?? ''), 0, 255) ?: null;
-            $pdo->prepare("UPDATE capacitacion_pagos SET estado='pagado',stripe_payment_intent_id=:intent,last_stripe_event_id=:evento,paid_at=COALESCE(paid_at,NOW()) WHERE id=:id")
+            $pdo->prepare("UPDATE capacitacion_pagos SET estado='pagado',es_intencion_checkout=0,oficializado_at=COALESCE(oficializado_at,NOW()),stripe_payment_intent_id=:intent,last_stripe_event_id=:evento,paid_at=COALESCE(paid_at,NOW()) WHERE id=:id")
                 ->execute(['intent' => $intent, 'evento' => (string) $evento->id, 'id' => $pagoId]);
         }
         asignarInscripcionAutomatica($pdo, $pagoId);

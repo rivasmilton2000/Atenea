@@ -15,7 +15,10 @@ $datos = is_array($_SESSION['registro_datos'] ?? null) ? $_SESSION['registro_dat
 unset($_SESSION['registro_errores'], $_SESSION['registro_datos']);
 $departamentos = obtenerDepartamentos();
 $googleDisponible = googleDisponible();
-$fechaMaxima = date('Y-m-d');
+$zonaFecha = new DateTimeZone('America/El_Salvador');
+$hoyFecha = new DateTimeImmutable('today', $zonaFecha);
+$fechaMaxima = $hoyFecha->modify('-18 years')->format('Y-m-d');
+$fechaMinima = $hoyFecha->modify('-120 years')->format('Y-m-d');
 $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
 ?>
 <!doctype html>
@@ -28,6 +31,8 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/vendors/css/vendor.bundle.base.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/css/style.css') ?>">
   <link rel="stylesheet" href="<?= atenea_url('src/login/auth.css') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/shared/vendor/flatpickr/flatpickr.min.css') ?>">
+  <link rel="stylesheet" href="<?= atenea_url('src/shared/assets/css/birthdate-picker.css') ?>">
   <?php ateneaAlertasHead(); ?>
 </head>
 <body>
@@ -48,7 +53,7 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
                 <div class="col-md-6 form-group"><label class="form-label" for="nombre">Nombre</label><input class="form-control" id="nombre" name="nombre" maxlength="100" value="<?= atenea_e((string) ($datos['nombre'] ?? '')) ?>" required></div>
                 <div class="col-md-6 form-group"><label class="form-label" for="apellido">Apellido</label><input class="form-control" id="apellido" name="apellido" maxlength="100" value="<?= atenea_e((string) ($datos['apellido'] ?? '')) ?>" required></div>
                 <div class="col-md-7 form-group"><label class="form-label" for="correo">Correo electrónico</label><input class="form-control" type="email" id="correo" name="correo" maxlength="190" value="<?= atenea_e((string) ($datos['correo'] ?? '')) ?>" autocomplete="email" required></div>
-                <div class="col-md-5 form-group"><label class="form-label" for="fecha_nacimiento">Fecha de nacimiento</label><input class="form-control" type="date" id="fecha_nacimiento" name="fecha_nacimiento" max="<?= $fechaMaxima ?>" value="<?= atenea_e((string) ($datos['fecha_nacimiento'] ?? '')) ?>" required></div>
+                <div class="col-md-5 form-group atenea-birthdate-field"><label class="form-label" for="fecha_nacimiento">Fecha de nacimiento</label><div class="atenea-birthdate-wrap"><input class="form-control" type="text" id="fecha_nacimiento" name="fecha_nacimiento" placeholder="dd/mm/aaaa" autocomplete="bday" inputmode="numeric" data-atenea-birthdate data-min-date="<?=$fechaMinima?>" data-max-date="<?=$fechaMaxima?>" value="<?= atenea_e((string) ($datos['fecha_nacimiento'] ?? '')) ?>" required></div><div class="form-text">Debes tener al menos 18 años.</div><div class="invalid-feedback" data-birthdate-error></div></div>
                 <div class="col-md-5 form-group"><label class="form-label" for="dui">DUI</label><input class="form-control" id="dui" name="dui" inputmode="numeric" maxlength="10" pattern="\d{8}-\d" placeholder="00000000-0" value="<?= atenea_e((string) ($datos['dui'] ?? '')) ?>" required></div>
                 <div class="col-md-3 form-group"><label class="form-label" for="codigo_telefono">Código internacional</label><select class="form-select" id="codigo_telefono" name="codigo_telefono" required><?php foreach (['+503'=>'🇸🇻 El Salvador +503','+502'=>'🇬🇹 Guatemala +502','+504'=>'🇭🇳 Honduras +504','+505'=>'🇳🇮 Nicaragua +505','+506'=>'🇨🇷 Costa Rica +506','+507'=>'🇵🇦 Panamá +507','+52'=>'🇲🇽 México +52','+1'=>'🇺🇸/🇨🇦 +1'] as $codigo=>$etiqueta): ?><option value="<?= $codigo ?>" <?= $codigoTelefono === $codigo ? 'selected' : '' ?>><?= $etiqueta ?></option><?php endforeach; ?></select></div>
                 <div class="col-md-4 form-group"><label class="form-label" for="telefono">Número de teléfono</label><input class="form-control" id="telefono" name="telefono" inputmode="numeric" maxlength="15" pattern="\d{7,15}" value="<?= atenea_e((string) ($datos['telefono'] ?? '')) ?>" required></div>
@@ -74,6 +79,9 @@ $codigoTelefono = (string) ($datos['codigo_telefono'] ?? '+503');
 </div>
 <script src="<?= atenea_url('src/estudiantes/dashboard_estudiantes/dashboard/assets/vendors/js/vendor.bundle.base.js') ?>"></script>
 <script src="<?= atenea_url('src/website/assets/js/security-ui.js') ?>"></script>
+<script src="<?= atenea_url('src/shared/vendor/flatpickr/flatpickr.min.js') ?>"></script>
+<script src="<?= atenea_url('src/shared/vendor/flatpickr/es.js') ?>"></script>
+<script src="<?= atenea_url('src/shared/assets/js/birthdate-picker.js') ?>"></script>
 <script>
 (() => {
   const endpoint = <?= json_encode(atenea_url('src/api/ubicaciones.php'), JSON_UNESCAPED_SLASHES) ?>;

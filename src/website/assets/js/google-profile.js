@@ -143,7 +143,7 @@
       .then(() => municipality.value && fill(district, 'distritos', municipality.value, initialDistrict));
   }
 
-  if (window.flatpickr) {
+  if (window.flatpickr && !form.elements.fecha_nacimiento._flatpickr) {
     window.flatpickr(form.elements.fecha_nacimiento, {
       altInput: true,
       altFormat: 'd/m/Y',

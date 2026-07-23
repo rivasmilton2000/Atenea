@@ -2,8 +2,8 @@
 declare(strict_types=1);
 require_once dirname(__DIR__).'/includes/cms.php';exigirPermiso('orders.view');$pdo=obtenerConexion();
 $qtxt=trim((string)($_GET['q']??''));$estado=(string)($_GET['estado']??'');$metodo=trim((string)($_GET['metodo']??''));$desde=(string)($_GET['desde']??'');$hasta=(string)($_GET['hasta']??'');
-$estados=['pendiente_pago','pagado','preparando','enviado','entregado','cancelado','pago_fallido','reembolsado'];$pagina=max(1,(int)($_GET['pagina']??1));$limite=25;
-$from=' FROM pedidos p JOIN usuarios u ON u.id=p.usuario_id LEFT JOIN dte_documentos d ON d.pedido_id=p.id LEFT JOIN pagos pg ON pg.pedido_id=p.id';$where=' WHERE 1';$pa=[];
+$estados=['pagado','preparando','enviado','entregado','reembolsado'];$pagina=max(1,(int)($_GET['pagina']??1));$limite=25;
+$from=' FROM pedidos p JOIN usuarios u ON u.id=p.usuario_id LEFT JOIN dte_documentos d ON d.pedido_id=p.id LEFT JOIN pagos pg ON pg.pedido_id=p.id';$where=" WHERE p.es_intencion_checkout=0 AND p.payment_status IN('paid','refunded')";$pa=[];
 if($qtxt!==''){$where.=' AND (p.numero LIKE :q OR CONCAT_WS(\' \',u.nombre,u.apellido) LIKE :q OR u.correo LIKE :q OR d.codigo_generacion LIKE :q OR p.stripe_checkout_session_id LIKE :q)';$pa['q']='%'.$qtxt.'%';}
 if(in_array($estado,$estados,true)){$where.=' AND p.estado=:e';$pa['e']=$estado;}
 if($metodo!==''){$where.=' AND (pg.proveedor=:m OR p.payment_brand=:m)';$pa['m']=mb_substr($metodo,0,30);}

@@ -12,6 +12,9 @@ $afirmar = static function (bool $condicion, string $mensaje) use (&$pruebas): v
 };
 
 $hoy = new DateTimeImmutable('today', new DateTimeZone('America/El_Salvador'));
+$afirmar(normalizarFechaNacimiento('31/12/1990') === '1990-12-31', 'convierte dd/mm/aaaa al formato de base de datos');
+$afirmar(normalizarFechaNacimiento('1990-12-31') === '1990-12-31', 'conserva el formato ISO de la base de datos');
+$afirmar(normalizarFechaNacimiento('31/02/1990') === null, 'rechaza una fecha visual inexistente');
 $afirmar(fechaNacimientoValida($hoy->modify('-18 years')->format('Y-m-d')), 'acepta exactamente 18 años');
 $afirmar(!fechaNacimientoValida($hoy->modify('-18 years +1 day')->format('Y-m-d')), 'rechaza a quien cumple 18 mañana');
 $afirmar(!fechaNacimientoValida($hoy->modify('+1 day')->format('Y-m-d')), 'rechaza fecha futura');

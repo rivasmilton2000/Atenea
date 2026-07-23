@@ -136,9 +136,14 @@ function enviarConfirmacionCompraAtenea(int $pedidoId): bool
             ]]);
         $pdo = obtenerConexion();
         if (tablaCorreoDisponible($pdo)) {
-            $consulta = $pdo->prepare("SELECT estado FROM correo_envios WHERE idempotency_key=:clave LIMIT 1");
+            $consulta = $pdo->prepare("SELECT id,estado FROM correo_envios WHERE idempotency_key=:clave LIMIT 1");
             $consulta->execute(['clave' => $clave]);
-            if ($consulta->fetchColumn() === 'enviado') {
+            $envio=$consulta->fetch();
+            if ($envio && in_array($envio['estado'],['pendiente','fallido'],true)) {
+                procesarCorreoEnColaAtenea((int)$envio['id']);
+                $consulta->execute(['clave'=>$clave]);$envio=$consulta->fetch();
+            }
+            if (($envio['estado']??'') === 'enviado') {
                 $pdo->prepare('UPDATE pedidos SET email_sent_at=COALESCE(email_sent_at,NOW()) WHERE id=:id')->execute(['id' => $pedidoId]);
                 return true;
             }
