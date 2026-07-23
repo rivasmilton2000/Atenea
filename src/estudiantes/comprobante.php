@@ -38,14 +38,7 @@ function contenidoComprobanteAtenea(array $pedido): string
 }
 
 if ($pedido && isset($_GET['descargar'])) {
-    actualizarActividadUsuario((int)$_SESSION['usuario_id']);
-    registrarAuditoria(['actor_user_id'=>(int)$_SESSION['usuario_id'],'target_user_id'=>(int)$_SESSION['usuario_id'],'event_type'=>'receipt.downloaded','module'=>'payments','entity_type'=>'order','entity_id'=>$pedidoId,'action'=>'download','result'=>'success','description'=>'El propietario descargo su comprobante interno de compra.']);
-    $contenido = contenidoComprobanteAtenea($pedido);
-    $nombreArchivo = preg_replace('/[^A-Za-z0-9_-]/', '-', (string) $pedido['numero']) ?: 'atenea';
-    header('Content-Type: text/html; charset=UTF-8');
-    header('Content-Disposition: attachment; filename="comprobante-' . $nombreArchivo . '.html"');
-    header('X-Content-Type-Options: nosniff');
-    echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comprobante ' . atenea_e((string) $pedido['numero']) . '</title><style>body{font-family:Arial,sans-serif;color:#20251f;padding:32px}.receipt{max-width:850px;margin:auto}.d-flex{display:flex}.justify-content-between{justify-content:space-between}.text-end{text-align:right}.text-center{text-align:center}.text-muted{color:#626a63}.border{border:1px solid #ddd}.rounded{border-radius:8px}.p-3{padding:1rem}.mb-4{margin-bottom:1.5rem}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:10px;border-bottom:1px solid #ddd}</style></head><body><main class="receipt">' . $contenido . '</main></body></html>';
+    header('Location: '.atenea_url('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=pdf'));
     exit;
 }
 
@@ -56,7 +49,7 @@ $portal = portalEstudianteCabecera('Comprobante de compra', 'pedidos', 'Consulta
 <?php if (!$pedido): ?>
   <div class="card"><div class="card-body text-center py-5"><i class="bi bi-file-earmark-x display-4 text-danger"></i><h1 class="h4 mt-3">Comprobante no disponible</h1><p class="text-muted">El pedido no existe, no pertenece a tu cuenta o todavía no tiene un pago confirmado.</p><a class="btn btn-primary" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>">Volver a mis pedidos</a></div></div>
 <?php else: ?>
-  <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><a class="btn btn-light" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="bi bi-arrow-left"></i> Mis pedidos</a><div class="d-flex gap-2"><button class="btn btn-outline-primary" type="button" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button><?php if(!empty($pedido['codigo_generacion'])&&!empty($pedido['pdf_relpath'])&&!empty($pedido['json_documento'])):?><a class="btn btn-outline-primary" href="<?=atenea_url('src/dte/documento.php?pedido='.$pedidoId.'&descargar=1')?>">Descargar PDF</a><a class="btn btn-outline-primary" href="<?=atenea_url('src/dte/documento.php?pedido='.$pedidoId.'&tipo=json&descargar=1')?>">Descargar JSON</a><?php endif;?><a class="btn btn-primary" href="<?= atenea_url('src/estudiantes/comprobante.php?pedido=' . $pedidoId . '&descargar=1') ?>"><i class="bi bi-download"></i> Descargar</a></div></div>
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><a class="btn btn-light" href="<?= atenea_url('src/estudiantes/pedidos.php') ?>"><i class="bi bi-arrow-left"></i> Volver a Mis pedidos</a><div class="d-flex flex-wrap gap-2"><?php if(!empty($pedido['pdf_relpath'])&&!empty($pedido['json_relpath'])):?><a class="btn btn-outline-secondary" target="_blank" href="<?=atenea_url('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=pdf&ver=1')?>">Ver factura</a><a class="btn btn-primary" href="<?=atenea_url('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=pdf')?>">Descargar PDF</a><a class="btn btn-outline-primary" href="<?=atenea_url('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=json')?>">Descargar JSON</a><a class="btn btn-outline-primary" target="_blank" href="<?=atenea_url('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=pdf&ver=1')?>"><i class="bi bi-printer"></i> Imprimir</a><?php endif;?></div></div>
   <article class="card atenea-receipt"><div class="card-body p-4 p-lg-5"><?= contenidoComprobanteAtenea($pedido) ?></div></article>
 <?php endif; ?>
 </div></div>

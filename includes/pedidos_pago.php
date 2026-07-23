@@ -8,7 +8,7 @@ require_once __DIR__ . '/audit.php';
 function obtenerPedidoParaComprobante(int $pedidoId, ?int $usuarioId = null): ?array
 {
     $pdo = obtenerConexion();
-    $sql = 'SELECT p.*,u.nombre,u.apellido,u.correo,d.codigo_generacion,d.numero_control,d.estado estado_dte FROM pedidos p INNER JOIN usuarios u ON u.id=p.usuario_id LEFT JOIN dte_documentos d ON d.pedido_id=p.id WHERE p.id=:pedido';
+    $sql = 'SELECT p.*,u.nombre,u.apellido,u.correo,c.codigo_generacion,c.numero comprobante_numero,c.pdf_relpath,c.json_relpath FROM pedidos p INNER JOIN usuarios u ON u.id=p.usuario_id LEFT JOIN comprobante_documentos c ON c.pedido_id=p.id WHERE p.id=:pedido';
     $parametros = ['pedido' => $pedidoId];
     if ($usuarioId !== null) {
         $sql .= ' AND p.usuario_id=:usuario';
@@ -94,8 +94,18 @@ function sincronizarRetornoPedidoStripe(string $sessionId, int $usuarioId): ?arr
 
 function enviarConfirmacionCompraAtenea(int $pedidoId): bool
 {
+    require_once __DIR__ . '/comprobantes.php';
     $pedido = obtenerPedidoParaComprobante($pedidoId);
     if (!$pedido || $pedido['estado'] !== 'pagado' || ($pedido['payment_status'] ?? '') !== 'paid') return false;
+    if (!filter_var($pedido['correo'], FILTER_VALIDATE_EMAIL) || str_ends_with(strtolower((string)$pedido['correo']), '@atenea.local')) {
+        error_log('Confirmación de compra omitida: el pedido '.$pedidoId.' no tiene un destinatario real válido.');
+        return false;
+    }
+    try { $documento = generarComprobantesCompraAtenea($pedidoId); }
+    catch (Throwable $error) { error_log('Documentos de compra pedido '.$pedidoId.': '.$error->getMessage()); return false; }
+    $pdfPath = rutaDocumentoComprobanteAtenea($documento, 'pdf');
+    $jsonPath = rutaDocumentoComprobanteAtenea($documento, 'json');
+    if (!$pdfPath || !$jsonPath) return false;
     $nombre = trim((string) ($pedido['nombre'] . ' ' . $pedido['apellido']));
     $clave = 'compra-confirmada:pedido:' . $pedidoId;
     try {
@@ -111,12 +121,19 @@ function enviarConfirmacionCompraAtenea(int $pedidoId): bool
             'descuento_formateado' => '-$' . number_format((float) $pedido['descuento'], 2) . ' ' . strtoupper((string) $pedido['moneda']),
             'total_formateado' => '$' . number_format((float) $pedido['total'], 2) . ' ' . strtoupper((string) $pedido['moneda']),
             'metodo' => metodoPagoPedido($pedido),
+            'codigo_generacion' => $documento['codigo_generacion'],
             'direccion' => $pedido['direccion'] ? (($pedido['direccion']['direccion_detallada']??'').', '.($pedido['direccion']['municipio']??'').', '.($pedido['direccion']['departamento']??'')) : 'No disponible en pedidos anteriores',
             'codigo_generacion' => $pedido['codigo_generacion'] ?: 'Pendiente de emisión',
+            'pedido_id' => $pedidoId,
+            'codigo_generacion' => $documento['codigo_generacion'],
             'comprobante_url' => atenea_url_absoluta('src/estudiantes/comprobante.php?pedido=' . $pedidoId),
-            'pdf_url' => $pedido['codigo_generacion'] ? atenea_url_absoluta('src/dte/documento.php?pedido='.$pedidoId.'&descargar=1') : '',
-            'json_url' => $pedido['codigo_generacion'] ? atenea_url_absoluta('src/dte/documento.php?pedido='.$pedidoId.'&tipo=json&descargar=1') : '',
-        ], ['usuario_id' => (int) $pedido['usuario_id'], 'pedido_id' => $pedidoId, 'idempotency_key' => $clave]);
+            'pdf_url' => atenea_url_absoluta('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=pdf'),
+            'json_url' => atenea_url_absoluta('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=json'),
+        ], ['usuario_id' => (int) $pedido['usuario_id'], 'pedido_id' => $pedidoId, 'idempotency_key' => $clave,
+            'attachments'=>[
+                ['path'=>$pdfPath,'name'=>'Comprobante_'.$documento['numero'].'.pdf','type'=>'application/pdf'],
+                ['path'=>$jsonPath,'name'=>'Compra_'.$documento['numero'].'.json','type'=>'application/json'],
+            ]]);
         $pdo = obtenerConexion();
         if (tablaCorreoDisponible($pdo)) {
             $consulta = $pdo->prepare("SELECT estado FROM correo_envios WHERE idempotency_key=:clave LIMIT 1");
@@ -132,6 +149,31 @@ function enviarConfirmacionCompraAtenea(int $pedidoId): bool
         error_log('Confirmación de compra Atenea pedido ' . $pedidoId . ': ' . sanitizarErrorCorreoAtenea($error));
         return false;
     }
+}
+
+function reenviarCorreoCompraConfirmadaAtenea(int $pedidoId, int $actorId): bool
+{
+    require_once __DIR__.'/comprobantes.php';
+    $pedido=obtenerPedidoParaComprobante($pedidoId);
+    if(!$pedido||($pedido['payment_status']??'')!=='paid')return false;
+    if(!filter_var($pedido['correo'],FILTER_VALIDATE_EMAIL)||str_ends_with(strtolower((string)$pedido['correo']),'@atenea.local'))return false;
+    $doc=generarComprobantesCompraAtenea($pedidoId);
+    $pdf=rutaDocumentoComprobanteAtenea($doc,'pdf');$json=rutaDocumentoComprobanteAtenea($doc,'json');
+    if(!$pdf||!$json)return false;
+    $datos=['nombre'=>trim($pedido['nombre'].' '.$pedido['apellido']),'numero'=>$pedido['numero'],'pedido_id'=>$pedidoId,
+        'fecha'=>date('d/m/Y H:i',strtotime((string)$pedido['paid_at'])).' (El Salvador)',
+        'productos'=>array_map(static fn(array $d):array=>['nombre'=>$d['nombre_producto'],'cantidad'=>(int)$d['cantidad'],'subtotal'=>'$'.number_format((float)$d['subtotal'],2).' USD'],$pedido['detalles']),
+        'subtotal_formateado'=>'$'.number_format((float)$pedido['subtotal'],2).' USD','descuento_formateado'=>'-$'.number_format((float)$pedido['descuento'],2).' USD','total_formateado'=>'$'.number_format((float)$pedido['total'],2).' USD',
+        'metodo'=>metodoPagoPedido($pedido),'direccion'=>implode(', ',array_filter([$pedido['direccion']['direccion_detallada']??null,$pedido['direccion']['municipio']??null,$pedido['direccion']['departamento']??null])),
+        'codigo_generacion'=>$doc['codigo_generacion'],'comprobante_url'=>atenea_url_absoluta('src/estudiantes/comprobante.php?pedido='.$pedidoId),
+        'pdf_url'=>atenea_url_absoluta('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=pdf'),'json_url'=>atenea_url_absoluta('src/comprobantes/descargar.php?pedido='.$pedidoId.'&tipo=json')];
+    $plantilla=plantillaCorreoAtenea('compra_confirmada',$datos);
+    $clave='compra-confirmada:pedido:'.$pedidoId.':reenvio:'.bin2hex(random_bytes(8));
+    $id=encolarCorreoAtenea((string)$pedido['correo'],trim($pedido['nombre'].' '.$pedido['apellido']),$plantilla['subject'],$plantilla['html'],$plantilla['text'],[
+        'tipo'=>'compra_confirmada','usuario_id'=>(int)$pedido['usuario_id'],'pedido_id'=>$pedidoId,'idempotency_key'=>$clave,
+        'attachments'=>[['path'=>$pdf,'name'=>'Comprobante_'.$doc['numero'].'.pdf','type'=>'application/pdf'],['path'=>$json,'name'=>'Compra_'.$doc['numero'].'.json','type'=>'application/json']]]);
+    if($id){$pdo=obtenerConexion();$pdo->prepare('UPDATE correo_envios SET reenvio_manual=1,reenviado_por=:actor WHERE id=:id')->execute(['actor'=>$actorId,'id'=>$id]);}
+    return $id!==null;
 }
 
 function enviarAvisoDteDisponibleAtenea(int $pedidoId): bool

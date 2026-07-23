@@ -160,6 +160,12 @@ function plantillaCorreoAtenea(string $tipo, array $datos): array
             break;
     }
 
+    if ($tipo === 'compra_confirmada') {
+        $asunto = 'Compra confirmada en Atenea — Pedido #' . (string)($datos['pedido_id'] ?? $datos['numero'] ?? '');
+        $preencabezado = 'Tu pago fue confirmado y tus documentos ya están disponibles.';
+        $html .= $parrafo('<strong>Documentos adjuntos:</strong><br>• Comprobante de compra en formato PDF.<br>• Datos de la compra en formato JSON.');
+        $texto .= "\n\nSe adjuntan el comprobante de compra PDF y los datos de la compra en JSON.\nAtenea Escuela de Naturopatía Holística";
+    }
     $layout = renderizarLayoutCorreoAtenea($tipo === 'contacto_recibido' ? 'Nuevo mensaje de contacto' : $asunto, $preencabezado, $html, $texto);
     return ['subject' => $asunto, 'html' => $layout['html'], 'text' => $layout['text']];
 }

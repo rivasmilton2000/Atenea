@@ -128,7 +128,7 @@ function enviarCorreoAtenea(string $destinatario, string $nombre, string $asunto
     encolarCorreoAtenea($destinatario, $nombre, $asunto, $html, $texto, $opciones);
 }
 
-function entregarCorreoSmtpAtenea(array $registro): void
+function entregarCorreoSmtpAtenea(array $registro): string
 {
     $configuracion = configuracionCorreoAtenea();
     $autoload = __DIR__ . '/mail/vendor/autoload.php';
@@ -153,7 +153,8 @@ function entregarCorreoSmtpAtenea(array $registro): void
     if (!empty($opciones['reply_to']) && filter_var($opciones['reply_to'], FILTER_VALIDATE_EMAIL)) $correo->addReplyTo((string)$opciones['reply_to'], (string)($opciones['reply_to_name']??''));
     foreach (($opciones['attachments'] ?? []) as $adjunto) {
         $ruta = (string)($adjunto['path'] ?? '');
-        if ($ruta !== '' && is_file($ruta)) $correo->addAttachment($ruta, (string)($adjunto['name'] ?? basename($ruta)));
+        if ($ruta === '' || !is_file($ruta) || filesize($ruta) < 1) throw new RuntimeException('Un adjunto requerido no está disponible.');
+        $correo->addAttachment($ruta, (string)($adjunto['name'] ?? basename($ruta)), PHPMailer::ENCODING_BASE64, (string)($adjunto['type'] ?? 'application/octet-stream'));
     }
     $html = (string) $registro['contenido_html'];
     $logo = str_contains($html,'data-atenea-email-logo="1"') ? rutaFisicaLogoCorreoAtenea() : null;
@@ -168,6 +169,7 @@ function entregarCorreoSmtpAtenea(array $registro): void
     $correo->Body = $html;
     $correo->AltBody = (string) $registro['contenido_texto'];
     $correo->send();
+    return mb_substr((string)$correo->getLastMessageID(), 0, 255);
 }
 
 function procesarCorreoEnColaAtenea(int $id): string
@@ -202,8 +204,9 @@ function procesarCorreoEnColaAtenea(int $id): string
         }
         $pdo->prepare("UPDATE correo_envios SET estado='procesando',intento=intento+1,procesando_desde=NOW(),error_sanitizado=NULL WHERE id=:id")->execute(['id'=>$id]);
         $pdo->commit();
-        entregarCorreoSmtpAtenea($r);
-        $pdo->prepare("UPDATE correo_envios SET estado='enviado',enviado_at=NOW(),procesando_desde=NULL,error_sanitizado=NULL WHERE id=:id")->execute(['id'=>$id]);
+        $messageId = entregarCorreoSmtpAtenea($r);
+        $pdo->prepare("UPDATE correo_envios SET estado='enviado',enviado_at=NOW(),message_id=:message,procesando_desde=NULL,error_sanitizado=NULL WHERE id=:id")->execute(['message'=>$messageId?:null,'id'=>$id]);
+        if (($r['tipo']??'')==='compra_confirmada'&&!empty($r['pedido_id'])) $pdo->prepare('UPDATE pedidos SET email_sent_at=COALESCE(email_sent_at,NOW()) WHERE id=:id')->execute(['id'=>$r['pedido_id']]);
         return 'enviado';
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();

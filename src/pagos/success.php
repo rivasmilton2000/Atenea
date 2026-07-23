@@ -2,10 +2,9 @@
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/pedidos_pago.php';
-require_once dirname(__DIR__, 2) . '/includes/dte.php';
 exigirRol(['usuario']);
 $sesion = substr((string) ($_GET['session_id'] ?? ''), 0, 255);
-$sincronizado = sincronizarRetornoPedidoStripe($sesion, (int) $_SESSION['usuario_id']);
+$sincronizado = null; // Solo el webhook firmado confirma pagos y genera documentos.
 if ($sincronizado) {
     try { generarDtePedidoSeguro((int)$sincronizado['pedido_id']); enviarConfirmacionCompraAtenea((int)$sincronizado['pedido_id']); }
     catch(Throwable $error) { error_log('Documentos después del retorno Stripe: '.preg_replace('/[\r\n\t]+/',' ',$error->getMessage())); }

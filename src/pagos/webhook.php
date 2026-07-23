@@ -5,7 +5,7 @@ require_once dirname(__DIR__, 2) . '/includes/pedidos_pago.php';
 require_once dirname(__DIR__, 2) . '/includes/stripe_config.php';
 require_once dirname(__DIR__, 2) . '/includes/audit.php';
 require_once dirname(__DIR__, 2) . '/includes/carrito.php';
-require_once dirname(__DIR__, 2) . '/includes/dte.php';
+require_once dirname(__DIR__, 2) . '/includes/comprobantes.php';
 require_once dirname(__DIR__, 2) . '/includes/admin_notification_service.php';
 require_once dirname(__DIR__, 2) . '/includes/errores_sistema.php';
 
@@ -110,7 +110,7 @@ try {
     $consulta->execute(['id' => $evento->id]);
     if ((int) $consulta->fetchColumn() === 1) {
         $pdo->commit();
-        if ($esConfirmacion && $pedidoId > 0) { try { $dte=generarDtePedidoSeguro($pedidoId); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$pedidoId.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$pedidoId,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$pedidoId]); } enviarConfirmacionCompraAtenea($pedidoId); }
+        if ($esConfirmacion && $pedidoId > 0) { try { generarComprobantesCompraAtenea($pedidoId); } catch(Throwable $e) { registrarErrorSistemaAtenea('comprobante','generar_documentos',$e->getMessage(),['pedido_id'=>$pedidoId]); http_response_code(500); exit; } enviarConfirmacionCompraAtenea($pedidoId); }
         http_response_code(200);
         exit;
     }
@@ -204,7 +204,7 @@ try {
         ];
         if(isset($mapa[$evento->type])){$n=$mapa[$evento->type];notificarAdministracionAtenea($n[0],$n[1],'Stripe procesó el evento del pedido #'.$pedidoId.'.',$n[2]==='exito'?'informacion':$n[2],null,atenea_url('src/dashboard/pedidos/detalle.php?id='.$pedidoId),'stripe:notificacion:'.$evento->id,['category'=>'pagos','pedido_id'=>$pedidoId]);}
     }
-    if ($enviarCorreoPedido) { try { $dte=generarDtePedidoSeguro($enviarCorreoPedido); crearNotificacionAtenea(['rol'=>'admin','tipo'=>'dte_generado','categoria'=>'dte','nivel'=>'exito','titulo'=>'DTE generado','descripcion'=>'Documento generado para el pedido #'.$enviarCorreoPedido.'.','url'=>atenea_url('src/dashboard/facturas/detalle.php?id='.$dte['id']),'pedido_id'=>$enviarCorreoPedido,'idempotency_key'=>'dte:generado:'.$dte['id']]); } catch(Throwable $e) { registrarErrorSistemaAtenea('dte','generar_dte',$e->getMessage(),['pedido_id'=>$enviarCorreoPedido]); } enviarConfirmacionCompraAtenea($enviarCorreoPedido); }
+    if ($enviarCorreoPedido) { try { generarComprobantesCompraAtenea($enviarCorreoPedido); } catch(Throwable $e) { registrarErrorSistemaAtenea('comprobante','generar_documentos',$e->getMessage(),['pedido_id'=>$enviarCorreoPedido]); http_response_code(500); exit; } enviarConfirmacionCompraAtenea($enviarCorreoPedido); }
     http_response_code(200);
 } catch (Throwable $error) {
     if ($pdo->inTransaction()) $pdo->rollBack();
